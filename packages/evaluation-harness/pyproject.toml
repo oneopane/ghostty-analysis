@@ -1,0 +1,24 @@
+[project]
+name = "evaluation-harness"
+version = "0.1.0"
+description = "Evaluation harness for routing and policy"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.12.5",
+  "rich>=14.2.0",
+  "typer>=0.21.1",
+  "repo-routing>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2.0"]
+
+[project.scripts]
+evaluation-harness = "evaluation_harness.cli.app:app"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.uv.sources]
+repo-routing = { workspace = true }

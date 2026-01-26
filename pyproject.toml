@@ -1,2 +1,7 @@
 [tool.uv.workspace]
-members = ["packages/repo-ingestion"]
+members = [
+  "packages/repo-ingestion",
+  "packages/repo-routing",
+  "packages/evaluation-harness",
+  "packages/repo-cli",
+]

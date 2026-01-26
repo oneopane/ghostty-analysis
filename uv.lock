@@ -4,7 +4,10 @@ requires-python = ">=3.11"
 
 [manifest]
 members = [
+    "evaluation-harness",
+    "repo-cli",
     "repo-ingestion",
+    "repo-routing",
 ]
 
 [[package]]
@@ -79,6 +82,32 @@ sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
 ]
+
+[[package]]
+name = "evaluation-harness"
+version = "0.1.0"
+source = { editable = "packages/evaluation-harness" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "repo-routing" },
+    { name = "rich" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0" },
+    { name = "repo-routing", editable = "packages/repo-routing" },
+    { name = "rich", specifier = ">=14.2.0" },
+    { name = "typer", specifier = ">=0.21.1" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "githubkit"
@@ -485,9 +514,26 @@ wheels = [
 ]
 
 [[package]]
+name = "repo-cli"
+version = "0.1.0"
+source = { virtual = "packages/repo-cli" }
+dependencies = [
+    { name = "evaluation-harness" },
+    { name = "repo-ingestion" },
+    { name = "repo-routing" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "evaluation-harness", editable = "packages/evaluation-harness" },
+    { name = "repo-ingestion", editable = "packages/repo-ingestion" },
+    { name = "repo-routing", editable = "packages/repo-routing" },
+]
+
+[[package]]
 name = "repo-ingestion"
 version = "0.1.0"
-source = { virtual = "packages/repo-ingestion" }
+source = { editable = "packages/repo-ingestion" }
 dependencies = [
     { name = "aiolimiter" },
     { name = "githubkit" },
@@ -516,6 +562,30 @@ requires-dist = [
     { name = "tenacity", specifier = ">=9.1.2" },
     { name = "typer", specifier = ">=0.21.1" },
 ]
+
+[[package]]
+name = "repo-routing"
+version = "0.1.0"
+source = { editable = "packages/repo-routing" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "rich" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0" },
+    { name = "rich", specifier = ">=14.2.0" },
+    { name = "typer", specifier = ">=0.21.1" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "rich"
