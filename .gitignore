@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Data / local artifacts
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.duckdb
+
+# OS
+.DS_Store

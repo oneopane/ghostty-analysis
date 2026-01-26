@@ -1,2 +1,2 @@
 [tool.uv.workspace]
-members = ["packages/gh-history-ingestion"]
+members = ["packages/repo-ingestion"]

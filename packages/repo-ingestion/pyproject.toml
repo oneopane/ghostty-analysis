@@ -1,0 +1,26 @@
+[project]
+name = "repo-ingestion"
+version = "0.1.0"
+description = "Repository-agnostic repo history ingestion (GitHub first)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aiolimiter>=1.2.1",
+    "githubkit>=0.14.3",
+    "httpx>=0.28.1",
+    "polars>=1.37.1",
+    "pydantic>=2.12.5",
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.7",
+    "rich>=14.2.0",
+    "sqlalchemy>=2.0.46",
+    "tenacity>=9.1.2",
+    "typer>=0.21.1",
+]
+
+[project.scripts]
+repo-ingestion = "gh_history_ingestion.cli.app:app"
+gh-history-ingestion = "gh_history_ingestion.cli.app:app"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

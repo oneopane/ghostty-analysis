@@ -1,0 +1,96 @@
+import asyncio
+from pathlib import Path
+
+import typer
+from rich import print
+
+from ..ingest.backfill import backfill_repo
+from ..ingest.incremental import incremental_update
+from ..ingest.pull_requests import backfill_pull_requests
+from .paths import default_db_path
+
+app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
+
+
+@app.command()
+def ingest(
+    repo: str = typer.Option(..., help="Repository in owner/name format"),
+    db: str | None = typer.Option(None, help="SQLite database path"),
+    data_dir: str = typer.Option(
+        "data",
+        help="Base directory for per-repo SQLite databases",
+    ),
+    max_pages: int | None = typer.Option(
+        None, help="Dev-only: limit pages per endpoint"
+    ),
+    start_at: str | None = typer.Option(
+        None, "--from", "--start-at", help="ISO timestamp to start at (inclusive)"
+    ),
+    end_at: str | None = typer.Option(None, help="ISO timestamp to end at (inclusive)"),
+):
+    """Run a one-shot full backfill for a GitHub repository."""
+    db_path = (
+        Path(db) if db else default_db_path(repo_full_name=repo, data_dir=data_dir)
+    )
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"[bold]Ingesting[/bold] {repo} -> {db_path}")
+    asyncio.run(
+        backfill_repo(
+            repo,
+            db_path,
+            max_pages=max_pages,
+            start_at=start_at,
+            end_at=end_at,
+        )
+    )
+
+
+@app.command()
+def incremental(
+    repo: str = typer.Option(..., help="Repository in owner/name format"),
+    db: str | None = typer.Option(None, help="SQLite database path"),
+    data_dir: str = typer.Option(
+        "data",
+        help="Base directory for per-repo SQLite databases",
+    ),
+):
+    """Run an incremental update using stored watermarks."""
+    db_path = (
+        Path(db) if db else default_db_path(repo_full_name=repo, data_dir=data_dir)
+    )
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"[bold]Incremental update[/bold] {repo} -> {db_path}")
+    asyncio.run(incremental_update(repo, db_path))
+
+
+@app.command()
+def pull_requests(
+    repo: str = typer.Option(..., help="Repository in owner/name format"),
+    db: str | None = typer.Option(None, help="SQLite database path"),
+    data_dir: str = typer.Option(
+        "data",
+        help="Base directory for per-repo SQLite databases",
+    ),
+    start_at: str | None = typer.Option(
+        None, "--from", "--start-at", help="ISO timestamp to start at (inclusive)"
+    ),
+    end_at: str | None = typer.Option(None, help="ISO timestamp to end at (inclusive)"),
+    max_pages: int | None = typer.Option(
+        None, help="Dev-only: limit pages per endpoint"
+    ),
+):
+    """Backfill pull requests created in a time window."""
+    db_path = (
+        Path(db) if db else default_db_path(repo_full_name=repo, data_dir=data_dir)
+    )
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"[bold]Pull request backfill[/bold] {repo} -> {db_path}")
+    asyncio.run(
+        backfill_pull_requests(
+            repo,
+            db_path,
+            start_at=start_at,
+            end_at=end_at,
+            max_pages=max_pages,
+        )
+    )
