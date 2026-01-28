@@ -2,7 +2,7 @@ import typer
 from rich import print
 
 from ..config import RepoRoutingConfig
-from ..paths import repo_db_path
+from ..paths import repo_codeowners_dir, repo_db_path
 
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
@@ -18,4 +18,7 @@ def info(
     print(f"[bold]repo[/bold] {cfg.repo}")
     print(
         f"[bold]db[/bold] {repo_db_path(repo_full_name=cfg.repo, data_dir=cfg.data_dir)}"
+    )
+    print(
+        f"[bold]codeowners_dir[/bold] {repo_codeowners_dir(repo_full_name=cfg.repo, data_dir=cfg.data_dir)}"
     )

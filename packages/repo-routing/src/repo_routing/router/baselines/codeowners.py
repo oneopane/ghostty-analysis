@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from ...history.reader import HistoryReader
+from ...paths import repo_codeowners_path
 from ..base import Evidence, RouteCandidate, RouteResult, Target, TargetType
 from .mentions import extract_targets
 
@@ -57,12 +58,26 @@ class CodeownersRouter:
         self,
         *,
         enabled: bool = False,
-        codeowners_at_base_sha: Callable[[str, str], str | None] | None = None,
-        checkout_dir: str | Path | None = None,
+        codeowners_at_base_sha: Callable[[str, str, str | Path], str | None]
+        | None = None,
+        codeowners_dir: str | Path | None = None,
     ) -> None:
         self.enabled = enabled
         self.codeowners_at_base_sha = codeowners_at_base_sha
-        self.checkout_dir = Path(checkout_dir) if checkout_dir is not None else None
+        self.codeowners_dir = (
+            Path(codeowners_dir) if codeowners_dir is not None else None
+        )
+
+    @staticmethod
+    def default_codeowners_at_base_sha(
+        repo: str, base_sha: str, data_dir: str | Path
+    ) -> str | None:
+        p = repo_codeowners_path(
+            repo_full_name=repo, base_sha=base_sha, data_dir=data_dir
+        )
+        if not p.exists():
+            return None
+        return p.read_text(encoding="utf-8")
 
     def route(
         self,
@@ -89,15 +104,24 @@ class CodeownersRouter:
 
         base_sha = pr.base_sha
         codeowners_text: str | None = None
-        risk = "leaky"
-        if base_sha is not None and self.codeowners_at_base_sha is not None:
-            codeowners_text = self.codeowners_at_base_sha(repo, base_sha)
-            risk = "low" if codeowners_text is not None else "high"
-        elif self.checkout_dir is not None:
-            # Leaky: reads the checkout's current CODEOWNERS, not as-of base SHA.
-            p = self.checkout_dir / "CODEOWNERS"
-            if p.exists():
-                codeowners_text = p.read_text(encoding="utf-8")
+        risk = "high"
+        if base_sha is None:
+            return RouteResult(
+                repo=repo,
+                pr_number=pr_number,
+                as_of=as_of,
+                top_k=top_k,
+                candidates=[],
+                risk=risk,
+                notes=["missing base_sha; cannot load CODEOWNERS as-of base"],
+            )
+
+        provider = self.codeowners_at_base_sha or self.default_codeowners_at_base_sha
+        co_data_dir: str | Path = (
+            self.codeowners_dir if self.codeowners_dir is not None else data_dir
+        )
+        codeowners_text = provider(repo, base_sha, co_data_dir)
+        risk = "low" if codeowners_text is not None else "high"
 
         if not codeowners_text:
             return RouteResult(
