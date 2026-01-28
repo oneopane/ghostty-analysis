@@ -11,6 +11,11 @@ Provide minimal CLI UX to run evaluation and inspect results.
 - `repo eval explain`: print route + evidence + truths for one PR.
 - `repo eval list`: list run directories.
 
+Defaults (v0):
+- cutoff: `created_at`
+- requested reviewer window: 60 minutes
+- `top_k=5`
+
 ## Files
 Touch:
 - `packages/evaluation-harness/src/evaluation_harness/cli/app.py`

@@ -2,6 +2,28 @@
 
 This plan tracks the work to build a leakage-safe, offline evaluation harness for routing and policy signals.
 
+## Pinned Defaults (v0)
+
+These are the design defaults we agreed to use unless a run overrides them via config/CLI:
+
+- Goal: report both routing accuracy and queue metrics (no single scalar).
+- Scope: start with `ghostty`, keep everything repo-agnostic.
+- Evaluation mode: strict streaming evaluation ordered by per-PR cutoff time.
+- Cutoff anchor (default): `created_at`.
+  - Supported alternates: `ready_for_review` (when available), `created_at + delta`.
+- Truth signals:
+  - Behavior truth (primary): first non-author, non-bot review submission.
+  - Intent truth (secondary): requested reviewers/teams within 60 minutes of cutoff.
+- Filtering:
+  - Exclude bots and PR author from candidates and truths.
+- Candidate pool default:
+  - Users/teams observed as reviewers or commenters in the last 180 days (as-of cutoff).
+  - Optionally include CODEOWNERS-derived candidates when CODEOWNERS is read as-of base SHA.
+- Routing output default:
+  - Evaluate `top_k=5` (hit@1/3/5, MRR) and also store full scored lists in per-PR artifacts.
+- Run outputs:
+  - `manifest.json`, `report.md`, `report.json`, `per_pr.jsonl` under `data/github/<owner>/<repo>/eval/<run_id>/`.
+
 Conventions:
 - Each task is atomic and tracked in its own file.
 - Mark tasks complete by checking the box in this index (and optionally in the task file).

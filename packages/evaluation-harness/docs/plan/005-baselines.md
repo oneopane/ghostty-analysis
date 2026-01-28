@@ -7,7 +7,7 @@ Provide minimal, credible baselines that do not require GitHub API calls.
 
 ## Work
 - Mentions baseline: route to explicitly mentioned `@user`/`@org/team` in PR body.
-- Popularity baseline: route to top reviewers by exponentially decayed review counts.
+- Popularity baseline: route to top reviewers by exponentially decayed review counts (default candidate history window: last 180 days as-of cutoff).
 - CODEOWNERS baseline (optional): use a local checkout + git to read CODEOWNERS as-of PR base SHA.
 
 ## Files

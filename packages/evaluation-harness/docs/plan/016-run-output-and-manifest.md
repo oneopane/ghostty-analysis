@@ -12,6 +12,10 @@ Standardize output paths and ensure every run is self-describing.
   - sampled PR list
   - DB watermark
   - router versions
+- Write primary outputs:
+  - `report.md`
+  - `report.json`
+  - `per_pr.jsonl`
 
 ## Files
 Create:

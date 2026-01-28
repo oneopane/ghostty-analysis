@@ -9,6 +9,11 @@ Persist per-PR changed file paths in the canonical per-repo SQLite database so r
 - Add a raw `pull_request_files` table to the history DB (queryable, not JSON blobs).
 - Ingest PR file lists via GitHub REST (`/pulls/{number}/files`) during backfill and incremental updates.
 
+Store (v0):
+- `path`
+- `status` (added/modified/removed/renamed)
+- optionally: `additions`, `deletions`, `changes` when available from the endpoint
+
 ## Files
 Touch:
 - `packages/repo-ingestion/src/gh_history_ingestion/storage/schema.py`

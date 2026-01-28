@@ -10,6 +10,7 @@ Define how to choose the evaluation cutoff timestamp per PR (avoid draft leakage
   - `created_at`
   - `ready_for_review` (when available)
   - `created_at + delta`
+- Default cutoff: `created_at`.
 - Ensure the chosen cutoff is recorded per PR.
 
 ## Files

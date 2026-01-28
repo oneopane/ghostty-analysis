@@ -7,7 +7,7 @@ Compute ground truth sets for evaluation, separately for intent vs behavior.
 
 ## Work
 - Intent truth: requested reviewers/teams within a window after open (default 1h).
-- Behavior truth: actual reviewers (review submitters).
+- Behavior truth: first non-author, non-bot review submitter.
 - Participants: commenters/reviewers excluding author and bots.
 - Outcome: merged vs closed/unmerged.
 

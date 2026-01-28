@@ -9,8 +9,12 @@ Make the evaluation harness reproducible by capturing config, sample selection, 
 - Define Pydantic models for config, run metadata, and metric outputs.
 - Ensure models capture:
   - repo, time window, sample size, seed
-  - cutoff policy
+  - cutoff policy (default `created_at`; alternates `ready_for_review`, `created_at + delta`)
+  - truth policy (requested reviewers window default 60 minutes; behavior truth = first review)
+  - filtering policy (exclude bots + author)
+  - candidate pool policy (default: last 180 days reviewers/commenters as-of cutoff)
   - router/baseline selection
+  - evaluation `top_k` (default 5)
   - DB watermarks
 
 ## Files
@@ -19,4 +23,4 @@ Create:
 - `packages/evaluation-harness/src/evaluation_harness/models.py`
 
 ## Acceptance Criteria
-- Every `repo eval run` writes a `manifest.json` containing the config + sample list + watermarks.
+- Every `repo eval run` writes a `manifest.json` containing config + sample list + watermarks + pinned defaults actually used.
