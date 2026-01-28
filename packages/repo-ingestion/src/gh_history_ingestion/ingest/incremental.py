@@ -37,6 +37,7 @@ from ..storage.upsert import (
 )
 from ..utils.time import parse_datetime
 from .qa import GapRecorder, write_qa_report
+from .pull_request_files import ingest_pull_request_files
 
 
 async def incremental_update(
@@ -259,6 +260,16 @@ async def _incremental_pull_requests(
         issue_id = issue_map.get(pr.get("number"))
         pr_id = upsert_pull_request(session, repo_id, pr, issue_id=issue_id)
         updated_pr_ids.append(pr_id)
+        await ingest_pull_request_files(
+            session,
+            client,
+            owner,
+            name,
+            repo_id=repo_id,
+            pull_request_number=pr.get("number"),
+            pull_request_id=pr_id,
+            head_sha=(pr.get("head") or {}).get("sha"),
+        )
         for event in normalize_pull_request(pr, repo_id):
             insert_event(session, event)
         if updated_at and (max_seen is None or updated_at > max_seen):

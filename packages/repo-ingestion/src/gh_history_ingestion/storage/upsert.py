@@ -16,6 +16,7 @@ from .schema import (
     Label,
     Milestone,
     PullRequest,
+    PullRequestFile,
     QaReport,
     Ref,
     Release,
@@ -168,6 +169,37 @@ def upsert_pull_request(session, repo_id: int, pr: dict, issue_id: int | None) -
     }
     _upsert(session, PullRequest, values, ["id"])
     return values["id"]
+
+
+def upsert_pull_request_file(
+    session,
+    repo_id: int,
+    pull_request_id: int,
+    *,
+    head_sha: str | None,
+    file: dict,
+) -> None:
+    if not head_sha:
+        return
+    path = file.get("filename") or file.get("path")
+    if not path:
+        return
+    values = {
+        "repo_id": repo_id,
+        "pull_request_id": pull_request_id,
+        "head_sha": head_sha,
+        "path": path,
+        "status": file.get("status"),
+        "additions": file.get("additions"),
+        "deletions": file.get("deletions"),
+        "changes": file.get("changes"),
+    }
+    _upsert(
+        session,
+        PullRequestFile,
+        values,
+        ["repo_id", "pull_request_id", "head_sha", "path"],
+    )
 
 
 def upsert_review(session, repo_id: int, pr_id: int, review: dict) -> int:

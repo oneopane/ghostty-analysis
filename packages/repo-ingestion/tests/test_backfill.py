@@ -9,6 +9,7 @@ from gh_history_ingestion.storage.schema import (
     Event,
     Issue,
     PullRequest,
+    PullRequestFile,
     Ref,
     Release,
     Repo,
@@ -201,6 +202,18 @@ class StubGitHubClient:
             ]:
                 yield item
             return
+        if path == "/repos/octo/repo/pulls/2/files":
+            for item in [
+                {
+                    "filename": "src/app.py",
+                    "status": "modified",
+                    "additions": 3,
+                    "deletions": 1,
+                    "changes": 4,
+                }
+            ]:
+                yield item
+            return
         if path == "/repos/octo/repo/pulls/2/comments":
             if False:
                 yield None
@@ -221,6 +234,7 @@ async def test_backfill_orchestration(tmp_path):
     assert session.scalar(select(func.count()).select_from(Repo)) == 1
     assert session.scalar(select(func.count()).select_from(Issue)) == 2
     assert session.scalar(select(func.count()).select_from(PullRequest)) == 1
+    assert session.scalar(select(func.count()).select_from(PullRequestFile)) == 1
     assert session.scalar(select(func.count()).select_from(Comment)) == 1
     assert session.scalar(select(func.count()).select_from(Review)) == 1
     assert session.scalar(select(func.count()).select_from(Commit)) == 1

@@ -14,6 +14,7 @@ from ..providers.github.client import GitHubRestClient
 from ..intervals.rebuild import rebuild_intervals
 from .qa import GapRecorder, write_qa_report
 from ..storage.db import get_engine, get_session, init_db
+from .pull_request_files import ingest_pull_request_files
 from ..storage.upsert import (
     insert_event,
     upsert_comment,
@@ -178,6 +179,17 @@ async def _run_backfill(
         pr_by_number[pr.get("number")] = pr
         pr_id = upsert_pull_request(session, repo_id, pr, issue_id=None)
         pr_id_by_number[pr.get("number")] = pr_id
+        await ingest_pull_request_files(
+            session,
+            client,
+            owner,
+            name,
+            repo_id=repo_id,
+            pull_request_number=pr.get("number"),
+            pull_request_id=pr_id,
+            head_sha=(pr.get("head") or {}).get("sha"),
+            max_pages=max_pages,
+        )
         _insert_events(
             session, normalize_pull_request(pr, repo_id), window_start, window_end
         )

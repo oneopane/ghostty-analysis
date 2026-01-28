@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -126,12 +127,42 @@ class PullRequest(Base):
     __table_args__ = (UniqueConstraint("repo_id", "number", name="uq_pr_number"),)
 
 
+class PullRequestFile(Base):
+    __tablename__ = "pull_request_files"
+
+    repo_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("repos.id"), primary_key=True
+    )
+    pull_request_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("pull_requests.id"), primary_key=True
+    )
+    head_sha: Mapped[str] = mapped_column(String, primary_key=True)
+    path: Mapped[str] = mapped_column(String, primary_key=True)
+
+    status: Mapped[str | None] = mapped_column(String, nullable=True)
+    additions: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    deletions: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    changes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    __table_args__ = (
+        Index(
+            "ix_pr_files_repo_pr_head",
+            "repo_id",
+            "pull_request_id",
+            "head_sha",
+        ),
+        Index("ix_pr_files_repo_path", "repo_id", "path"),
+    )
+
+
 class Review(Base):
     __tablename__ = "reviews"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     repo_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("repos.id"))
-    pull_request_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("pull_requests.id"))
+    pull_request_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("pull_requests.id")
+    )
     user_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
     state: Mapped[str | None] = mapped_column(String, nullable=True)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -163,7 +194,9 @@ class Comment(Base):
 class Commit(Base):
     __tablename__ = "commits"
 
-    repo_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("repos.id"), primary_key=True)
+    repo_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("repos.id"), primary_key=True
+    )
     sha: Mapped[str] = mapped_column(String, primary_key=True)
     author_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
     committer_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
@@ -210,7 +243,9 @@ class Event(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     repo_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("repos.id"))
-    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     actor_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
     subject_type: Mapped[str] = mapped_column(String, nullable=False)
     subject_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
@@ -313,7 +348,9 @@ class PullRequestDraftInterval(Base):
     __tablename__ = "pull_request_draft_intervals"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    pull_request_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("pull_requests.id"))
+    pull_request_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("pull_requests.id")
+    )
     is_draft: Mapped[bool] = mapped_column(Boolean, nullable=False)
     start_event_id: Mapped[int] = mapped_column(Integer, ForeignKey("events.id"))
     end_event_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("events.id"))
@@ -323,7 +360,9 @@ class PullRequestHeadInterval(Base):
     __tablename__ = "pull_request_head_intervals"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    pull_request_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("pull_requests.id"))
+    pull_request_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("pull_requests.id")
+    )
     head_sha: Mapped[str | None] = mapped_column(String, nullable=True)
     head_ref: Mapped[str | None] = mapped_column(String, nullable=True)
     start_event_id: Mapped[int] = mapped_column(Integer, ForeignKey("events.id"))
@@ -334,7 +373,9 @@ class PullRequestReviewRequestInterval(Base):
     __tablename__ = "pull_request_review_request_intervals"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    pull_request_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("pull_requests.id"))
+    pull_request_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("pull_requests.id")
+    )
     reviewer_type: Mapped[str | None] = mapped_column(String, nullable=True)
     reviewer_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     start_event_id: Mapped[int] = mapped_column(Integer, ForeignKey("events.id"))

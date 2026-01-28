@@ -23,6 +23,7 @@ from ..storage.upsert import (
 )
 from ..utils.time import parse_datetime
 from .qa import GapRecorder, write_qa_report
+from .pull_request_files import ingest_pull_request_files
 
 
 async def backfill_pull_requests(
@@ -115,6 +116,17 @@ async def _run_pr_backfill(
         pr_numbers.add(pr.get("number"))
         pr_id = upsert_pull_request(session, repo_id, pr, issue_id=None)
         pr_id_by_number[pr.get("number")] = pr_id
+        await ingest_pull_request_files(
+            session,
+            client,
+            owner,
+            name,
+            repo_id=repo_id,
+            pull_request_number=pr.get("number"),
+            pull_request_id=pr_id,
+            head_sha=(pr.get("head") or {}).get("sha"),
+            max_pages=max_pages,
+        )
         for event in normalize_pull_request(pr, repo_id):
             insert_event(session, event)
     session.commit()

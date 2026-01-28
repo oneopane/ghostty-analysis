@@ -23,6 +23,7 @@ def test_schema_creation(tmp_path):
         "qa_reports",
         "issues",
         "pull_requests",
+        "pull_request_files",
         "reviews",
         "comments",
         "events",

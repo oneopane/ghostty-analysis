@@ -3,7 +3,14 @@ from sqlalchemy import select
 
 from gh_history_ingestion.ingest.incremental import incremental_update
 from gh_history_ingestion.storage.db import get_engine, get_session, init_db
-from gh_history_ingestion.storage.schema import Commit, Issue, PullRequest, Repo, Watermark
+from gh_history_ingestion.storage.schema import (
+    Commit,
+    Issue,
+    PullRequest,
+    PullRequestFile,
+    Repo,
+    Watermark,
+)
 from gh_history_ingestion.storage.upsert import upsert_repo
 from gh_history_ingestion.utils.time import parse_datetime
 
@@ -29,7 +36,13 @@ class StubIncrementalClient:
         raise AssertionError(f"Unexpected get_json: {path}")
 
     async def paginate_conditional(
-        self, path, params=None, headers=None, resource=None, on_gap=None, on_response=None
+        self,
+        path,
+        params=None,
+        headers=None,
+        resource=None,
+        on_gap=None,
+        on_response=None,
     ):
         self.calls.append((path, params, headers))
         if path == "/repos/octo/repo/issues":
@@ -103,9 +116,27 @@ class StubIncrementalClient:
         raise AssertionError(f"Unexpected paginate_conditional: {path}")
 
     async def paginate(
-        self, path, params=None, headers=None, on_gap=None, resource=None, max_pages=None
+        self,
+        path,
+        params=None,
+        headers=None,
+        on_gap=None,
+        resource=None,
+        max_pages=None,
     ):
         self.calls.append((path, params, headers))
+        if path == "/repos/octo/repo/pulls/1/files":
+            for item in [
+                {
+                    "filename": "README.md",
+                    "status": "modified",
+                    "additions": 1,
+                    "deletions": 0,
+                    "changes": 1,
+                }
+            ]:
+                yield item
+            return
         if path == "/repos/octo/repo/issues/1/events":
             for item in [
                 {
@@ -193,17 +224,22 @@ async def test_incremental_uses_watermarks_and_updates(tmp_path):
     client = StubIncrementalClient()
     await incremental_update("octo/repo", db_path, client=client)
 
-    issue_call = next(call for call in client.calls if call[0] == "/repos/octo/repo/issues")
+    issue_call = next(
+        call for call in client.calls if call[0] == "/repos/octo/repo/issues"
+    )
     assert issue_call[1]["since"] == "2024-01-01T00:00:00Z"
     assert issue_call[2]["If-None-Match"] == '"e-issues"'
 
-    commit_call = next(call for call in client.calls if call[0] == "/repos/octo/repo/commits")
+    commit_call = next(
+        call for call in client.calls if call[0] == "/repos/octo/repo/commits"
+    )
     assert commit_call[1]["since"] == "2024-01-03T00:00:00Z"
     assert commit_call[2]["If-None-Match"] == '"e-commits"'
 
     session = get_session(engine)
     assert session.scalar(select(Issue.id)) == 100
     assert session.scalar(select(PullRequest.id)) == 200
+    assert session.scalar(select(PullRequestFile.path)) == "README.md"
     assert session.scalar(select(Commit.sha)) == "c1"
 
     issue_wm = session.execute(
@@ -212,8 +248,12 @@ async def test_incremental_uses_watermarks_and_updates(tmp_path):
     commit_wm = session.execute(
         select(Watermark).where(Watermark.resource == "commits")
     ).scalar_one()
-    pr_wm = session.execute(select(Watermark).where(Watermark.resource == "pulls")).scalar_one()
+    pr_wm = session.execute(
+        select(Watermark).where(Watermark.resource == "pulls")
+    ).scalar_one()
 
     assert parse_datetime(issue_wm.updated_at) == parse_datetime("2024-01-05T00:00:00Z")
-    assert parse_datetime(commit_wm.updated_at) == parse_datetime("2024-01-07T00:00:00Z")
+    assert parse_datetime(commit_wm.updated_at) == parse_datetime(
+        "2024-01-07T00:00:00Z"
+    )
     assert parse_datetime(pr_wm.updated_at) == parse_datetime("2024-01-06T00:00:00Z")
