@@ -1,6 +1,6 @@
 # 002 - Ensure reviewer/commenter truth signals exist for the eval window
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Guarantee the offline DB contains the ground-truth signals needed for evaluation (requested reviewers, actual reviewers, and optionally commenters) for the sampled PRs.
@@ -9,6 +9,10 @@ Guarantee the offline DB contains the ground-truth signals needed for evaluation
 Choose one path and document the recommended operational flow:
 - Use full ingest for the repo and then incremental updates.
 - Or extend the PR-window ingest (`pull-requests`) to also fetch reviews/comments/issue-events for PRs in the window.
+
+Chosen (v0):
+- Recommended: run full backfill (`repo-ingestion ingest`) and then `repo-ingestion incremental`.
+- Optional: `repo-ingestion pull-requests --with-truth` makes PR-window backfills evaluation-ready.
 
 ## Files
 Possible touch points:

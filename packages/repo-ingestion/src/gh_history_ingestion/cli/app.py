@@ -71,6 +71,10 @@ def pull_requests(
         "data",
         help="Base directory for per-repo SQLite databases",
     ),
+    with_truth: bool = typer.Option(
+        False,
+        help="Also fetch reviews/comments/issue-events for PRs in the window",
+    ),
     start_at: str | None = typer.Option(
         None, "--from", "--start-at", help="ISO timestamp to start at (inclusive)"
     ),
@@ -89,6 +93,7 @@ def pull_requests(
         backfill_pull_requests(
             repo,
             db_path,
+            with_truth=with_truth,
             start_at=start_at,
             end_at=end_at,
             max_pages=max_pages,

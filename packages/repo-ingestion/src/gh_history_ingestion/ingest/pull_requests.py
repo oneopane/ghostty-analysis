@@ -4,8 +4,12 @@ from sqlalchemy import select
 
 from ..events.normalize import (
     normalize_issue_closed,
+    normalize_issue_comment,
+    normalize_issue_event,
     normalize_issue_opened,
     normalize_pull_request,
+    normalize_review,
+    normalize_review_comment,
 )
 from ..github.auth import select_auth_token
 from ..github.client import GitHubRestClient
@@ -14,11 +18,14 @@ from ..storage.db import get_engine, get_session, init_db
 from ..storage.schema import Issue
 from ..storage.upsert import (
     insert_event,
+    upsert_comment,
     upsert_issue,
     upsert_label,
     upsert_milestone,
     upsert_pull_request,
     upsert_repo,
+    upsert_review,
+    upsert_team,
     upsert_user,
 )
 from ..utils.time import parse_datetime
@@ -30,6 +37,7 @@ async def backfill_pull_requests(
     repo_full_name: str,
     db_path,
     *,
+    with_truth: bool = False,
     start_at: str | None,
     end_at: str | None,
     client: GitHubRestClient | None = None,
@@ -56,6 +64,7 @@ async def backfill_pull_requests(
                 client,
                 owner,
                 name,
+                with_truth=with_truth,
                 start_at=start_at,
                 end_at=end_at,
                 max_pages=max_pages,
@@ -66,6 +75,7 @@ async def backfill_pull_requests(
             client,
             owner,
             name,
+            with_truth=with_truth,
             start_at=start_at,
             end_at=end_at,
             max_pages=max_pages,
@@ -78,6 +88,7 @@ async def _run_pr_backfill(
     owner: str,
     name: str,
     *,
+    with_truth: bool,
     start_at: str | None,
     end_at: str | None,
     max_pages: int | None,
@@ -189,6 +200,25 @@ async def _run_pr_backfill(
         upsert_pull_request(session, repo_id, pr, issue_id=issue_id)
     session.commit()
 
+    if with_truth:
+        for number in sorted(pr_numbers):
+            issue_id = issue_id_by_number.get(number)
+            pr_id = pr_id_by_number.get(number)
+            if pr_id is None or issue_id is None:
+                continue
+            await _ingest_pr_truth(
+                session,
+                client,
+                owner,
+                name,
+                repo_id=repo_id,
+                issue_id=issue_id,
+                pull_request_id=pr_id,
+                pull_request_number=number,
+                max_pages=max_pages,
+            )
+        session.commit()
+
     rebuild_intervals(
         session,
         repo_id,
@@ -196,3 +226,98 @@ async def _run_pr_backfill(
         pr_ids=list(pr_id_by_number.values()) or None,
     )
     write_qa_report(session, repo_id)
+
+
+async def _ingest_pr_truth(
+    session,
+    client: GitHubRestClient,
+    owner: str,
+    name: str,
+    *,
+    repo_id: int,
+    issue_id: int,
+    pull_request_id: int,
+    pull_request_number: int,
+    max_pages: int | None,
+) -> None:
+    async for event_payload in client.paginate(
+        f"/repos/{owner}/{name}/issues/{pull_request_number}/events",
+        params={"per_page": 100},
+        on_gap=GapRecorder(session, repo_id, "issue_events"),
+        resource="issue_events",
+        max_pages=max_pages,
+    ):
+        _upsert_related_for_issue_event(session, repo_id, event_payload)
+        for event in normalize_issue_event(
+            issue_id=issue_id,
+            repo_id=repo_id,
+            payload=event_payload,
+            pull_request_id=pull_request_id,
+        ):
+            insert_event(session, event)
+
+    async for comment in client.paginate(
+        f"/repos/{owner}/{name}/issues/{pull_request_number}/comments",
+        params={"per_page": 100},
+        on_gap=GapRecorder(session, repo_id, "issue_comments"),
+        resource="issue_comments",
+        max_pages=max_pages,
+    ):
+        upsert_user(session, comment.get("user"))
+        upsert_comment(
+            session,
+            repo_id,
+            comment,
+            issue_id=issue_id,
+            pull_request_id=pull_request_id,
+            comment_type="issue",
+        )
+        for event in normalize_issue_comment(comment, repo_id, issue_id):
+            insert_event(session, event)
+
+    async for review in client.paginate(
+        f"/repos/{owner}/{name}/pulls/{pull_request_number}/reviews",
+        params={"per_page": 100},
+        on_gap=GapRecorder(session, repo_id, "reviews"),
+        resource="reviews",
+        max_pages=max_pages,
+    ):
+        upsert_user(session, review.get("user"))
+        upsert_review(session, repo_id, pull_request_id, review)
+        for event in normalize_review(review, repo_id, pull_request_id):
+            insert_event(session, event)
+
+    async for comment in client.paginate(
+        f"/repos/{owner}/{name}/pulls/{pull_request_number}/comments",
+        params={"per_page": 100},
+        on_gap=GapRecorder(session, repo_id, "review_comments"),
+        resource="review_comments",
+        max_pages=max_pages,
+    ):
+        upsert_user(session, comment.get("user"))
+        review_id = comment.get("pull_request_review_id")
+        upsert_comment(
+            session,
+            repo_id,
+            comment,
+            pull_request_id=pull_request_id,
+            review_id=review_id,
+            comment_type="review",
+        )
+        for event in normalize_review_comment(
+            comment, repo_id, pull_request_id, review_id
+        ):
+            insert_event(session, event)
+
+
+def _upsert_related_for_issue_event(session, repo_id: int, payload: dict) -> None:
+    if payload.get("label"):
+        upsert_label(session, repo_id, payload.get("label"))
+    if payload.get("assignee"):
+        upsert_user(session, payload.get("assignee"))
+    if payload.get("milestone"):
+        upsert_milestone(session, repo_id, payload.get("milestone"))
+    if payload.get("requested_reviewer"):
+        upsert_user(session, payload.get("requested_reviewer"))
+    if payload.get("requested_team"):
+        upsert_team(session, payload.get("requested_team"))

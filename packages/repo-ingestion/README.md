@@ -38,6 +38,28 @@ repo-ingestion ingest --repo owner/name --db /tmp/repo.db \
   --start-at 2024-01-01T00:00:00Z --end-at 2024-02-01T00:00:00Z
 ```
 
+## Evaluation-ready ingestion (truth signals)
+
+The evaluation harness needs truth signals (requested reviewers/teams, review submitters,
+and optionally commenters). Those are populated by the full ingest:
+
+```bash
+repo-ingestion ingest --repo owner/name
+repo-ingestion incremental --repo owner/name
+```
+
+If you only want PRs from a time window, prefer the full ingest with `--start-at/--end-at`.
+
+The `repo-ingestion pull-requests` command is optimized for PR-only backfills. It can be
+made evaluation-ready by enabling `--with-truth`, which also fetches issue events,
+issue comments, PR reviews, and PR review comments for the PRs in the window:
+
+```bash
+repo-ingestion pull-requests --repo owner/name \
+  --start-at 2024-01-01T00:00:00Z --end-at 2024-02-01T00:00:00Z \
+  --with-truth
+```
+
 ## Default data location
 
 If you omit `--db`, a stable per-repo database path is used:
