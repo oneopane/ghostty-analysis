@@ -36,7 +36,7 @@ def behavior_truth_first_eligible_review(
     exclude_author: bool = True,
     exclude_bots: bool = True,
 ) -> str | None:
-    """v0 behavior truth: first non-author/non-bot review (by submitted_at)."""
+    """v0 behavior truth: first non-author/non-bot review up to cutoff."""
 
     db = repo_db_path(repo_full_name=repo, data_dir=data_dir)
     conn = sqlite3.connect(str(db))
