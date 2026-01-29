@@ -24,7 +24,9 @@ def _parse_dt(value: object) -> datetime | None:
 def _dt_sql(dt: datetime) -> str:
     # Ingestion stores timezone-aware datetimes in SQLite as ISO strings.
     # Comparisons are lexicographic, so we normalize to a consistent format.
-    return dt.replace(tzinfo=None).isoformat(sep=" ")
+    # SQLite values are stored with microsecond precision (e.g. ".000000");
+    # keep the same precision to make string comparisons reliable.
+    return dt.replace(tzinfo=None).isoformat(sep=" ", timespec="microseconds")
 
 
 @dataclass(frozen=True)
