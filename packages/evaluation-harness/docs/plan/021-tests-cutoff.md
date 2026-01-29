@@ -1,6 +1,6 @@
 # 021 - Add cutoff tests
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Lock in cutoff policy behavior.

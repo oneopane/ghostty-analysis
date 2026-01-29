@@ -1,6 +1,6 @@
 # 023 - Add end-to-end eval run test
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Ensure `repo eval run` produces expected outputs from a synthetic DB.

@@ -1,6 +1,6 @@
 # 020 - Add synthetic DB fixture builder
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Create a minimal SQLite DB in tests (no large committed DB files) to validate end-to-end logic.

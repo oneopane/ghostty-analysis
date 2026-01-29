@@ -1,6 +1,6 @@
 # 014 - Implement queue metrics (TTFR/TTFC)
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Compute simple queue metrics to compare high-risk vs low-risk routing buckets.

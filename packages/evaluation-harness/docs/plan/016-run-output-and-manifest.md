@@ -1,6 +1,6 @@
 # 016 - Implement run output layout + manifests
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Standardize output paths and ensure every run is self-describing.

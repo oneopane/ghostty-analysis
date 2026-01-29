@@ -1,6 +1,6 @@
 # 013 - Implement gate correlation metrics
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Measure directional correlation between missing policy fields and outcomes.

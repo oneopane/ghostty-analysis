@@ -1,6 +1,6 @@
 # 009 - Implement cutoff policy
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Define how to choose the evaluation cutoff timestamp per PR (avoid draft leakage and align with triage reality).

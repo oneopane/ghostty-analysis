@@ -1,6 +1,6 @@
 # 019 - Validate unified CLI wiring
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Ensure the unified `repo` CLI correctly mounts routing and evaluation subcommands.

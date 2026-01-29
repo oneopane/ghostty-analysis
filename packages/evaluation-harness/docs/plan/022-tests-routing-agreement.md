@@ -1,6 +1,6 @@
 # 022 - Add routing agreement unit tests
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Validate routing agreement metrics are computed correctly.

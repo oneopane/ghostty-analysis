@@ -1,6 +1,6 @@
 # 018 - Add repo eval commands (run/show/explain/list)
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Provide minimal CLI UX to run evaluation and inspect results.

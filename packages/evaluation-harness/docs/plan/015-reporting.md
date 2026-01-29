@@ -1,6 +1,6 @@
 # 015 - Implement report aggregation + formatting
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Emit a human one-page report and machine-readable output for reproducibility.

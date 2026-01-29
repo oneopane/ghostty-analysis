@@ -1,6 +1,6 @@
 # 017 - Implement streaming evaluator (leakage-safe)
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Evaluate PRs in time order, ensuring router state never sees future events.
