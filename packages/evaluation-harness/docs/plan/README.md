@@ -31,7 +31,7 @@ Conventions:
 ## Phase 0 - Prerequisites (Blocking)
 
 - [ ] [001 - Add PR changed files signal to history DB](001-add-pr-changed-files-signal.md)
-- [ ] [002 - Ensure reviewer/commenter truth signals exist for the eval window](002-ensure-truth-signals.md)
+- [x] [002 - Ensure reviewer/commenter truth signals exist for the eval window](002-ensure-truth-signals.md)
 
 ## Phase 1 - Routing/Eval Interfaces (repo-routing)
 
@@ -66,7 +66,7 @@ Conventions:
 - [x] [022 - Add routing agreement unit tests](022-tests-routing-agreement.md)
 - [x] [023 - Add end-to-end eval run test](023-tests-end-to-end.md)
 - [ ] [024 - Add leakage + bot filtering guardrail tests](024-tests-guardrails.md)
-- [ ] [025 - Ensure unique test module names across packages](025-tests-unique-names.md)
+- [x] [025 - Ensure unique test module names across packages](025-tests-unique-names.md)
 
 ## Phase 5 - Docs
 

@@ -1,6 +1,6 @@
 # 025 - Ensure unique test module names across packages
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Avoid pytest import collisions when running tests from the monorepo root.
