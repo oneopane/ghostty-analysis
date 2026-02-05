@@ -40,3 +40,9 @@ uv run --project packages/evaluation-harness evaluation-harness run \
   --config packages/repo-routing/experiments/configs/v0.json \
   --pr 123
 ```
+
+Explore exports and write configs in marimo:
+
+```
+uv run --project packages/repo-routing marimo run packages/repo-routing/experiments/marimo/stewards_v0.py
+```
