@@ -52,33 +52,33 @@ Missing (this plan):
 Update these checkboxes as work lands.
 
 ### Phase 1 — Export foundations (library)
-- [ ] Implement `repo_routing.exports.area` (default area + overrides)
-- [ ] Implement export extractors (DB → rows) for:
-  - [ ] `prs.parquet` (dehydrated PR snapshot)
-  - [ ] `prs_text.parquet` (optional; `--include-text`)
-  - [ ] `pr_files.parquet`
-  - [ ] `pr_activity.parquet` (repo-wide window)
-  - [ ] `truth_behavior.parquet` (optional)
-  - [ ] `truth_intent.parquet` (optional)
-- [ ] Unit tests for export foundations (area mapping + deterministic extraction)
+- [x] Implement `repo_routing.exports.area` (default area + overrides)
+- [x] Implement export extractors (DB → rows) for:
+  - [x] `prs.parquet` (dehydrated PR snapshot)
+  - [x] `prs_text.parquet` (optional; `--include-text`)
+  - [x] `pr_files.parquet`
+  - [x] `pr_activity.parquet` (repo-wide window)
+  - [x] `truth_behavior.parquet` (optional)
+  - [x] `truth_intent.parquet` (optional)
+- [x] Unit tests for export foundations (area mapping + deterministic extraction)
 
 ### Phase 2 — Export scripts (experiments)
-- [ ] Create `experiments/` workspace structure (`extract/`, `configs/`, `lib/`, `marimo/`)
-- [ ] Implement `experiments/extract/export_v0.py` CLI per the pinned contract
-- [ ] Add an `export_manifest.json` describing window/version inputs
+- [x] Create `experiments/` workspace structure (`extract/`, `configs/`, `lib/`, `marimo/`)
+- [x] Implement `experiments/extract/export_v0.py` CLI per the pinned contract
+- [x] Add an `export_manifest.json` describing window/version inputs
 
 ### Phase 3 — Stewards router (DB-native) + evaluation integration
-- [ ] Add scoring config models + loader (strict validation)
-- [ ] Implement decay + activity aggregation utilities
-- [ ] Implement `repo_routing.router.stewards.StewardsRouter`
-- [ ] Add `confidence` to `RouteResult` schema (and propagate through artifacts/eval)
-- [ ] Wire evaluation harness to evaluate `stewards` router (bridge → end-state)
-- [ ] Unit tests for router/scoring
+- [x] Add scoring config models + loader (strict validation)
+- [x] Implement decay + activity aggregation utilities
+- [x] Implement `repo_routing.router.stewards.StewardsRouter`
+- [x] Add `confidence` to `RouteResult` schema (and propagate through artifacts/eval)
+- [x] Wire evaluation harness to evaluate `stewards` router (bridge → end-state)
+- [x] Unit tests for router/scoring
 
 ### Phase 4 — Receipts + labels
-- [ ] Implement `suggest_labels(AnalysisResult)`
-- [ ] Implement receipt renderer (one-screen markdown)
-- [ ] Snapshot/golden tests for receipts
+- [x] Implement `suggest_labels(AnalysisResult)`
+- [x] Implement receipt renderer (one-screen markdown)
+- [x] Snapshot/golden tests for receipts
 
 ---
 
@@ -505,75 +505,75 @@ Config is the knob surface area marimo writes and the router reads.
 
 Deliverables:
 
-- [ ] `repo_routing.exports.area.default_area_for_path()`
-- [ ] Area overrides support (load + apply): `data/github/<owner>/<repo>/routing/area_overrides.json`
-- [ ] Extractors that can produce the v0 Parquet tables deterministically:
-  - [ ] PR snapshot rows (`prs.parquet`, dehydrated)
-  - [ ] PR text rows (`prs_text.parquet`, optional)
-  - [ ] changed files rows (`pr_files.parquet`, head_sha as-of cutoff)
-  - [ ] repo-wide activity fact rows (`pr_activity.parquet`)
-  - [ ] truth behavior rows (`truth_behavior.parquet`, optional)
-  - [ ] truth intent rows (`truth_intent.parquet`, optional; normalized)
+- [x] `repo_routing.exports.area.default_area_for_path()`
+- [x] Area overrides support (load + apply): `data/github/<owner>/<repo>/routing/area_overrides.json`
+- [x] Extractors that can produce the v0 Parquet tables deterministically:
+  - [x] PR snapshot rows (`prs.parquet`, dehydrated)
+  - [x] PR text rows (`prs_text.parquet`, optional)
+  - [x] changed files rows (`pr_files.parquet`, head_sha as-of cutoff)
+  - [x] repo-wide activity fact rows (`pr_activity.parquet`)
+  - [x] truth behavior rows (`truth_behavior.parquet`, optional)
+  - [x] truth intent rows (`truth_intent.parquet`, optional; normalized)
 
 Acceptance checks:
 
-- [ ] Unit tests for `default_area_for_path`
-- [ ] Deterministic extract output on a synthetic fixture DB
+- [x] Unit tests for `default_area_for_path`
+- [x] Deterministic extract output on a synthetic fixture DB
 
 ### Phase 2: Export Pipeline (Scripts)
 
 Deliverables:
 
-- [ ] `experiments/extract/export_v0.py` (single entrypoint), or split scripts:
-  - [ ] `experiments/extract/export_prs.py`
-  - [ ] `experiments/extract/export_pr_files.py`
-  - [ ] `experiments/extract/export_pr_activity.py`
-  - [ ] `experiments/extract/export_truth.py`
-- [ ] Write `export_manifest.json` alongside Parquet outputs
+- [x] `experiments/extract/export_v0.py` (single entrypoint), or split scripts:
+  - [x] `experiments/extract/export_prs.py` (n/a; covered by `export_v0.py`)
+  - [x] `experiments/extract/export_pr_files.py` (n/a; covered by `export_v0.py`)
+  - [x] `experiments/extract/export_pr_activity.py` (n/a; covered by `export_v0.py`)
+  - [x] `experiments/extract/export_truth.py` (n/a; covered by `export_v0.py`)
+- [x] Write `export_manifest.json` alongside Parquet outputs
 
 CLI requirements (pinned):
 
-- [ ] Runs offline (reads `history.sqlite` only)
-- [ ] Accepts:
-  - [ ] `--repo owner/name`
-  - [ ] `--export-run-id <id>`
-  - [ ] `--cutoff-policy ...`
-  - [ ] `--from/--start-at` and `--end-at` (created_at window) OR `--pr` list
-  - [ ] `--activity-lookback-days` (default: 180)
-  - [ ] `--include-text` (optional; writes `prs_text.parquet`)
+- [x] Runs offline (reads `history.sqlite` only)
+- [x] Accepts:
+  - [x] `--repo owner/name`
+  - [x] `--export-run-id <id>`
+  - [x] `--cutoff-policy ...`
+  - [x] `--from/--start-at` and `--end-at` (created_at window) OR `--pr` list
+  - [x] `--activity-lookback-days` (default: 180)
+  - [x] `--include-text` (optional; writes `prs_text.parquet`)
 
 Acceptance checks:
 
-- [ ] Exports are stable across runs with same inputs
-- [ ] Output directory layout matches the contract
+- [x] Exports are stable across runs with same inputs
+- [x] Output directory layout matches the contract
 
 ### Phase 3: Marimo Loop + Config-driven Scoring
 
 Deliverables:
 
-- [ ] Marimo notebooks under `experiments/marimo/` that:
-  - [ ] load Parquet exports
-  - [ ] define / evaluate feature recipes
-  - [ ] write JSON configs under `experiments/configs/`
+- [x] Marimo notebooks under `experiments/marimo/` that:
+  - [x] load Parquet exports
+  - [x] define / evaluate feature recipes
+  - [x] write JSON configs under `experiments/configs/`
 
-- [ ] `repo_routing.scoring` + `repo_routing.router.stewards.StewardsRouter` that:
-  - [ ] consumes the JSON config
-  - [ ] produces a `RouteResult` with evidence
+- [x] `repo_routing.scoring` + `repo_routing.router.stewards.StewardsRouter` that:
+  - [x] consumes the JSON config
+  - [x] produces a `RouteResult` with evidence
 
 Acceptance checks:
 
-- [ ] `evaluation-harness run ...` can evaluate `stewards` router outputs (integration work required)
+- [x] `evaluation-harness run ...` can evaluate `stewards` router outputs (integration work required)
 
 ### Phase 4: Receipt + Labels (Offline Outputs)
 
 Deliverables:
 
-- [ ] `repo_routing.policy.labels.suggest_labels(AnalysisResult) -> list[str]`
-- [ ] `repo_routing.receipt.render.render_receipt(AnalysisResult) -> str`
+- [x] `repo_routing.policy.labels.suggest_labels(AnalysisResult) -> list[str]`
+- [x] `repo_routing.receipt.render.render_receipt(AnalysisResult) -> str`
 
 Acceptance checks:
 
-- [ ] Snapshot/golden tests for receipt formatting
+- [x] Snapshot/golden tests for receipt formatting
 
 ---
 
