@@ -37,6 +37,7 @@ def run_streaming_eval(
     cfg: EvalRunConfig,
     pr_numbers: list[int],
     baselines: list[str] | None = None,
+    router_config_path: str | Path | None = None,
 ) -> RunResult:
     """Run a leakage-safe streaming evaluation.
 
@@ -47,6 +48,8 @@ def run_streaming_eval(
     baselines = baselines or ["mentions", "popularity", "codeowners"]
     if not baselines:
         raise ValueError("at least one baseline is required")
+    if "stewards" in baselines and router_config_path is None:
+        raise ValueError("router_config_path is required for stewards")
 
     def pkg_version(name: str) -> str | None:
         try:
@@ -124,6 +127,7 @@ def run_streaming_eval(
                 as_of=cutoff,
                 data_dir=cfg.data_dir,
                 top_k=cfg.defaults.top_k,
+                config_path=router_config_path,
             )
             routing_writer.write_route_result(
                 RouteArtifact(baseline=baseline, result=result)

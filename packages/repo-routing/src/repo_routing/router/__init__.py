@@ -1,13 +1,7 @@
 """Routing algorithms and result schemas."""
 
-from .base import (
-    Evidence,
-    RouteCandidate,
-    RouteResult,
-    Router,
-    Target,
-    TargetType,
-)
+from .base import Evidence, RouteCandidate, RouteResult, Router, Target, TargetType
+from .stewards import StewardsRouter
 
 __all__ = [
     "Evidence",
@@ -16,4 +10,5 @@ __all__ = [
     "Router",
     "Target",
     "TargetType",
+    "StewardsRouter",
 ]

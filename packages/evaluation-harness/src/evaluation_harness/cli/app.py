@@ -213,7 +213,10 @@ def run(
     end_at: str | None = typer.Option(None, help="ISO created_at window end"),
     limit: int | None = typer.Option(None, help="Max PRs"),
     baseline: list[str] = typer.Option(
-        ["mentions"], "--baseline", help="Baseline(s) to evaluate"
+        ["mentions"], "--baseline", "--router", help="Router(s) to evaluate"
+    ),
+    config: str | None = typer.Option(
+        None, "--config", help="Router config path (required for stewards)"
     ),
 ):
     prs = pr_number
@@ -232,6 +235,11 @@ def run(
     if run_id is None:
         cfg.run_id = compute_run_id(cfg=cfg)
 
-    res = run_streaming_eval(cfg=cfg, pr_numbers=list(prs), baselines=list(baseline))
+    res = run_streaming_eval(
+        cfg=cfg,
+        pr_numbers=list(prs),
+        baselines=list(baseline),
+        router_config_path=config,
+    )
     # Use plain output (no rich wrapping) for machine parsing.
     typer.echo(f"run_dir {res.run_dir}")

@@ -13,6 +13,7 @@ from ..router.base import RouteResult
 from ..router.baselines.codeowners import CodeownersRouter
 from ..router.baselines.mentions import MentionsRouter
 from ..router.baselines.popularity import PopularityRouter
+from ..router.stewards import StewardsRouter
 from .models import PRSnapshotArtifact, RouteArtifact
 from .paths import pr_route_result_path, pr_snapshot_path
 
@@ -112,6 +113,7 @@ def build_route_result(
     as_of: datetime,
     data_dir: str | Path = "data",
     top_k: int = 5,
+    config_path: str | Path | None = None,
 ) -> RouteResult:
     if baseline == "mentions":
         router = MentionsRouter()
@@ -121,6 +123,10 @@ def build_route_result(
         # Must not read mutable checkout state: CODEOWNERS is loaded from the
         # snapshot directory pinned to the PR base SHA.
         router = CodeownersRouter(enabled=True)
+    elif baseline == "stewards":
+        if config_path is None:
+            raise ValueError("config_path is required for stewards router")
+        router = StewardsRouter(config_path=config_path)
     else:
         raise ValueError(f"unknown baseline: {baseline}")
 
@@ -137,6 +143,7 @@ def build_route_artifact(
     as_of: datetime,
     data_dir: str | Path = "data",
     top_k: int = 5,
+    config_path: str | Path | None = None,
 ) -> RouteArtifact:
     result = build_route_result(
         baseline=baseline,
@@ -145,6 +152,7 @@ def build_route_artifact(
         as_of=as_of,
         data_dir=data_dir,
         top_k=top_k,
+        config_path=config_path,
     )
     return RouteArtifact(baseline=baseline, result=result)
 

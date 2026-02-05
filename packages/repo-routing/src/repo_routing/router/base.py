@@ -37,6 +37,7 @@ class RouteResult(BaseModel):
     candidates: list[RouteCandidate] = Field(default_factory=list)
 
     risk: str = "unknown"
+    confidence: str = "unknown"
     notes: list[str] = Field(default_factory=list)
 
 

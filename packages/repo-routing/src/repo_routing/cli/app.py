@@ -67,7 +67,10 @@ def route(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     pr_number: int = typer.Option(..., help="Pull request number"),
     baseline: str = typer.Option(
-        ..., help="Baseline: mentions | popularity | codeowners"
+        ..., help="Baseline: mentions | popularity | codeowners | stewards"
+    ),
+    config: str | None = typer.Option(
+        None, help="Scoring config path (required for stewards)"
     ),
     run_id: str = typer.Option(..., help="Evaluation run id"),
     as_of: str = typer.Option(..., help="ISO timestamp cutoff"),
@@ -84,6 +87,7 @@ def route(
         as_of=as_of_dt,
         data_dir=cfg.data_dir,
         top_k=top_k,
+        config_path=config,
     )
     writer = ArtifactWriter(repo=cfg.repo, data_dir=cfg.data_dir, run_id=run_id)
     out = writer.write_route_result(artifact)
@@ -111,6 +115,9 @@ def build_artifacts(
     baseline: list[str] = typer.Option(
         ["mentions", "popularity", "codeowners"],
         help="Baselines to run",
+    ),
+    config: str | None = typer.Option(
+        None, help="Scoring config path (used by stewards)"
     ),
     data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
 ):
@@ -162,6 +169,7 @@ def build_artifacts(
                 as_of=cutoff,
                 data_dir=cfg.data_dir,
                 top_k=top_k,
+                config_path=config,
             )
             route_path = writer.write_route_result(art)
             print(f"[bold]wrote[/bold] {route_path}")

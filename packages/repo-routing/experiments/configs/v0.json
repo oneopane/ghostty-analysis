@@ -1,0 +1,32 @@
+{
+  "version": "v0",
+  "feature_version": "v0",
+  "candidate_pool": {
+    "lookback_days": 180,
+    "exclude_author": true,
+    "exclude_bots": true
+  },
+  "decay": {
+    "half_life_days": 30,
+    "lookback_days": 180
+  },
+  "event_weights": {
+    "review_submitted": 1.0,
+    "review_comment_created": 0.4,
+    "comment_created": 0.2
+  },
+  "weights": {
+    "area_overlap_activity": 1.0,
+    "activity_total": 0.2
+  },
+  "filters": {
+    "min_activity_total": 0.0
+  },
+  "thresholds": {
+    "confidence_high_margin": 0.15,
+    "confidence_med_margin": 0.05
+  },
+  "labels": {
+    "include_area_labels": false
+  }
+}
