@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import marimo as mo
-import pyarrow.parquet as pq
 
 
 app = mo.App()
@@ -12,6 +8,20 @@ app = mo.App()
 
 @app.cell
 def _():
+    import json
+    from pathlib import Path
+
+    import marimo as mo
+    try:
+        import pyarrow.parquet as pq
+    except ModuleNotFoundError:
+        pq = None
+
+    return mo, Path, json, pq
+
+
+@app.cell
+def _(mo):
     repo = mo.ui.text(label="repo", value="owner/name")
     export_run_id = mo.ui.text(label="export run id", value="run")
     data_dir = mo.ui.text(label="data dir", value="data")
@@ -27,8 +37,10 @@ def _(repo, export_run_id, data_dir):
 
 
 @app.cell
-def _(export_dir):
+def _(export_dir, pq):
     def load_table(name: str):
+        if pq is None:
+            return None
         path = export_dir / name
         if not path.exists():
             return None
@@ -41,7 +53,10 @@ def _(export_dir):
 
 
 @app.cell
-def _(mo, prs, pr_activity):
+def _(mo, prs, pr_activity, pq):
+    if pq is None:
+        mo.md("`pyarrow` is missing. Run via `uv run --project packages/repo-routing marimo run ...`.")
+        return
     if prs is None:
         mo.md("Missing `prs.parquet` in export dir.")
     else:
@@ -55,18 +70,26 @@ def _(mo, prs, pr_activity):
 
 @app.cell
 def _(pr_activity):
-    if pr_activity is None:
-        return None
-    try:
-        df = pr_activity.to_pandas()
-    except Exception:
-        return None
-    activity_counts = df.groupby("actor_login")["kind"].count().sort_values(ascending=False)
-    activity_counts.head(10)
+    activity_counts = None
+    if pr_activity is not None:
+        try:
+            df = pr_activity.to_pandas()
+        except Exception:
+            activity_counts = None
+        else:
+            activity_counts = (
+                df.groupby("actor_login")["kind"]
+                .count()
+                .sort_values(ascending=False)
+            )
+
+    if activity_counts is not None:
+        activity_counts.head(10)
+    return activity_counts
 
 
 @app.cell
-def _():
+def _(Path, json):
     def write_config(path: Path) -> Path:
         config = {
             "version": "v0",
