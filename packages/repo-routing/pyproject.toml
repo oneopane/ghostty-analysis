@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.12.5",
+  "pyarrow>=16.0.0",
   "rich>=14.2.0",
   "typer>=0.21.1",
 ]
