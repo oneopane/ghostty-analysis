@@ -1,9 +1,7 @@
-from __future__ import annotations
+import marimo
 
-import marimo as mo
-
-
-app = mo.App()
+__generated_with = "0.19.7"
+app = marimo.App()
 
 
 @app.cell
@@ -54,18 +52,22 @@ def _(export_dir, pq):
 
 @app.cell
 def _(mo, prs, pr_activity, pq):
+    note = None
     if pq is None:
-        mo.md("`pyarrow` is missing. Run via `uv run --project packages/repo-routing marimo run ...`.")
-        return
-    if prs is None:
-        mo.md("Missing `prs.parquet` in export dir.")
+        note = mo.md(
+            "`pyarrow` is missing. Run via `uv run --project packages/repo-routing marimo run ...`."
+        )
     else:
-        mo.md(f"Loaded `{prs.num_rows}` PR rows.")
+        if prs is None:
+            mo.md("Missing `prs.parquet` in export dir.")
+        else:
+            mo.md(f"Loaded `{prs.num_rows}` PR rows.")
 
-    if pr_activity is None:
-        mo.md("Missing `pr_activity.parquet` in export dir.")
-    else:
-        mo.md(f"Loaded `{pr_activity.num_rows}` activity rows.")
+        if pr_activity is None:
+            mo.md("Missing `pr_activity.parquet` in export dir.")
+        else:
+            mo.md(f"Loaded `{pr_activity.num_rows}` activity rows.")
+    return note
 
 
 @app.cell
