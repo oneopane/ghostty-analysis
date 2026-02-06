@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0.0",
+  "plan": {
+    "slug": "repo-features",
+    "title": "Repo Features",
+    "created_at": "2026-02-07T02:02:52.081Z",
+    "updated_at": "2026-02-07T02:02:52.081Z",
+    "scope": "Repository scoped delivery plan",
+    "goals": [
+      "Deliver requested outcome with explicit verification"
+    ],
+    "non_goals": [],
+    "assumptions": [],
+    "risks": [],
+    "open_questions": [],
+    "preferences": {
+      "style_guides": [],
+      "test_strategy": "Use project test commands when available",
+      "repo_conventions": []
+    }
+  },
+  "nodes": {
+    "Nmlbo6b08f7dd42072e": {
+      "id": "Nmlbo6b08f7dd42072e",
+      "title": "Initial deliverable",
+      "summary": "Refine this node into concrete tasks.",
+      "type": "deliverable",
+      "status": "todo",
+      "priority": 50,
+      "estimate": {
+        "tshirt": "m",
+        "notes": "placeholder"
+      },
+      "tags": [
+        "bootstrap"
+      ],
+      "deliverables": [
+        {
+          "kind": "doc",
+          "path": "",
+          "description": "Define concrete output artifacts"
+        }
+      ],
+      "exit_criteria": [
+        {
+          "id": "ECmlbo6b088cc15573cc",
+          "text": "Requirements captured with verification steps"
+        }
+      ],
+      "verification": [
+        {
+          "kind": "manual",
+          "value": "Review against user request",
+          "notes": "Replace with commands"
+        }
+      ],
+      "files_touched": [],
+      "interfaces": [],
+      "blockers": [],
+      "questions": [],
+      "provenance": {
+        "last_operator": "derive",
+        "last_updated_at": "2026-02-07T02:02:52.081Z",
+        "derived_from": {
+          "branch_ref": "current",
+          "message_refs": []
+        }
+      }
+    }
+  },
+  "edges": [],
+  "questions": {},
+  "runs": {
+    "history": []
+  }
+}
