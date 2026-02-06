@@ -4,218 +4,200 @@ import re
 from collections import Counter
 
 from ...inputs.models import PRInputBundle
+from .patterns import (
+    CI_BUILD_PATH_HINTS,
+    DOC_PATH_HINTS,
+    LOCK_VENDOR_GENERATED_HINTS,
+    TEST_PATH_HINTS,
+    parent_directory,
+    path_extension,
+)
+from .stats import median_int, normalized_entropy, safe_ratio
+
+
+def _file_changes(input: PRInputBundle) -> list[int]:
+    return [int(f.changes or 0) for f in input.changed_files]
+
+
+def _file_additions(input: PRInputBundle) -> list[int]:
+    return [int(f.additions or 0) for f in input.changed_files]
+
+
+def _file_deletions(input: PRInputBundle) -> list[int]:
+    return [int(f.deletions or 0) for f in input.changed_files]
 
 
 def changed_file_count(input: PRInputBundle) -> int:
-    """Feature #1: number of changed files.
-
-    Derivation: `len(input.changed_files)` from as-of snapshot.
-    """
-    raise NotImplementedError
+    return len(input.changed_files)
 
 
 def total_additions(input: PRInputBundle) -> int:
-    """Feature #2: total additions.
-
-    Derivation: sum `additions` across `input.changed_files` (from pull_request_files@head_sha).
-    """
-    raise NotImplementedError
+    return sum(_file_additions(input))
 
 
 def total_deletions(input: PRInputBundle) -> int:
-    """Feature #3: total deletions.
-
-    Derivation: sum `deletions` across `input.changed_files`.
-    """
-    raise NotImplementedError
+    return sum(_file_deletions(input))
 
 
 def total_churn(input: PRInputBundle) -> int:
-    """Feature #4: total changes/churn.
-
-    Derivation: sum `changes` across `input.changed_files`.
-    """
-    raise NotImplementedError
+    return sum(_file_changes(input))
 
 
 def max_file_churn(input: PRInputBundle) -> int:
-    """Feature #5: max file churn.
-
-    Derivation: max `changes` across changed files.
-    """
-    raise NotImplementedError
+    changes = _file_changes(input)
+    return max(changes) if changes else 0
 
 
 def median_file_churn(input: PRInputBundle) -> float:
-    """Feature #6: median file churn.
-
-    Derivation: median of per-file `changes` values from changed files list.
-    """
-    raise NotImplementedError
+    return median_int(_file_changes(input))
 
 
 def status_ratios(input: PRInputBundle) -> dict[str, float]:
-    """Feature #7: ratios by file status (added/modified/removed).
+    total = float(len(input.changed_files))
+    status_counts = Counter((f.status or "unknown").lower() for f in input.changed_files)
+    return {
+        "added": safe_ratio(float(status_counts.get("added", 0)), total),
+        "modified": safe_ratio(float(status_counts.get("modified", 0)), total),
+        "removed": safe_ratio(float(status_counts.get("removed", 0)), total),
+    }
 
-    Derivation: count statuses from pull_request_files.status and normalize by file count.
-    """
-    raise NotImplementedError
+
+def _contains_any(path: str, hints: tuple[str, ...]) -> bool:
+    p = path.lower()
+    return any(h in p for h in hints)
 
 
 def touches_tests(input: PRInputBundle) -> bool:
-    """Feature #8: binary test-surface indicator.
-
-    Derivation: any changed file path matches test-like patterns (tests/, __tests__, etc).
-    """
-    raise NotImplementedError
+    return any(_contains_any(f.path, TEST_PATH_HINTS) for f in input.changed_files)
 
 
 def touches_docs(input: PRInputBundle) -> bool:
-    """Feature #9: binary docs-surface indicator.
-
-    Derivation: path prefix checks (docs/) and extension checks (.md/.rst).
-    """
-    raise NotImplementedError
+    for f in input.changed_files:
+        p = f.path.lower()
+        if _contains_any(p, DOC_PATH_HINTS) or p.endswith(".md") or p.endswith(".rst"):
+            return True
+    return False
 
 
 def touches_ci_build(input: PRInputBundle) -> bool:
-    """Feature #10: binary build/CI indicator.
-
-    Derivation: path matches .github/, ci/, build/, workflow-like files, Makefile.
-    """
-    raise NotImplementedError
+    for f in input.changed_files:
+        p = f.path.lower()
+        if _contains_any(p, CI_BUILD_PATH_HINTS):
+            return True
+        if p.endswith("makefile") or p.endswith(".github/workflows"):
+            return True
+    return False
 
 
 def distinct_directories_count(input: PRInputBundle) -> int:
-    """Feature #11: number of unique parent directories touched.
-
-    Derivation: parent dir set over changed file paths.
-    """
-    raise NotImplementedError
+    return len({parent_directory(f.path) for f in input.changed_files})
 
 
 def directory_entropy(input: PRInputBundle) -> float:
-    """Feature #12: entropy over touched directories.
-
-    Derivation: count files per parent directory, then compute Shannon entropy.
-    """
-    raise NotImplementedError
+    dirs = Counter(parent_directory(f.path) for f in input.changed_files)
+    return normalized_entropy(dirs.values())
 
 
 def distinct_extensions_count(input: PRInputBundle) -> int:
-    """Feature #13: number of unique file extensions.
-
-    Derivation: normalize extension per path, count unique values.
-    """
-    raise NotImplementedError
+    return len({path_extension(f.path) for f in input.changed_files})
 
 
 def top_extension_share(input: PRInputBundle) -> float:
-    """Feature #14: dominant extension share.
-
-    Derivation: max(files_in_extension / total_files).
-    """
-    raise NotImplementedError
+    n = len(input.changed_files)
+    if n == 0:
+        return 0.0
+    ext_counts = Counter(path_extension(f.path) for f in input.changed_files)
+    return safe_ratio(float(max(ext_counts.values())), float(n))
 
 
 def includes_lock_vendor_generated(input: PRInputBundle) -> bool:
-    """Feature #15: lock/vendor/generated indicator.
-
-    Derivation: path/filename pattern match for lockfiles, vendor/, dist/, generated/.
-    """
-    raise NotImplementedError
+    return any(_contains_any(f.path, LOCK_VENDOR_GENERATED_HINTS) for f in input.changed_files)
 
 
 def areas_count(input: PRInputBundle) -> int:
-    """Feature #16: number of unique areas touched.
-
-    Derivation: `len(set(input.file_areas.values()))` (already as-of + deterministic mapping).
-    """
-    raise NotImplementedError
+    return len({a for a in input.file_areas.values() if a})
 
 
 def max_files_in_one_area(input: PRInputBundle) -> int:
-    """Feature #17: dominant area mass.
-
-    Derivation: count files per area from `input.file_areas`, take max.
-    """
-    raise NotImplementedError
+    counts = Counter(a for a in input.file_areas.values() if a)
+    return max(counts.values()) if counts else 0
 
 
 def area_entropy(input: PRInputBundle) -> float:
-    """Feature #18: entropy over area distribution.
-
-    Derivation: count files per area, compute Shannon entropy.
-    """
-    raise NotImplementedError
+    counts = Counter(a for a in input.file_areas.values() if a)
+    return normalized_entropy(counts.values())
 
 
 def is_multi_area(input: PRInputBundle) -> bool:
-    """Feature #19: binary multi-area flag.
-
-    Derivation: `areas_count > 1`.
-    """
-    raise NotImplementedError
+    return areas_count(input) > 1
 
 
 def title_length_chars(input: PRInputBundle) -> int:
-    """Feature #20: PR title length.
-
-    Derivation: character length of as-of title.
-    """
-    raise NotImplementedError
+    return len((input.title or "").strip())
 
 
 def body_length_chars(input: PRInputBundle) -> int:
-    """Feature #21: PR body length.
-
-    Derivation: character length of as-of body.
-    """
-    raise NotImplementedError
+    return len((input.body or "").strip())
 
 
 def is_body_empty_or_near_empty(input: PRInputBundle) -> bool:
-    """Feature #22: binary empty/near-empty body flag.
-
-    Derivation: body stripped length threshold (e.g., 0..N chars).
-    """
-    raise NotImplementedError
+    return body_length_chars(input) <= 20
 
 
 def mention_count(input: PRInputBundle) -> int:
-    """Feature #23: count of @mentions in title+body.
-
-    Derivation: regex over `input.title` and `input.body` for @user / @org/team tokens.
-    """
-    raise NotImplementedError
+    text = "\n".join([input.title or "", input.body or ""])
+    return len(MENTION_RE.findall(text))
 
 
 def url_count(input: PRInputBundle) -> int:
-    """Feature #24: count of URLs in PR body.
-
-    Derivation: regex match for http(s) links in body.
-    """
-    raise NotImplementedError
+    return len(URL_RE.findall(input.body or ""))
 
 
 def gate_completeness_score(input: PRInputBundle) -> float:
-    """Feature #25: fraction of required gate fields present.
-
-    Derivation: from `input.gate_fields` missing booleans; score in [0,1].
-    """
-    raise NotImplementedError
+    missing = [
+        input.gate_fields.missing_issue,
+        input.gate_fields.missing_ai_disclosure,
+        input.gate_fields.missing_provenance,
+    ]
+    present_count = sum(0 if m else 1 for m in missing)
+    return safe_ratio(float(present_count), 3.0)
 
 
 def build_pr_surface_features(input: PRInputBundle) -> dict[str, int | float | bool]:
-    """Assemble PR surface family features (#1-#25).
+    ratios = status_ratios(input)
+    return {
+        "pr.files.count": changed_file_count(input),
+        "pr.churn.additions_total": total_additions(input),
+        "pr.churn.deletions_total": total_deletions(input),
+        "pr.churn.total": total_churn(input),
+        "pr.churn.file_max": max_file_churn(input),
+        "pr.churn.file_median": median_file_churn(input),
+        "pr.files.status_added_ratio": ratios["added"],
+        "pr.files.status_modified_ratio": ratios["modified"],
+        "pr.files.status_removed_ratio": ratios["removed"],
+        "pr.paths.touches_tests": touches_tests(input),
+        "pr.paths.touches_docs": touches_docs(input),
+        "pr.paths.touches_ci_build": touches_ci_build(input),
+        "pr.paths.distinct_directories": distinct_directories_count(input),
+        "pr.paths.directory_entropy": directory_entropy(input),
+        "pr.paths.distinct_extensions": distinct_extensions_count(input),
+        "pr.paths.top_extension_share": top_extension_share(input),
+        "pr.paths.includes_lock_vendor_generated": includes_lock_vendor_generated(input),
+        "pr.areas.count": areas_count(input),
+        "pr.areas.max_files_one_area": max_files_in_one_area(input),
+        "pr.areas.entropy": area_entropy(input),
+        "pr.areas.is_multi": is_multi_area(input),
+        "pr.text.title_length_chars": title_length_chars(input),
+        "pr.text.body_length_chars": body_length_chars(input),
+        "pr.text.body_empty_or_near_empty": is_body_empty_or_near_empty(input),
+        "pr.text.mention_count": mention_count(input),
+        "pr.text.url_count": url_count(input),
+        "pr.gates.completeness_score": gate_completeness_score(input),
+    }
 
-    High-level implementation plan:
-    - Compute each feature above from PRInputBundle only (no extra SQL required).
-    - Return flat deterministic dict with stable key naming (`pr.*`).
-    """
-    raise NotImplementedError
 
-
-MENTION_RE = re.compile(r"(?<![A-Za-z0-9_])@[A-Za-z0-9][A-Za-z0-9-]*(?:/[A-Za-z0-9][A-Za-z0-9-]*)?")
+MENTION_RE = re.compile(
+    r"(?<![A-Za-z0-9_])@[A-Za-z0-9][A-Za-z0-9-]*(?:/[A-Za-z0-9][A-Za-z0-9-]*)?"
+)
 URL_RE = re.compile(r"https?://[^\s)\]]+")
 STATUS_COUNTER_TYPE = Counter[str]

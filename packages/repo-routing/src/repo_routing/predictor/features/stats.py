@@ -1,36 +1,49 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 
 
 def normalized_entropy(counts: Iterable[int]) -> float:
-    """TODO: compute normalized Shannon entropy from non-negative counts.
+    """Compute normalized Shannon entropy from non-negative counts.
 
-    High level derivation:
-    - Convert counts to probabilities p_i = c_i / sum(c).
-    - Compute H = -sum(p_i * log(p_i)).
-    - Optionally normalize by log(k) where k = number of non-zero buckets.
-
-    Used by:
-    - directory entropy feature
-    - area entropy feature
+    Returns 0.0 for empty or degenerate inputs (all mass in one bucket).
     """
-    raise NotImplementedError("TODO: implement entropy helper")
+
+    xs = [int(c) for c in counts if int(c) > 0]
+    total = sum(xs)
+    if total <= 0:
+        return 0.0
+
+    k = len(xs)
+    if k <= 1:
+        return 0.0
+
+    probs = [x / total for x in xs]
+    h = -sum(p * math.log(p) for p in probs if p > 0.0)
+    return h / math.log(k)
 
 
 def median_int(values: list[int]) -> float:
-    """TODO: compute median file churn.
+    """Compute median over integer values.
 
-    High level derivation:
-    - Sort integer list.
-    - Return middle value for odd n, avg of two middles for even n.
+    Returns 0.0 for empty input.
     """
-    raise NotImplementedError("TODO: implement median helper")
+
+    if not values:
+        return 0.0
+
+    xs = sorted(int(v) for v in values)
+    n = len(xs)
+    mid = n // 2
+    if n % 2 == 1:
+        return float(xs[mid])
+    return float(xs[mid - 1] + xs[mid]) / 2.0
 
 
 def safe_ratio(numerator: float, denominator: float) -> float:
-    """TODO: deterministic division helper returning 0.0 for denominator=0.
+    """Deterministic division helper returning 0.0 for denominator <= 0."""
 
-    Used by percentage/share features (status ratios, owner coverage, top-extension share).
-    """
-    raise NotImplementedError("TODO: implement ratio helper")
+    if denominator <= 0.0:
+        return 0.0
+    return float(numerator) / float(denominator)
