@@ -55,14 +55,72 @@ def pr_routes_dir(
     )
 
 
+def pr_inputs_path(
+    *, repo_full_name: str, data_dir: str | Path, run_id: str, pr_number: int
+) -> Path:
+    return (
+        pr_dir(
+            repo_full_name=repo_full_name,
+            data_dir=data_dir,
+            run_id=run_id,
+            pr_number=pr_number,
+        )
+        / "inputs.json"
+    )
+
+
+def pr_features_path(
+    *,
+    repo_full_name: str,
+    data_dir: str | Path,
+    run_id: str,
+    pr_number: int,
+    router_id: str,
+) -> Path:
+    return (
+        pr_dir(
+            repo_full_name=repo_full_name,
+            data_dir=data_dir,
+            run_id=run_id,
+            pr_number=pr_number,
+        )
+        / "features"
+        / f"{router_id}.json"
+    )
+
+
+def pr_llm_step_path(
+    *,
+    repo_full_name: str,
+    data_dir: str | Path,
+    run_id: str,
+    pr_number: int,
+    router_id: str,
+    step: str,
+) -> Path:
+    return (
+        pr_dir(
+            repo_full_name=repo_full_name,
+            data_dir=data_dir,
+            run_id=run_id,
+            pr_number=pr_number,
+        )
+        / "llm"
+        / router_id
+        / f"{step}.json"
+    )
+
+
 def pr_route_result_path(
     *,
     repo_full_name: str,
     data_dir: str | Path,
     run_id: str,
     pr_number: int,
-    baseline: str,
+    baseline: str | None = None,
+    router_id: str | None = None,
 ) -> Path:
+    rid = (router_id or baseline or "router").strip()
     return (
         pr_routes_dir(
             repo_full_name=repo_full_name,
@@ -70,5 +128,5 @@ def pr_route_result_path(
             run_id=run_id,
             pr_number=pr_number,
         )
-        / f"{baseline}.json"
+        / f"{rid}.json"
     )

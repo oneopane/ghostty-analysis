@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
@@ -11,6 +11,7 @@ from ..history.reader import HistoryReader
 from ..parsing.gates import GateFields, parse_gate_fields
 from ..paths import repo_db_path
 from ..router.base import Evidence
+from ..time import dt_sql_utc, parse_dt_utc, require_dt_utc
 from ..scoring import (
     confidence_from_scores,
     decay_weight,
@@ -20,22 +21,6 @@ from ..scoring import (
 )
 from ..scoring.config import ScoringConfig
 from .models import AnalysisResult, CandidateAnalysis, CandidateFeatures
-
-
-def _parse_dt(value: object) -> datetime | None:
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value
-    s = str(value)
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    dt = datetime.fromisoformat(s)
-    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
-
-
-def _dt_sql(dt: datetime) -> str:
-    return dt.replace(tzinfo=None).isoformat(sep=" ", timespec="microseconds")
 
 
 def _is_bot_login(login: str) -> bool:
@@ -61,8 +46,8 @@ def _candidate_pool(
     author_login: str | None,
 ) -> list[str]:
     start = cutoff - timedelta(days=lookback_days)
-    start_s = _dt_sql(start)
-    cutoff_s = _dt_sql(cutoff)
+    start_s = dt_sql_utc(start, timespec="microseconds")
+    cutoff_s = dt_sql_utc(cutoff, timespec="microseconds")
 
     rows = conn.execute(
         """
@@ -109,8 +94,8 @@ def _activity_events(
     lookback_days: int,
 ) -> list[ActivityEvent]:
     start = cutoff - timedelta(days=lookback_days)
-    start_s = _dt_sql(start)
-    cutoff_s = _dt_sql(cutoff)
+    start_s = dt_sql_utc(start, timespec="microseconds")
+    cutoff_s = dt_sql_utc(cutoff, timespec="microseconds")
 
     events: list[ActivityEvent] = []
 
@@ -130,7 +115,7 @@ def _activity_events(
         (repo_id, start_s, cutoff_s),
     ).fetchall()
     for r in review_rows:
-        occurred_at = _parse_dt(r["occurred_at"])
+        occurred_at = parse_dt_utc(r["occurred_at"])
         if occurred_at is None:
             continue
         events.append(
@@ -161,7 +146,7 @@ def _activity_events(
         (repo_id, start_s, cutoff_s),
     ).fetchall()
     for r in comment_rows:
-        occurred_at = _parse_dt(r["occurred_at"])
+        occurred_at = parse_dt_utc(r["occurred_at"])
         if occurred_at is None:
             continue
         comment_type = r["comment_type"]
@@ -186,7 +171,7 @@ def _activity_events(
 def _pr_head_sha_as_of(
     *, conn: sqlite3.Connection, pr_id: int, as_of: datetime
 ) -> str | None:
-    as_of_s = _dt_sql(as_of)
+    as_of_s = dt_sql_utc(as_of, timespec="microseconds")
     row = conn.execute(
         """
         select phi.head_sha as head_sha
@@ -289,11 +274,12 @@ def analyze_pr(
     data_dir: str | Path = "data",
     config_path: str | Path,
 ) -> AnalysisResult:
+    cutoff_utc = require_dt_utc(cutoff, name="cutoff")
     config = load_scoring_config(config_path)
     overrides = load_repo_area_overrides(repo_full_name=repo, data_dir=data_dir)
 
     with HistoryReader(repo_full_name=repo, data_dir=data_dir) as reader:
-        snapshot = reader.pull_request_snapshot(number=pr_number, as_of=cutoff)
+        snapshot = reader.pull_request_snapshot(number=pr_number, as_of=cutoff_utc)
 
     gates = parse_gate_fields(snapshot.body)
     current_paths = [f.path for f in snapshot.changed_files]
@@ -313,7 +299,7 @@ def analyze_pr(
         candidates = _candidate_pool(
             conn=conn,
             repo_id=repo_id,
-            cutoff=cutoff,
+            cutoff=cutoff_utc,
             lookback_days=config.candidate_pool.lookback_days,
             exclude_bots=config.candidate_pool.exclude_bots,
             exclude_author=config.candidate_pool.exclude_author,
@@ -323,7 +309,7 @@ def analyze_pr(
         events = _activity_events(
             conn=conn,
             repo_id=repo_id,
-            cutoff=cutoff,
+            cutoff=cutoff_utc,
             lookback_days=config.decay.lookback_days,
         )
 
@@ -337,7 +323,7 @@ def analyze_pr(
             weight = float(event_weights.get(event.kind, 0.0))
             if weight == 0.0:
                 continue
-            age_days = (cutoff - event.occurred_at).total_seconds() / 86400.0
+            age_days = (cutoff_utc - event.occurred_at).total_seconds() / 86400.0
             if age_days < 0:
                 continue
             if age_days > config.decay.lookback_days:
@@ -390,7 +376,7 @@ def analyze_pr(
     return AnalysisResult(
         repo=repo,
         pr_number=pr_number,
-        cutoff=cutoff,
+        cutoff=cutoff_utc,
         author_login=snapshot.author_login,
         areas=areas,
         gates=gates,

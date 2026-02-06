@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 
 import typer
 from rich import print
@@ -14,9 +15,47 @@ from ..artifacts.writer import (
 )
 from ..config import RepoRoutingConfig
 from ..paths import repo_codeowners_dir, repo_db_path
+from ..time import parse_dt_utc
 
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
+
+_VALID_BASELINES = {"mentions", "popularity", "codeowners", "stewards"}
+
+
+def _parse_iso_utc(value: str, *, param: str) -> datetime:
+    try:
+        dt = parse_dt_utc(value)
+    except ValueError as exc:
+        raise typer.BadParameter(f"invalid ISO timestamp for {param}: {value}") from exc
+    if dt is None:
+        raise typer.BadParameter(f"missing {param}")
+    return dt
+
+
+def _normalize_baselines(values: list[str]) -> list[str]:
+    normalized = [v.strip().lower() for v in values if v.strip()]
+    if not normalized:
+        raise typer.BadParameter("at least one baseline is required")
+
+    unknown = sorted({b for b in normalized if b not in _VALID_BASELINES})
+    if unknown:
+        valid = ", ".join(sorted(_VALID_BASELINES))
+        raise typer.BadParameter(
+            f"unknown baseline(s): {', '.join(unknown)}. valid: {valid}"
+        )
+    return normalized
+
+
+def _validate_stewards_config(*, baselines: list[str], config: str | None) -> str | None:
+    if "stewards" not in baselines:
+        return config
+    if config is None:
+        raise typer.BadParameter("--config is required when baseline includes stewards")
+    config_path = Path(config)
+    if not config_path.exists():
+        raise typer.BadParameter(f"--config path does not exist: {config_path}")
+    return str(config_path)
 
 
 @app.command()
@@ -35,14 +74,6 @@ def info(
     )
 
 
-def _parse_as_of(value: str) -> datetime:
-    # Accept either ISO with timezone or naive ISO; stored timestamps are UTC-ish.
-    s = value.strip()
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    return datetime.fromisoformat(s)
-
-
 @app.command()
 def snapshot(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
@@ -53,7 +84,7 @@ def snapshot(
 ):
     """Build a deterministic PR snapshot artifact."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
-    as_of_dt = _parse_as_of(as_of)
+    as_of_dt = _parse_iso_utc(as_of, param="--as-of")
     artifact = build_pr_snapshot_artifact(
         repo=cfg.repo, pr_number=pr_number, as_of=as_of_dt, data_dir=cfg.data_dir
     )
@@ -79,15 +110,18 @@ def route(
 ):
     """Run one baseline and emit a RouteResult artifact."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
-    as_of_dt = _parse_as_of(as_of)
+    baselines = _normalize_baselines([baseline])
+    config_path = _validate_stewards_config(baselines=baselines, config=config)
+    as_of_dt = _parse_iso_utc(as_of, param="--as-of")
+
     artifact = build_route_artifact(
-        baseline=baseline,
+        baseline=baselines[0],
         repo=cfg.repo,
         pr_number=pr_number,
         as_of=as_of_dt,
         data_dir=cfg.data_dir,
         top_k=top_k,
-        config_path=config,
+        config_path=config_path,
     )
     writer = ArtifactWriter(repo=cfg.repo, data_dir=cfg.data_dir, run_id=run_id)
     out = writer.write_route_result(artifact)
@@ -123,10 +157,14 @@ def build_artifacts(
 ):
     """Build snapshot + baseline routing artifacts for a PR list/window."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
+    baselines = _normalize_baselines(list(baseline))
+    config_path = _validate_stewards_config(baselines=baselines, config=config)
 
-    as_of_dt: datetime | None = _parse_as_of(as_of) if as_of is not None else None
-    start_dt = _parse_as_of(start_at) if start_at is not None else None
-    end_dt = _parse_as_of(end_at) if end_at is not None else None
+    as_of_dt: datetime | None = (
+        _parse_iso_utc(as_of, param="--as-of") if as_of is not None else None
+    )
+    start_dt = _parse_iso_utc(start_at, param="--start-at") if start_at else None
+    end_dt = _parse_iso_utc(end_at, param="--end-at") if end_at else None
 
     pr_numbers: list[int]
     if pr:
@@ -141,35 +179,47 @@ def build_artifacts(
             )
         )
 
+    if not pr_numbers:
+        raise typer.BadParameter("no PRs selected")
+
+    # Preflight PR cutoffs before any artifact writes.
+    cutoff_by_pr: dict[int, datetime] = {}
+    for pr_number in pr_numbers:
+        if as_of_dt is not None:
+            cutoff_by_pr[pr_number] = as_of_dt
+            continue
+
+        created = pr_created_at(repo=cfg.repo, data_dir=cfg.data_dir, pr_number=pr_number)
+        if created is None:
+            raise typer.BadParameter(f"missing created_at for {cfg.repo}#{pr_number}")
+        cutoff_by_pr[pr_number] = created
+
     writer = ArtifactWriter(repo=cfg.repo, data_dir=cfg.data_dir, run_id=run_id)
     for pr_number in pr_numbers:
-        cutoff = as_of_dt
-        if cutoff is None:
-            created = pr_created_at(
-                repo=cfg.repo, data_dir=cfg.data_dir, pr_number=pr_number
-            )
-            if created is None:
-                raise RuntimeError(f"missing created_at for {cfg.repo}#{pr_number}")
-            cutoff = created
+        cutoff = cutoff_by_pr[pr_number]
 
+        # Build first, write second: no partial per-PR outputs if route build fails.
         snap = build_pr_snapshot_artifact(
             repo=cfg.repo,
             pr_number=pr_number,
             as_of=cutoff,
             data_dir=cfg.data_dir,
         )
-        snap_path = writer.write_pr_snapshot(snap)
-        print(f"[bold]wrote[/bold] {snap_path}")
-
-        for b in baseline:
-            art = build_route_artifact(
+        route_artifacts = [
+            build_route_artifact(
                 baseline=b,
                 repo=cfg.repo,
                 pr_number=pr_number,
                 as_of=cutoff,
                 data_dir=cfg.data_dir,
                 top_k=top_k,
-                config_path=config,
+                config_path=config_path,
             )
+            for b in baselines
+        ]
+
+        snap_path = writer.write_pr_snapshot(snap)
+        print(f"[bold]wrote[/bold] {snap_path}")
+        for art in route_artifacts:
             route_path = writer.write_route_result(art)
             print(f"[bold]wrote[/bold] {route_path}")

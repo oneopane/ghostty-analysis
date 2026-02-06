@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 
 import typer
 from rich import print
+from repo_routing.time import parse_dt_utc
+
+from repo_routing.registry import RouterSpec, router_id_for_spec
 
 from ..cutoff import cutoff_for_pr
 from ..paths import (
@@ -22,6 +26,108 @@ from ..runner import run_streaming_eval
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
+_VALID_ROUTERS = {"mentions", "popularity", "codeowners", "stewards"}
+
+
+def _parse_dt(value: str) -> datetime:
+    try:
+        dt = parse_dt_utc(value)
+    except ValueError as exc:
+        raise typer.BadParameter(f"invalid ISO timestamp: {value}") from exc
+    if dt is None:
+        raise typer.BadParameter("missing datetime value")
+    return dt
+
+
+def _normalize_builtin_routers(values: list[str], *, option_name: str) -> list[str]:
+    normalized = [v.strip().lower() for v in values if v.strip()]
+    if not normalized:
+        return []
+
+    unknown = sorted({b for b in normalized if b not in _VALID_ROUTERS})
+    if unknown:
+        valid = ", ".join(sorted(_VALID_ROUTERS))
+        raise typer.BadParameter(
+            f"unknown {option_name}(s): {', '.join(unknown)}. valid: {valid}"
+        )
+    return normalized
+
+
+def _apply_router_configs(
+    *,
+    specs: list[RouterSpec],
+    router_configs: list[str],
+) -> list[RouterSpec]:
+    if not router_configs:
+        return specs
+
+    keyed = [c for c in router_configs if "=" in c]
+    positional = [c for c in router_configs if "=" not in c]
+
+    out = [s.model_copy() for s in specs]
+
+    if keyed:
+        mapping: dict[str, str] = {}
+        for item in keyed:
+            key, value = item.split("=", 1)
+            if not key.strip() or not value.strip():
+                raise typer.BadParameter(f"invalid --router-config pair: {item}")
+            mapping[key.strip()] = value.strip()
+
+        for i, spec in enumerate(out):
+            rid = router_id_for_spec(spec)
+            if rid in mapping:
+                out[i] = spec.model_copy(update={"config_path": mapping[rid]})
+            elif spec.name in mapping:
+                out[i] = spec.model_copy(update={"config_path": mapping[spec.name]})
+
+    if positional:
+        if len(positional) > len(out):
+            raise typer.BadParameter("too many --router-config values for routers")
+        for i, cfg in enumerate(positional):
+            out[i] = out[i].model_copy(update={"config_path": cfg})
+
+    return out
+
+
+def _build_router_specs(
+    *,
+    routers: list[str],
+    baselines: list[str],
+    router_imports: list[str],
+    router_configs: list[str],
+) -> list[RouterSpec]:
+    builtin = _normalize_builtin_routers(routers, option_name="router")
+    baseline_alias = _normalize_builtin_routers(baselines, option_name="baseline")
+
+    specs: list[RouterSpec] = [
+        RouterSpec(type="builtin", name=name)
+        for name in [*baseline_alias, *builtin]
+    ]
+    specs.extend(
+        [
+            RouterSpec(type="import_path", name=import_path, import_path=import_path)
+            for import_path in router_imports
+        ]
+    )
+
+    if not specs:
+        specs = [RouterSpec(type="builtin", name="mentions")]
+
+    specs = _apply_router_configs(specs=specs, router_configs=router_configs)
+
+    for spec in specs:
+        if spec.type == "builtin" and spec.name == "stewards":
+            if spec.config_path is None:
+                raise typer.BadParameter(
+                    "--config is required when baseline includes stewards"
+                )
+            p = Path(spec.config_path)
+            if not p.exists():
+                raise typer.BadParameter(f"router config path does not exist: {p}")
+
+    return specs
+
 
 @app.command()
 def info(
@@ -31,13 +137,6 @@ def info(
     """Show resolved paths for a repository."""
     print(f"[bold]repo[/bold] {repo}")
     print(f"[bold]db[/bold] {repo_db_path(repo_full_name=repo, data_dir=data_dir)}")
-
-
-def _parse_dt(value: str) -> datetime:
-    s = value.strip()
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    return datetime.fromisoformat(s)
 
 
 @app.command("sample")
@@ -125,7 +224,8 @@ def explain(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     run_id: str = typer.Option(..., help="Evaluation run id"),
     pr_number: int = typer.Option(..., "--pr", help="Pull request number"),
-    baseline: str | None = typer.Option(None, help="Baseline (default: first present)"),
+    baseline: str | None = typer.Option(None, help="Router id (deprecated name)"),
+    router: str | None = typer.Option(None, help="Router id (default: first present)"),
     data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
 ):
     import json
@@ -145,21 +245,21 @@ def explain(
     if row is None:
         raise typer.BadParameter(f"pr not found in per_pr.jsonl: {pr_number}")
 
-    baselines = row.get("baselines") or {}
-    if not isinstance(baselines, dict) or not baselines:
-        raise typer.BadParameter("missing baselines for pr")
+    routers = row.get("routers") or row.get("baselines") or {}
+    if not isinstance(routers, dict) or not routers:
+        raise typer.BadParameter("missing routers for pr")
 
-    chosen = baseline
+    chosen = router or baseline
     if chosen is None:
-        chosen = sorted(baselines.keys(), key=lambda s: str(s).lower())[0]
-    if chosen not in baselines:
-        raise typer.BadParameter(f"baseline not found: {chosen}")
+        chosen = sorted(routers.keys(), key=lambda s: str(s).lower())[0]
+    if chosen not in routers:
+        raise typer.BadParameter(f"router not found: {chosen}")
 
     print(f"[bold]repo[/bold] {repo}")
     print(f"[bold]run_id[/bold] {run_id}")
     print(f"[bold]pr[/bold] {pr_number}")
     print(f"[bold]cutoff[/bold] {row.get('cutoff')}")
-    print(f"[bold]baseline[/bold] {chosen}")
+    print(f"[bold]router[/bold] {chosen}")
     print("")
 
     print("[bold]truth_behavior[/bold]")
@@ -167,7 +267,7 @@ def explain(
         print(f"- {t}")
     print("")
 
-    b = baselines[chosen]
+    b = routers[chosen]
     rr = b.get("route_result") or {}
     print("[bold]candidates[/bold]")
     for c in rr.get("candidates") or []:
@@ -213,12 +313,36 @@ def run(
     end_at: str | None = typer.Option(None, help="ISO created_at window end"),
     limit: int | None = typer.Option(None, help="Max PRs"),
     baseline: list[str] = typer.Option(
-        ["mentions"], "--baseline", "--router", help="Router(s) to evaluate"
+        [], "--baseline", help="Deprecated alias for --router"
+    ),
+    router: list[str] = typer.Option(
+        [], "--router", help="Builtin router name(s) (repeatable)"
+    ),
+    router_import: list[str] = typer.Option(
+        [], "--router-import", help="Import-path router(s): pkg.mod:ClassOrFactory"
+    ),
+    router_config: list[str] = typer.Option(
+        [],
+        "--router-config",
+        help="Router config path(s): router_id=path, name=path, or positional",
     ),
     config: str | None = typer.Option(
-        None, "--config", help="Router config path (required for stewards)"
+        None,
+        "--config",
+        help="Deprecated single router config path (maps to first router)",
     ),
 ):
+    configs = list(router_config)
+    if config is not None:
+        configs.insert(0, config)
+
+    specs = _build_router_specs(
+        routers=list(router),
+        baselines=list(baseline),
+        router_imports=list(router_import),
+        router_configs=configs,
+    )
+
     prs = pr_number
     if not prs:
         prs = sample_pr_numbers_created_in_window(
@@ -238,8 +362,6 @@ def run(
     res = run_streaming_eval(
         cfg=cfg,
         pr_numbers=list(prs),
-        baselines=list(baseline),
-        router_config_path=config,
+        router_specs=specs,
     )
-    # Use plain output (no rich wrapping) for machine parsing.
     typer.echo(f"run_dir {res.run_dir}")

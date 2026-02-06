@@ -20,6 +20,7 @@ class EvalReport(BaseModel):
     db_max_watermark_updated_at: datetime | None = None
     package_versions: dict[str, str | None] = Field(default_factory=dict)
 
+    routers: list[str] = Field(default_factory=list)
     baselines: list[str] = Field(default_factory=list)
 
     routing_agreement: dict[str, RoutingAgreementSummary] = Field(default_factory=dict)

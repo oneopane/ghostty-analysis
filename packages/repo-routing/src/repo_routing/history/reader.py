@@ -7,26 +7,8 @@ from pathlib import Path
 from typing import Iterable
 
 from ..paths import repo_db_path
+from ..time import dt_sql_utc, parse_dt_utc, require_dt_utc
 from .models import PullRequestFile, PullRequestSnapshot, ReviewRequest
-
-
-def _parse_dt(value: object) -> datetime | None:
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value
-    s = str(value)
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    return datetime.fromisoformat(s)
-
-
-def _dt_sql(dt: datetime) -> str:
-    # Ingestion stores timezone-aware datetimes in SQLite as ISO strings.
-    # Comparisons are lexicographic, so we normalize to a consistent format.
-    # SQLite values are stored with microsecond precision (e.g. ".000000");
-    # keep the same precision to make string comparisons reliable.
-    return dt.replace(tzinfo=None).isoformat(sep=" ", timespec="microseconds")
 
 
 @dataclass(frozen=True)
@@ -77,6 +59,7 @@ class HistoryReader:
     def pull_request_snapshot(
         self, *, number: int, as_of: datetime
     ) -> PullRequestSnapshot:
+        as_of_utc = require_dt_utc(as_of, name="as_of")
         repo_id = self.repo_ids().repo_id
         pr_row = self._conn.execute(
             """
@@ -104,13 +87,15 @@ class HistoryReader:
         issue_id = pr_row["issue_id"]
 
         if issue_id is not None:
-            title, body = self._issue_content_as_of(issue_id=int(issue_id), as_of=as_of)
+            title, body = self._issue_content_as_of(
+                issue_id=int(issue_id), as_of=as_of_utc
+            )
         else:
             title, body = pr_row["pr_title"], pr_row["pr_body"]
-        head_sha = self._pr_head_sha_as_of(pull_request_id=pr_id, as_of=as_of)
+        head_sha = self._pr_head_sha_as_of(pull_request_id=pr_id, as_of=as_of_utc)
         files = self._pull_request_files(pull_request_id=pr_id, head_sha=head_sha)
         review_requests = self._review_requests_as_of(
-            pull_request_id=pr_id, as_of=as_of
+            pull_request_id=pr_id, as_of=as_of_utc
         )
 
         return PullRequestSnapshot(
@@ -119,7 +104,7 @@ class HistoryReader:
             pull_request_id=pr_id,
             issue_id=int(issue_id) if issue_id is not None else None,
             author_login=pr_row["author_login"],
-            created_at=_parse_dt(pr_row["created_at"]),
+            created_at=parse_dt_utc(pr_row["created_at"]),
             title=title,
             body=body,
             base_sha=pr_row["base_sha"],
@@ -131,8 +116,8 @@ class HistoryReader:
     def iter_participants(self, *, start: datetime, end: datetime) -> Iterable[str]:
         """Yield user logins who commented or reviewed in [start, end]."""
         repo_id = self.repo_ids().repo_id
-        start_s = _dt_sql(start)
-        end_s = _dt_sql(end)
+        start_s = dt_sql_utc(start, timespec="microseconds")
+        end_s = dt_sql_utc(end, timespec="microseconds")
 
         for row in self._conn.execute(
             """
@@ -170,7 +155,7 @@ class HistoryReader:
     def _issue_content_as_of(
         self, *, issue_id: int, as_of: datetime
     ) -> tuple[str | None, str | None]:
-        as_of_s = _dt_sql(as_of)
+        as_of_s = dt_sql_utc(as_of, timespec="microseconds")
         row = self._conn.execute(
             """
             select ici.title as title, ici.body as body
@@ -202,7 +187,7 @@ class HistoryReader:
     def _pr_head_sha_as_of(
         self, *, pull_request_id: int, as_of: datetime
     ) -> str | None:
-        as_of_s = _dt_sql(as_of)
+        as_of_s = dt_sql_utc(as_of, timespec="microseconds")
         row = self._conn.execute(
             """
             select phi.head_sha as head_sha
@@ -258,7 +243,7 @@ class HistoryReader:
     def _review_requests_as_of(
         self, *, pull_request_id: int, as_of: datetime
     ) -> list[ReviewRequest]:
-        as_of_s = _dt_sql(as_of)
+        as_of_s = dt_sql_utc(as_of, timespec="microseconds")
         rows = self._conn.execute(
             """
             select rri.reviewer_type as reviewer_type, rri.reviewer_id as reviewer_id

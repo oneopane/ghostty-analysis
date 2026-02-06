@@ -2,6 +2,9 @@
 
 from .models import PRSnapshotArtifact, RouteArtifact
 from .paths import (
+    pr_features_path,
+    pr_inputs_path,
+    pr_llm_step_path,
     pr_route_result_path,
     pr_snapshot_path,
     repo_eval_run_dir,
@@ -12,6 +15,9 @@ __all__ = [
     "ArtifactWriter",
     "PRSnapshotArtifact",
     "RouteArtifact",
+    "pr_features_path",
+    "pr_inputs_path",
+    "pr_llm_step_path",
     "pr_route_result_path",
     "pr_snapshot_path",
     "repo_eval_run_dir",

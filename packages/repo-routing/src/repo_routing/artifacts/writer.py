@@ -8,29 +8,20 @@ from pathlib import Path
 from typing import Iterable
 
 from ..history.reader import HistoryReader
+from ..inputs.builder import build_pr_input_bundle
+from ..inputs.models import PRInputBuilderOptions, PRInputBundle
 from ..paths import repo_db_path
+from ..registry import RouterSpec, load_router
 from ..router.base import RouteResult
-from ..router.baselines.codeowners import CodeownersRouter
-from ..router.baselines.mentions import MentionsRouter
-from ..router.baselines.popularity import PopularityRouter
-from ..router.stewards import StewardsRouter
+from ..time import dt_sql_utc, parse_dt_utc, require_dt_utc
 from .models import PRSnapshotArtifact, RouteArtifact
-from .paths import pr_route_result_path, pr_snapshot_path
-
-
-def _parse_dt(value: object) -> datetime | None:
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value
-    s = str(value)
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    return datetime.fromisoformat(s)
-
-
-def _dt_sql(dt: datetime) -> str:
-    return dt.replace(tzinfo=None).isoformat(sep=" ")
+from .paths import (
+    pr_features_path,
+    pr_inputs_path,
+    pr_llm_step_path,
+    pr_route_result_path,
+    pr_snapshot_path,
+)
 
 
 def _write_json_deterministic(path: Path, obj: object) -> None:
@@ -58,6 +49,14 @@ class ArtifactWriter:
             pr_number=pr_number,
         )
 
+    def pr_inputs_path(self, *, pr_number: int) -> Path:
+        return pr_inputs_path(
+            repo_full_name=self.repo,
+            data_dir=self.data_dir,
+            run_id=self.run_id,
+            pr_number=pr_number,
+        )
+
     def route_result_path(self, *, pr_number: int, baseline: str) -> Path:
         return pr_route_result_path(
             repo_full_name=self.repo,
@@ -67,9 +66,52 @@ class ArtifactWriter:
             baseline=baseline,
         )
 
+    def features_path(self, *, pr_number: int, router_id: str) -> Path:
+        return pr_features_path(
+            repo_full_name=self.repo,
+            data_dir=self.data_dir,
+            run_id=self.run_id,
+            pr_number=pr_number,
+            router_id=router_id,
+        )
+
+    def llm_step_path(self, *, pr_number: int, router_id: str, step: str) -> Path:
+        return pr_llm_step_path(
+            repo_full_name=self.repo,
+            data_dir=self.data_dir,
+            run_id=self.run_id,
+            pr_number=pr_number,
+            router_id=router_id,
+            step=step,
+        )
+
     def write_pr_snapshot(self, artifact: PRSnapshotArtifact) -> Path:
         p = self.pr_snapshot_path(pr_number=artifact.pr_number)
         _write_json_deterministic(p, artifact.model_dump(mode="json"))
+        return p
+
+    def write_pr_inputs(self, bundle: PRInputBundle) -> Path:
+        p = self.pr_inputs_path(pr_number=bundle.pr_number)
+        _write_json_deterministic(p, bundle.model_dump(mode="json"))
+        return p
+
+    def write_features(
+        self, *, pr_number: int, router_id: str, features: dict[str, object]
+    ) -> Path:
+        p = self.features_path(pr_number=pr_number, router_id=router_id)
+        _write_json_deterministic(p, features)
+        return p
+
+    def write_llm_step(
+        self,
+        *,
+        pr_number: int,
+        router_id: str,
+        step: str,
+        payload: dict[str, object],
+    ) -> Path:
+        p = self.llm_step_path(pr_number=pr_number, router_id=router_id, step=step)
+        _write_json_deterministic(p, payload)
         return p
 
     def write_route_result(self, artifact: RouteArtifact) -> Path:
@@ -83,8 +125,9 @@ class ArtifactWriter:
 def build_pr_snapshot_artifact(
     *, repo: str, pr_number: int, as_of: datetime, data_dir: str | Path = "data"
 ) -> PRSnapshotArtifact:
+    as_of_utc = require_dt_utc(as_of, name="as_of")
     with HistoryReader(repo_full_name=repo, data_dir=data_dir) as reader:
-        pr = reader.pull_request_snapshot(number=pr_number, as_of=as_of)
+        pr = reader.pull_request_snapshot(number=pr_number, as_of=as_of_utc)
 
     changed_files = sorted(pr.changed_files, key=lambda f: f.path)
     review_requests = sorted(
@@ -94,7 +137,7 @@ def build_pr_snapshot_artifact(
     return PRSnapshotArtifact(
         repo=repo,
         pr_number=pr_number,
-        as_of=as_of,
+        as_of=as_of_utc,
         author=pr.author_login,
         title=pr.title,
         body=pr.body,
@@ -105,9 +148,27 @@ def build_pr_snapshot_artifact(
     )
 
 
+def build_pr_inputs_artifact(
+    *,
+    repo: str,
+    pr_number: int,
+    as_of: datetime,
+    data_dir: str | Path = "data",
+    options: PRInputBuilderOptions | None = None,
+) -> PRInputBundle:
+    return build_pr_input_bundle(
+        repo=repo,
+        pr_number=pr_number,
+        cutoff=as_of,
+        data_dir=data_dir,
+        options=options,
+    )
+
+
 def build_route_result(
     *,
-    baseline: str,
+    baseline: str | None = None,
+    router_spec: RouterSpec | None = None,
     repo: str,
     pr_number: int,
     as_of: datetime,
@@ -115,23 +176,23 @@ def build_route_result(
     top_k: int = 5,
     config_path: str | Path | None = None,
 ) -> RouteResult:
-    if baseline == "mentions":
-        router = MentionsRouter()
-    elif baseline == "popularity":
-        router = PopularityRouter(lookback_days=180)
-    elif baseline == "codeowners":
-        # Must not read mutable checkout state: CODEOWNERS is loaded from the
-        # snapshot directory pinned to the PR base SHA.
-        router = CodeownersRouter(enabled=True)
-    elif baseline == "stewards":
-        if config_path is None:
-            raise ValueError("config_path is required for stewards router")
-        router = StewardsRouter(config_path=config_path)
-    else:
-        raise ValueError(f"unknown baseline: {baseline}")
+    spec = router_spec
+    if spec is None:
+        if baseline is None:
+            raise ValueError("baseline or router_spec is required")
+        spec = RouterSpec(
+            type="builtin",
+            name=baseline,
+            config_path=None if config_path is None else str(config_path),
+        )
 
+    router = load_router(spec)
     return router.route(
-        repo=repo, pr_number=pr_number, as_of=as_of, data_dir=str(data_dir), top_k=top_k
+        repo=repo,
+        pr_number=pr_number,
+        as_of=require_dt_utc(as_of, name="as_of"),
+        data_dir=str(data_dir),
+        top_k=top_k,
     )
 
 
@@ -179,10 +240,10 @@ def iter_pr_numbers_created_in_window(
         params: list[object] = [repo_id]
         if start_at is not None:
             where.append("created_at >= ?")
-            params.append(_dt_sql(start_at))
+            params.append(dt_sql_utc(start_at))
         if end_at is not None:
             where.append("created_at <= ?")
-            params.append(_dt_sql(end_at))
+            params.append(dt_sql_utc(end_at))
 
         sql = (
             "select number from pull_requests where "
@@ -214,6 +275,6 @@ def pr_created_at(
         ).fetchone()
         if pr is None:
             raise KeyError(f"pr not found: {repo}#{pr_number}")
-        return _parse_dt(pr["created_at"])
+        return parse_dt_utc(pr["created_at"])
     finally:
         conn.close()

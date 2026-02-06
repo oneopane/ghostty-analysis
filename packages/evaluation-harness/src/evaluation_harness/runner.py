@@ -8,9 +8,11 @@ from pathlib import Path
 from repo_routing.artifacts.models import RouteArtifact
 from repo_routing.artifacts.writer import (
     ArtifactWriter,
+    build_pr_inputs_artifact,
     build_pr_snapshot_artifact,
-    build_route_result,
 )
+from repo_routing.predictor.pipeline import PipelinePredictor
+from repo_routing.registry import RouterSpec, load_router, router_id_for_spec, router_manifest_entry
 
 from .config import EvalRunConfig
 from .cutoff import cutoff_for_pr
@@ -32,24 +34,54 @@ class RunResult:
     run_dir: Path
 
 
+def _normalize_router_specs(
+    *,
+    baselines: list[str] | None,
+    router_specs: list[RouterSpec] | None,
+    router_config_path: str | Path | None,
+) -> list[RouterSpec]:
+    if router_specs:
+        specs = [s.model_copy() for s in router_specs]
+    else:
+        names = baselines or ["mentions", "popularity", "codeowners"]
+        specs = [RouterSpec(type="builtin", name=n) for n in names]
+
+    if not specs:
+        raise ValueError("at least one router is required")
+
+    if router_config_path is not None:
+        for i, spec in enumerate(specs):
+            if spec.type == "builtin" and spec.name == "stewards" and not spec.config_path:
+                specs[i] = spec.model_copy(update={"config_path": str(router_config_path)})
+
+    for spec in specs:
+        if spec.type == "builtin" and spec.name == "stewards" and not spec.config_path:
+            raise ValueError("router_config_path is required for stewards")
+
+    return specs
+
+
 def run_streaming_eval(
     *,
     cfg: EvalRunConfig,
     pr_numbers: list[int],
     baselines: list[str] | None = None,
+    router_specs: list[RouterSpec] | None = None,
     router_config_path: str | Path | None = None,
 ) -> RunResult:
-    """Run a leakage-safe streaming evaluation.
+    """Run a leakage-safe streaming evaluation."""
 
-    This v0 runner uses only offline DB state and enforces that router inputs
-    are computed as-of the per-PR cutoff.
-    """
+    specs = _normalize_router_specs(
+        baselines=baselines,
+        router_specs=router_specs,
+        router_config_path=router_config_path,
+    )
+    router_ids = [router_id_for_spec(s) for s in specs]
 
-    baselines = baselines or ["mentions", "popularity", "codeowners"]
-    if not baselines:
-        raise ValueError("at least one baseline is required")
-    if "stewards" in baselines and router_config_path is None:
-        raise ValueError("router_config_path is required for stewards")
+    routers_by_id = {
+        router_id_for_spec(spec): load_router(spec)
+        for spec in specs
+    }
 
     def pkg_version(name: str) -> str | None:
         try:
@@ -76,7 +108,6 @@ def run_streaming_eval(
     finally:
         conn.close()
 
-    # Streaming order: cutoff asc, then pr number.
     cutoffs = {
         n: cutoff_for_pr(
             repo=cfg.repo,
@@ -92,8 +123,8 @@ def run_streaming_eval(
         repo=cfg.repo, data_dir=cfg.data_dir, run_id=cfg.run_id
     )
 
-    routing_rows_by_baseline: dict[str, list[object]] = {b: [] for b in baselines}
-    queue_rows_by_baseline: dict[str, list[object]] = {b: [] for b in baselines}
+    routing_rows_by_router: dict[str, list[object]] = {rid: [] for rid in router_ids}
+    queue_rows_by_router: dict[str, list[object]] = {rid: [] for rid in router_ids}
     gate_rows: list[object] = []
 
     for pr_number in ordered:
@@ -103,6 +134,14 @@ def run_streaming_eval(
             repo=cfg.repo, pr_number=pr_number, as_of=cutoff, data_dir=cfg.data_dir
         )
         routing_writer.write_pr_snapshot(snap)
+
+        inputs = build_pr_inputs_artifact(
+            repo=cfg.repo,
+            pr_number=pr_number,
+            as_of=cutoff,
+            data_dir=cfg.data_dir,
+        )
+        routing_writer.write_pr_inputs(inputs)
 
         truth_login = behavior_truth_first_eligible_review(
             repo=cfg.repo,
@@ -118,20 +157,29 @@ def run_streaming_eval(
             repo=cfg.repo, pr_number=pr_number, cutoff=cutoff, data_dir=cfg.data_dir
         )
 
-        per_baseline: dict[str, object] = {}
-        for baseline in baselines:
-            result = build_route_result(
-                baseline=baseline,
+        per_router: dict[str, object] = {}
+        for spec in specs:
+            router_id = router_id_for_spec(spec)
+            router = routers_by_id[router_id]
+
+            result = router.route(
                 repo=cfg.repo,
                 pr_number=pr_number,
                 as_of=cutoff,
                 data_dir=cfg.data_dir,
                 top_k=cfg.defaults.top_k,
-                config_path=router_config_path,
             )
             routing_writer.write_route_result(
-                RouteArtifact(baseline=baseline, result=result)
+                RouteArtifact(baseline=router_id, result=result)
             )
+
+            predictor = getattr(router, "predictor", None)
+            if isinstance(predictor, PipelinePredictor) and predictor.last_features is not None:
+                routing_writer.write_features(
+                    pr_number=pr_number,
+                    router_id=router_id,
+                    features=predictor.last_features,
+                )
 
             pr_metrics = per_pr_metrics(
                 result=result,
@@ -144,15 +192,15 @@ def run_streaming_eval(
             )
             queue_metrics = per_pr_queue_metrics(
                 result=result,
-                baseline=baseline,
+                baseline=router_id,
                 cutoff=cutoff,
                 data_dir=cfg.data_dir,
                 include_ttfc=False,
             )
 
-            routing_rows_by_baseline[baseline].append(pr_metrics)
-            queue_rows_by_baseline[baseline].append(queue_metrics)
-            per_baseline[baseline] = {
+            routing_rows_by_router[router_id].append(pr_metrics)
+            queue_rows_by_router[router_id].append(queue_metrics)
+            per_router[router_id] = {
                 "route_result": result.model_dump(mode="json"),
                 "routing_agreement": pr_metrics.model_dump(mode="json"),
                 "queue": queue_metrics.model_dump(mode="json"),
@@ -165,25 +213,26 @@ def run_streaming_eval(
             "cutoff": cutoff.isoformat(),
             "truth_behavior": truth_targets,
             "gates": gate_metrics.model_dump(mode="json"),
-            "baselines": per_baseline,
+            "routers": per_router,
+            "baselines": per_router,
         }
         store.append_jsonl("per_pr.jsonl", row)
         gate_rows.append(gate_metrics)
 
     routing_summaries = {
-        b: RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id).aggregate(rows)  # type: ignore[arg-type]
-        for b, rows in routing_rows_by_baseline.items()
+        rid: RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id).aggregate(rows)  # type: ignore[arg-type]
+        for rid, rows in routing_rows_by_router.items()
     }
     gates_summary = GateCorrelation(repo=cfg.repo, run_id=cfg.run_id).aggregate(
         gate_rows  # type: ignore[arg-type]
     )
     queue_summaries = {
-        b: QueueMetricsAggregator(
-            repo=cfg.repo, run_id=cfg.run_id, baseline=b
+        rid: QueueMetricsAggregator(
+            repo=cfg.repo, run_id=cfg.run_id, baseline=rid
         ).aggregate(
             rows  # type: ignore[arg-type]
         )
-        for b, rows in queue_rows_by_baseline.items()
+        for rid, rows in queue_rows_by_router.items()
     }
 
     notes: list[str] = []
@@ -201,7 +250,8 @@ def run_streaming_eval(
         db_max_event_occurred_at=db_max_event_occurred_at,
         db_max_watermark_updated_at=db_max_watermark_updated_at,
         package_versions=package_versions,
-        baselines=list(baselines),
+        routers=list(router_ids),
+        baselines=list(router_ids),
         routing_agreement=routing_summaries,  # type: ignore[arg-type]
         gates=gates_summary,
         queue=queue_summaries,  # type: ignore[arg-type]
@@ -232,7 +282,8 @@ def run_streaming_eval(
         db_max_event_occurred_at=db_max_event_occurred_at,
         db_max_watermark_updated_at=db_max_watermark_updated_at,
         package_versions=package_versions,
-        baselines=list(baselines),
+        baselines=list(router_ids),
+        routers=[router_manifest_entry(s) for s in specs],
     )
     store.write_json("manifest.json", manifest.model_dump(mode="json"))
 
