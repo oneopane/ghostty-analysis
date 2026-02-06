@@ -84,6 +84,27 @@ def count_head_updates_pre_cutoff(
     return 0 if row is None else int(row["n"])
 
 
+def latest_head_update_pre_cutoff(
+    *,
+    conn: sqlite3.Connection,
+    pull_request_id: int,
+    cutoff: datetime,
+) -> datetime | None:
+    row = conn.execute(
+        """
+        select max(se.occurred_at) as latest_ts
+        from pull_request_head_intervals phi
+        join events se on se.id = phi.start_event_id
+        where phi.pull_request_id = ?
+          and se.occurred_at <= ?
+        """,
+        (pull_request_id, cutoff_sql(cutoff)),
+    ).fetchone()
+    if row is None or row["latest_ts"] is None:
+        return None
+    return parse_dt_utc(row["latest_ts"])
+
+
 def is_draft_at_cutoff(
     *,
     conn: sqlite3.Connection,
