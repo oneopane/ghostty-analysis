@@ -69,7 +69,7 @@ def build_candidate_activity_features(
     candidate_login: str,
     data_dir: str | Path,
     windows_days: tuple[int, ...] = (30, 90, 180),
-) -> dict[str, int | float | bool]:
+) -> dict[str, int | float | bool | None]:
     days_since = days_since_last_candidate_activity(
         repo=input.repo,
         candidate_login=candidate_login,
@@ -99,7 +99,7 @@ def build_candidate_activity_table(
     candidate_logins: list[str],
     data_dir: str | Path,
     windows_days: tuple[int, ...] = (30, 90, 180),
-) -> dict[str, dict[str, int | float | bool]]:
+) -> dict[str, dict[str, int | float | bool | None]]:
     out: dict[str, dict[str, int | float | bool]] = {}
     for login in sorted(set(candidate_logins), key=lambda s: s.lower()):
         out[login] = build_candidate_activity_features(
