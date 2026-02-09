@@ -68,3 +68,54 @@ If you omit `--db`, a stable per-repo database path is used:
 
 If only `--start-at` is provided, the run continues until now. If only `--end-at`
 is provided, the run includes history up to that time.
+
+## Local SQLite explorer (EDA)
+
+A minimal local web app is included for quick exploratory analysis of ingested
+SQLite files under `data/github/...`.
+
+### Run
+
+From the repository root:
+
+```bash
+uv run --project packages/repo-ingestion repo-ingestion explore
+```
+
+Optional flags:
+
+```bash
+uv run --project packages/repo-ingestion repo-ingestion explore \
+  --data-root data/github \
+  --host 127.0.0.1 \
+  --port 8787
+```
+
+Then open: `http://127.0.0.1:8787`
+
+### Expected folder structure
+
+The explorer scans recursively for SQLite files under:
+
+`data/github/<owner>/<repo>/...`
+
+Typical default ingestion output:
+
+`data/github/<owner>/<repo>/history.sqlite`
+
+### Features
+
+- Database discovery grouped by owner/repo
+- Table list with row counts
+- Schema viewer (name, type, nullability, PK, default)
+- Paginated row browsing (100 rows/page default)
+- Sorting by a chosen column
+- Global text contains filter across all columns
+- Read-only SQL scratchpad (`SELECT` / `WITH ... SELECT` only)
+
+### Known limitations
+
+- Row counts and filtered totals use `COUNT(*)`, which can be slow on very large tables.
+- Global filter is simple `LIKE` matching and may be slow on wide tables.
+- SQL scratchpad supports a single statement and is intentionally read-only.
+- This tool is local/dev-only (no auth, no multi-user isolation).

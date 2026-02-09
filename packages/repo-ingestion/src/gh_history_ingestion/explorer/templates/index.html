@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Repo Ingestion SQLite Explorer</title>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <header>
+      <h1>SQLite Explorer</h1>
+      <p>Inspect <code>data/github/&lt;owner&gt;/&lt;repo&gt;/...</code> databases.</p>
+    </header>
+
+    <main class="layout">
+      <aside>
+        <h2>Databases</h2>
+        <button id="refreshDbs">Refresh</button>
+        <div id="dbRoot" class="muted"></div>
+        <ul id="dbList"></ul>
+      </aside>
+
+      <section>
+        <div class="panel">
+          <h2>Tables</h2>
+          <div id="selectedDb" class="muted"></div>
+          <ul id="tableList"></ul>
+        </div>
+
+        <div class="panel">
+          <h2>Schema</h2>
+          <table id="schemaTable"></table>
+        </div>
+
+        <div class="panel">
+          <h2>Rows</h2>
+          <div class="controls">
+            <label>Filter
+              <input id="filterInput" placeholder="contains text" />
+            </label>
+            <label>Sort column
+              <select id="sortCol"></select>
+            </label>
+            <label>Direction
+              <select id="sortDir">
+                <option value="asc">ASC</option>
+                <option value="desc">DESC</option>
+              </select>
+            </label>
+            <button id="applyRows">Apply</button>
+          </div>
+          <div class="controls">
+            <button id="prevPage">Prev</button>
+            <span id="pageInfo" class="muted"></span>
+            <button id="nextPage">Next</button>
+          </div>
+          <div id="rowsMeta" class="muted"></div>
+          <div class="table-wrap">
+            <table id="rowsTable"></table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>SQL scratchpad (SELECT only)</h2>
+          <textarea id="sqlInput" rows="6" spellcheck="false" placeholder="SELECT * FROM your_table LIMIT 20;"></textarea>
+          <div class="controls">
+            <label>Row limit
+              <input id="sqlLimit" type="number" value="200" min="1" max="1000" />
+            </label>
+            <button id="runSql">Run SQL</button>
+            <span id="sqlMeta" class="muted"></span>
+          </div>
+          <div class="table-wrap">
+            <table id="sqlTable"></table>
+          </div>
+        </div>
+
+        <div id="errorBox" class="error hidden"></div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

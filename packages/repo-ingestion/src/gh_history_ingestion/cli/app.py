@@ -4,6 +4,7 @@ from pathlib import Path
 import typer
 from rich import print
 
+from ..explorer.server import create_app
 from ..ingest.backfill import backfill_repo
 from ..ingest.incremental import incremental_update
 from ..ingest.pull_requests import backfill_pull_requests
@@ -99,3 +100,19 @@ def pull_requests(
             max_pages=max_pages,
         )
     )
+
+
+@app.command()
+def explore(
+    data_root: str = typer.Option(
+        "data/github",
+        help="Root directory to scan for SQLite files",
+    ),
+    host: str = typer.Option("127.0.0.1", help="Host interface to bind"),
+    port: int = typer.Option(8787, help="Port to bind"),
+):
+    """Start a local read-only SQLite explorer web app."""
+    app_server = create_app(data_root=data_root)
+    print(f"[bold]SQLite explorer[/bold] scanning {Path(data_root).resolve()}")
+    print(f"Open [cyan]http://{host}:{port}[/cyan] in your browser")
+    app_server.run(host=host, port=port, debug=False)
