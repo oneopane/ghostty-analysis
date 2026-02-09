@@ -108,6 +108,9 @@ def test_candidate_activity_features(tmp_path: Path) -> None:
     assert f["cand.activity.has_prior_event"] is True
     assert f["cand.activity.events_30d"] == 2
     assert f["cand.activity.events_7d"] == 1
+    assert "candidate.profile.account_age_days" in f
+    assert "candidate.footprint.path_scores.topN" in f
+    assert "candidate.activity.load_proxy.open_reviews_est" in f
 
     table = build_candidate_activity_table(
         input=bundle,

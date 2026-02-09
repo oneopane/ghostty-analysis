@@ -42,3 +42,17 @@ def test_feature_extractor_v1_surface_only() -> None:
     assert "pr.files.count" in out["pr"]
     assert out["candidates"] == {}
     assert out["interactions"] == {}
+    assert "labels" in out
+    assert "debug" in out
+
+
+def test_feature_extractor_v1_task_policy_report() -> None:
+    extractor = build_feature_extractor_v1(
+        include_pr_timeline_features=False,
+        include_ownership_features=False,
+        include_candidate_features=False,
+        task_id="T02",
+    )
+    out = extractor.extract(_bundle())
+    assert "task_policy" in out["meta"]
+    assert out["meta"]["task_policy"]["task_id"] == "T02"

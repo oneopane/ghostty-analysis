@@ -4,6 +4,7 @@ import fnmatch
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from ...exports.area import default_area_for_path, load_repo_area_overrides
 from ...inputs.models import PRInputBundle
@@ -14,8 +15,6 @@ from ...router.baselines.mentions import extract_targets
 
 @dataclass(frozen=True)
 class OwnershipMatchSummary:
-    """Structured intermediate for ownership-derived features."""
-
     owner_set: set[str]
     owner_by_file: dict[str, set[str]]
     files_with_owner: int
@@ -68,7 +67,7 @@ def match_codeowners_for_changed_files(
     rules: list[CodeownersMatch],
 ) -> OwnershipMatchSummary:
     owner_by_file: dict[str, set[str]] = {}
-    for f in input.changed_files:
+    for f in sorted(input.changed_files, key=lambda x: x.path):
         owners: set[str] = set()
         for rule in rules:
             if not _matches(rule.pattern, f.path):
@@ -164,27 +163,46 @@ def build_ownership_features(
     *,
     data_dir: str | Path,
     active_candidates: set[str] | None = None,
-) -> dict[str, int | float | bool]:
+) -> dict[str, Any]:
     text = load_codeowners_text_for_pr(input=input, data_dir=data_dir)
     rules = parse_codeowners_rules(text or "")
     summary = match_codeowners_for_changed_files(input, rules=rules)
 
-    return {
-        "pr.owners.owner_set_size": owner_set_size(summary),
-        "pr.owners.coverage_ratio": owner_coverage_ratio(summary),
-        "pr.owners.max_owners_any_file": max_owners_on_any_file(summary),
-        "pr.owners.top_owner_share": top_owner_share(summary),
-        "pr.owners.zero_owner_found": zero_owner_found(summary),
-        "pr.owners.overlap_active_candidates": owner_overlap_with_active_candidates(
-            owner_set=summary.owner_set,
-            active_candidates=(active_candidates or set()),
-        ),
-        "pr.owners.area_override_hit_rate": area_override_hit_rate(
-            input,
-            data_dir=data_dir,
-        ),
-        "pr.owners.conflicting_signals": conflicting_ownership_signals(
+    owner_set_sorted = sorted(summary.owner_set, key=str.lower)
+
+    out: dict[str, Any] = {
+        "pr.ownership.owner_set": owner_set_sorted,
+        "pr.ownership.owner_set_size": owner_set_size(summary),
+        "pr.ownership.owner_coverage_ratio": owner_coverage_ratio(summary),
+        "pr.ownership.zero_owner_found": zero_owner_found(summary),
+        "pr.ownership.max_owners_on_any_file": max_owners_on_any_file(summary),
+        "pr.ownership.top_owner_share": top_owner_share(summary),
+        "pr.ownership.conflicting_ownership_signals": conflicting_ownership_signals(
             input=input,
             summary=summary,
         ),
+        "pr.ownership.area_override_hit_rate": area_override_hit_rate(
+            input,
+            data_dir=data_dir,
+        ),
+        "pr.ownership.overlap_active_candidates_count": owner_overlap_with_active_candidates(
+            owner_set=summary.owner_set,
+            active_candidates=(active_candidates or set()),
+        ),
     }
+
+    # Compatibility aliases.
+    out.update(
+        {
+            "pr.owners.owner_set_size": out["pr.ownership.owner_set_size"],
+            "pr.owners.coverage_ratio": out["pr.ownership.owner_coverage_ratio"],
+            "pr.owners.max_owners_any_file": out["pr.ownership.max_owners_on_any_file"],
+            "pr.owners.top_owner_share": out["pr.ownership.top_owner_share"],
+            "pr.owners.zero_owner_found": out["pr.ownership.zero_owner_found"],
+            "pr.owners.overlap_active_candidates": out["pr.ownership.overlap_active_candidates_count"],
+            "pr.owners.area_override_hit_rate": out["pr.ownership.area_override_hit_rate"],
+            "pr.owners.conflicting_signals": out["pr.ownership.conflicting_ownership_signals"],
+        }
+    )
+
+    return {k: out[k] for k in sorted(out)}

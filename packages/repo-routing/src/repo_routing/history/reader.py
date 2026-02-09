@@ -107,6 +107,7 @@ class HistoryReader:
             created_at=parse_dt_utc(pr_row["created_at"]),
             title=title,
             body=body,
+            base_ref=pr_row["base_ref"],
             base_sha=pr_row["base_sha"],
             head_sha=head_sha,
             changed_files=files,

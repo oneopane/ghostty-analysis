@@ -31,8 +31,14 @@ class PullRequestSnapshot(BaseModel):
     title: str | None = None
     body: str | None = None
 
+    base_ref: str | None = None
     base_sha: str | None = None
     head_sha: str | None = None
+
+    # Optional process metadata. Reader currently leaves these empty unless available.
+    labels: list[str] = Field(default_factory=list)
+    assignees: list[str] = Field(default_factory=list)
+    milestone_present: bool | None = None
 
     changed_files: list[PullRequestFile] = Field(default_factory=list)
     review_requests: list[ReviewRequest] = Field(default_factory=list)
