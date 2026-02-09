@@ -273,6 +273,35 @@ Before shipping a feature:
 
 ---
 
+## 6.5 Feature registry and task policy (implemented)
+
+The feature stack now includes two registry layers:
+
+1. **Feature registry** (`predictor/features/feature_registry.py`)
+   - canonical metadata per feature key (or wildcard pattern):
+     - value type
+     - temporal semantics
+     - granularity
+     - role (gate/context/ranking/calibration)
+   - extractor emits `meta.feature_registry` with resolved/unresolved coverage counts.
+
+2. **Task policy registry** (`predictor/features/task_policy.py`)
+   - task-level constraints over:
+     - allowed roles
+     - allowed granularities
+     - allowed key prefixes
+     - recommended baseline model class
+   - extractor emits `meta.task_policy` when `FeatureExtractionConfig.task_id` is set.
+
+Current default task policies:
+- `T02` review readiness
+- `T04` owner coverage confidence
+- `T06` first responder routing
+- `T09` stall risk
+- `T10` reviewer set sizing
+
+This enables deterministic policy checks on extracted features without changing router interfaces.
+
 ## 7) Extension playbooks
 
 ## 7.1 Add a new feature set (FeatureExtractor + Ranker)
