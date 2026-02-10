@@ -21,6 +21,7 @@ class EvalManifest(BaseModel):
     package_versions: dict[str, str | None] = Field(default_factory=dict)
     routers: list[dict[str, Any]] = Field(default_factory=list)
     baselines: list[str] = Field(default_factory=list)
+    router_feature_meta: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
     config: dict[str, Any]
     pr_numbers: list[int] = Field(default_factory=list)
@@ -36,6 +37,7 @@ def build_manifest(
     package_versions: dict[str, str | None] | None = None,
     baselines: list[str] | None = None,
     routers: list[dict[str, Any]] | None = None,
+    router_feature_meta: dict[str, dict[str, Any]] | None = None,
 ) -> EvalManifest:
     return EvalManifest(
         repo=cfg.repo,
@@ -46,6 +48,7 @@ def build_manifest(
         package_versions=package_versions or {},
         routers=list(routers or []),
         baselines=list(baselines or []),
+        router_feature_meta=dict(router_feature_meta or {}),
         config=cfg.model_dump(mode="json"),
         pr_numbers=list(pr_numbers),
     )

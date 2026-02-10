@@ -32,3 +32,4 @@ class RouteArtifact(BaseModel):
 
     baseline: str
     result: RouteResult
+    meta: dict[str, object] = Field(default_factory=dict)

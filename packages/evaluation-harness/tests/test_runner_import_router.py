@@ -28,3 +28,10 @@ def test_runner_import_path_router_writes_route_and_features(tmp_path) -> None: 
 
     row = json.loads((res.run_dir / "per_pr.jsonl").read_text(encoding="utf-8").splitlines()[0])
     assert rid in row["routers"]
+    assert row["routers"][rid]["feature_meta"]["candidate_gen_version"] == "cg.v1"
+
+    route_payload = json.loads((pr_dir / "routes" / f"{rid}.json").read_text(encoding="utf-8"))
+    assert route_payload["meta"]["candidate_gen_version"] == "cg.v1"
+
+    manifest = json.loads((res.run_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["router_feature_meta"][rid]["candidate_gen_version"] == "cg.v1"

@@ -36,9 +36,23 @@ def test_behavior_truth_ignores_bots(tmp_path) -> None:  # type: ignore[no-untyp
     truth = behavior_truth_first_eligible_review(
         repo=db.repo,
         pr_number=db.pr_number,
-        cutoff=datetime.fromisoformat("2024-01-02T00:00:00+00:00"),
+        cutoff=datetime.fromisoformat("2024-01-01T00:00:00+00:00"),
         data_dir=db.data_dir,
         exclude_author=True,
         exclude_bots=True,
     )
     assert truth == "bob"
+
+
+def test_behavior_truth_requires_post_cutoff_response(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    db = build_min_db(tmp_path=tmp_path)
+
+    truth = behavior_truth_first_eligible_review(
+        repo=db.repo,
+        pr_number=db.pr_number,
+        cutoff=datetime.fromisoformat("2024-01-02T00:00:00+00:00"),
+        data_dir=db.data_dir,
+        exclude_author=True,
+        exclude_bots=True,
+    )
+    assert truth is None

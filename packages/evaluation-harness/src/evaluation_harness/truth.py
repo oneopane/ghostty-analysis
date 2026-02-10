@@ -35,8 +35,15 @@ def behavior_truth_first_eligible_review(
     data_dir: str | Path = "data",
     exclude_author: bool = True,
     exclude_bots: bool = True,
+    window: timedelta = timedelta(hours=48),
+    include_review_comments: bool = True,
 ) -> str | None:
-    """v0 behavior truth: first non-author/non-bot review up to cutoff."""
+    """v1 behavior truth: first eligible post-cutoff review response.
+
+    Default response window is `(cutoff, cutoff+48h]`.
+    Qualifying responses include review submissions and (optionally)
+    review-comments when `comments.review_id` is available.
+    """
 
     db = repo_db_path(repo_full_name=repo, data_dir=data_dir)
     conn = sqlite3.connect(str(db))
@@ -60,20 +67,59 @@ def behavior_truth_first_eligible_review(
         author_id = pr["user_id"]
 
         cutoff_s = _dt_sql(cutoff)
-        rows = conn.execute(
+        end_s = _dt_sql(cutoff + window)
+
+        review_rows = conn.execute(
             """
-            select r.user_id as user_id, u.login as login, u.type as type, r.submitted_at as submitted_at
+            select r.user_id as user_id,
+                   u.login as login,
+                   u.type as type,
+                   r.submitted_at as ts,
+                   r.id as event_id,
+                   'review_submitted' as kind
             from reviews r
             join users u on u.id = r.user_id
             where r.repo_id = ?
               and r.pull_request_id = ?
               and r.submitted_at is not null
+              and r.submitted_at > ?
               and r.submitted_at <= ?
               and u.login is not null
-            order by r.submitted_at asc, r.id asc
             """,
-            (repo_id, pr_id, cutoff_s),
+            (repo_id, pr_id, cutoff_s, end_s),
         ).fetchall()
+
+        review_comment_rows: list[sqlite3.Row] = []
+        if include_review_comments:
+            try:
+                review_comment_rows = conn.execute(
+                    """
+                    select c.user_id as user_id,
+                           u.login as login,
+                           u.type as type,
+                           c.created_at as ts,
+                           c.id as event_id,
+                           'review_comment' as kind
+                    from comments c
+                    join users u on u.id = c.user_id
+                    where c.repo_id = ?
+                      and c.pull_request_id = ?
+                      and c.review_id is not null
+                      and c.created_at is not null
+                      and c.created_at > ?
+                      and c.created_at <= ?
+                      and u.login is not null
+                    """,
+                    (repo_id, pr_id, cutoff_s, end_s),
+                ).fetchall()
+            except sqlite3.OperationalError:
+                # Minimal schemas may omit comments.review_id.
+                review_comment_rows = []
+
+        rows = sorted(
+            [*review_rows, *review_comment_rows],
+            key=lambda r: (str(r["ts"]), int(r["event_id"]), str(r["kind"])),
+        )
 
         for r in rows:
             if exclude_bots and (r["type"] == "Bot" or _is_bot_login(str(r["login"]))):

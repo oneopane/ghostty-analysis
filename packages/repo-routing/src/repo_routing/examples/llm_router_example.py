@@ -70,6 +70,9 @@ class PromptLikeFeatureExtractor(FeatureExtractor):
             "requested_users": requested,
             "pseudo_llm_ranked_users": pseudo_llm_ranked,
             "areas": list(input.areas),
+            "meta": {
+                "candidate_gen_version": "cg.v1",
+            },
         }
 
 

@@ -126,6 +126,7 @@ def run_streaming_eval(
     routing_rows_by_router: dict[str, list[object]] = {rid: [] for rid in router_ids}
     queue_rows_by_router: dict[str, list[object]] = {rid: [] for rid in router_ids}
     gate_rows: list[object] = []
+    router_feature_meta: dict[str, dict[str, object]] = {}
 
     for pr_number in ordered:
         cutoff = cutoffs[pr_number]
@@ -169,17 +170,28 @@ def run_streaming_eval(
                 data_dir=cfg.data_dir,
                 top_k=cfg.defaults.top_k,
             )
-            routing_writer.write_route_result(
-                RouteArtifact(baseline=router_id, result=result)
-            )
 
             predictor = getattr(router, "predictor", None)
+            feature_meta: dict[str, object] = {}
             if isinstance(predictor, PipelinePredictor) and predictor.last_features is not None:
                 routing_writer.write_features(
                     pr_number=pr_number,
                     router_id=router_id,
                     features=predictor.last_features,
                 )
+                raw_meta = predictor.last_features.get("meta")
+                if isinstance(raw_meta, dict):
+                    for k in ("candidate_gen_version", "task_policy", "feature_registry"):
+                        if k in raw_meta:
+                            feature_meta[k] = raw_meta[k]
+                if "feature_version" in predictor.last_features:
+                    feature_meta["feature_version"] = predictor.last_features["feature_version"]
+                if router_id not in router_feature_meta and feature_meta:
+                    router_feature_meta[router_id] = feature_meta
+
+            routing_writer.write_route_result(
+                RouteArtifact(baseline=router_id, result=result, meta=feature_meta)
+            )
 
             pr_metrics = per_pr_metrics(
                 result=result,
@@ -202,6 +214,7 @@ def run_streaming_eval(
             queue_rows_by_router[router_id].append(queue_metrics)
             per_router[router_id] = {
                 "route_result": result.model_dump(mode="json"),
+                "feature_meta": feature_meta,
                 "routing_agreement": pr_metrics.model_dump(mode="json"),
                 "queue": queue_metrics.model_dump(mode="json"),
             }
@@ -284,6 +297,7 @@ def run_streaming_eval(
         package_versions=package_versions,
         baselines=list(router_ids),
         routers=[router_manifest_entry(s) for s in specs],
+        router_feature_meta={k: router_feature_meta[k] for k in sorted(router_feature_meta)},
     )
     store.write_json("manifest.json", manifest.model_dump(mode="json"))
 
