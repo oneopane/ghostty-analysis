@@ -177,6 +177,7 @@ Per run:
 - cutoff policy: `evaluation_harness.cutoff.cutoff_for_pr`
   - supports `created_at`, `created_at+delta`, `ready_for_review`
 - behavior truth: `evaluation_harness.truth.behavior_truth_first_eligible_review`
+  - default semantics: first eligible post-cutoff review response in `(cutoff, cutoff+48h]`
 - routing metrics: `evaluation_harness.metrics.routing_agreement`
   - hit@1/hit@3/hit@5/MRR
 - gate and queue summaries:
@@ -301,6 +302,30 @@ Current default task policies:
 - `T10` reviewer set sizing
 
 This enables deterministic policy checks on extracted features without changing router interfaces.
+
+## 6.6 Relational feature framing (PR×X)
+
+Attention-routing features are organized conceptually as relations of the form:
+
+`(PR_at_cutoff, X) -> signal`
+
+with `X` in a small fixed set (PR, user, team, file/area, automation, repo context, time, silence).
+
+Reference taxonomy:
+- `docs/attention-routing/relation-taxonomy.md`
+
+Hard signal boundary policy:
+- `docs/attention-routing/policy-signal-boundary.md`
+
+## 6.7 Mixed-membership exploration lane
+
+A function-first mixed-membership API is available for notebook-driven exploration:
+
+- module: `repo_routing.mixed_membership`
+- basis v1: areas (`areas.v1`)
+- notebook starter: `packages/repo-routing/experiments/marimo/mixed_membership_areas_v0.py`
+
+This lane is optional and intended for offline analysis/ablation.
 
 ## 7) Extension playbooks
 
@@ -435,6 +460,9 @@ Validation commands:
 
 # full package tests
 ./.venv/bin/pytest -q packages/repo-routing/tests packages/evaluation-harness/tests
+
+# feature policy/registry checks from eval artifacts (warn mode)
+python scripts/check_feature_quality.py --run-dir data/github/<owner>/<repo>/eval/<run_id>
 ```
 
 Quick run sanity checks:
@@ -464,6 +492,7 @@ Quick run sanity checks:
 ## Anti-patterns to avoid
 
 - Feature extraction reading local git checkout files directly
+- External/social persona signals in core feature extraction
 - SQL queries without cutoff bounds for temporal features
 - Writing unordered JSON/maps that vary run-to-run
 - Storing massive LLM payloads directly in `Evidence.data`

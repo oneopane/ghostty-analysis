@@ -19,6 +19,7 @@ Updated for current code in:
 
 Notes:
 - Includes deterministic ordering and sorted map/set outputs.
+- Includes lightweight shape geometry keys (`pr.geometry.shape.*`).
 - Legacy aliases (`pr.files.*`, `pr.churn.*`, `pr.paths.*`, `pr.text.*`) are still emitted for compatibility.
 
 ## B) PR trajectory / attention
@@ -26,9 +27,11 @@ Notes:
 - [x] `pr.trajectory.*`
 - [x] `pr.attention.*`
 - [x] `pr.request_overlap.*`
+- [x] `pr.silence.*`
 
 Notes:
 - SQL-backed as-of features are cutoff bounded.
+- Includes lightweight trajectory geometry keys (`pr.geometry.trajectory.*`).
 - `pr.timeline.*` compatibility keys are still emitted.
 
 ## C) Ownership / areas
@@ -104,6 +107,11 @@ Notes:
   - extractor can emit `meta.task_policy` when `task_id` is set in config
 
 ---
+
+## Policy boundary
+
+- [x] Repository-native only signal policy documented
+- [x] External/social persona signals explicitly disallowed in core extraction
 
 ## Remaining optional / higher-risk work
 

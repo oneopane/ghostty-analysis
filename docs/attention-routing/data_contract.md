@@ -56,6 +56,7 @@ Scope:
 - **Pinned artifact directories:**
   - CODEOWNERS: `data/github/<owner>/<repo>/codeowners/<base_sha>/CODEOWNERS` (`repo_routing.paths.repo_codeowners_path`)
   - Area overrides: `data/github/<owner>/<repo>/routing/area_overrides.json` (`repo_routing.exports.area.load_repo_area_overrides`)
+- Team roster expansion (optional): `data/github/<owner>/<repo>/routing/team_roster.json`
 - **Naming/versioning in artifacts:**
   - `snapshot.json`: `kind=pr_snapshot`, `version=v0`
   - route artifact: `kind=route_result`, `version=v0`
@@ -184,7 +185,7 @@ Source of truth: `packages/repo-ingestion/src/gh_history_ingestion/storage/schem
 - **Eligibility rules in harness (current code)**
   - Non-bot and non-author filters applied in truth/metrics via `exclude_bots`, `exclude_author` defaults.
   - Routing truth function currently: `behavior_truth_first_eligible_review(...)` in `evaluation_harness/truth.py`.
-  - **Important verified behavior:** SQL currently filters `r.submitted_at <= cutoff` (despite docs/comments elsewhere saying “after cutoff”). This mismatch is a known gap (see §13).
+  - **Behavior truth policy (current):** first eligible post-cutoff review response in `(cutoff, cutoff+window]` (default window `48h`), with non-author/non-bot filters.
 
 ## 10. Candidate Generation Contract
 - **Entity types supported in router outputs:** `user`, `team` (`router/base.py`).
@@ -194,7 +195,7 @@ Source of truth: `packages/repo-ingestion/src/gh_history_ingestion/storage/schem
   - CODEOWNERS baseline: owners from pinned CODEOWNERS text (`router/baselines/codeowners.py`).
   - Active review requests are available from snapshot inputs, but **not** currently integrated into stewards candidate pool logic.
 - **Versioning requirements (contract):**
-  - Persist `candidate_gen_version` in model outputs/eval manifest (currently partial; TODO).
+  - Persist `candidate_gen_version` in model outputs and eval artifacts (features, routes, manifest) when available.
   - Candidate set must be frozen per evaluation run and recoverable from artifacts.
   - Any source change (e.g., add requested reviewers to pool) is a contract-breaking candidate-gen version bump.
 
@@ -230,10 +231,10 @@ Size/format constraints:
 - JSON only, deterministic ordering.
 
 ## 13. Known Gaps / Non-Data
-1. **Truth semantic mismatch:** `behavior_truth_first_eligible_review` currently uses `submitted_at <= cutoff`, conflicting with intended “after cutoff” phrasing in docs/plans.
-2. No team membership table in canonical DB; team→user expansion is external/UNKNOWN.
+1. No team membership table in canonical DB; team→user expansion is external/UNKNOWN.
+2. `behavior_truth_first_eligible_review` defaults are versioned policy knobs (`window`, qualifying events) and must be mirrored in manifests/docs when changed.
 3. `object_snapshots` table exists but no ingestion writer observed.
-4. Ingestion does not natively persist `candidate_gen_version` artifacts.
+4. Ingestion does not natively persist `candidate_gen_version` artifacts (routing/eval artifacts do when feature metadata is available).
 5. No explicit foreign key constraints for many logical joins beyond schema declarations (SQLite enforcement depends on runtime PRAGMA; not guaranteed here).
 6. CODEOWNERS artifacts are expected on disk but ingestion package does not create them.
 
@@ -268,14 +269,12 @@ Size/format constraints:
 - Verified pinned CODEOWNERS path function: `codeowners/<base_sha>/CODEOWNERS`.
 - Verified area overrides path and parser: `routing/area_overrides.json`.
 - Verified harness unit is PR at cutoff and routing metrics consume `TruthLabel(repo, pr_number, cutoff, targets)`.
-- Verified current harness truth SQL in `truth.py` uses `r.submitted_at <= cutoff` plus non-author/non-bot filters.
+- Verified harness truth SQL in `truth.py` uses post-cutoff window semantics `(cutoff, cutoff+window]` plus non-author/non-bot filters.
 
 ## Appendix B — Open TODOs
-1. Fix or explicitly ratify truth-time direction (`<= cutoff` vs `> cutoff`) in `behavior_truth_first_eligible_review`.
-2. Add explicit `candidate_gen_version` capture in run artifacts and route outputs.
-3. Define authoritative team-membership snapshot source for team→user evaluation.
-4. Decide whether `object_snapshots` should be populated or removed from contract scope.
-5. Confirm SQLite foreign key enforcement policy (`PRAGMA foreign_keys`) for production runs.
-6. Document canonical CODEOWNERS artifact producer (currently outside ingestion package).
-7. Add explicit schema docs for `inputs.json`/`features/*.json` versioning guarantees.
-8. Define migration playbook for interval schema changes.
+1. Define authoritative team-membership snapshot source for team→user evaluation.
+2. Decide whether `object_snapshots` should be populated or removed from contract scope.
+3. Confirm SQLite foreign key enforcement policy (`PRAGMA foreign_keys`) for production runs.
+4. Document canonical CODEOWNERS artifact producer (currently outside ingestion package).
+5. Add explicit schema docs for `inputs.json`/`features/*.json` versioning guarantees.
+6. Define migration playbook for interval schema changes.

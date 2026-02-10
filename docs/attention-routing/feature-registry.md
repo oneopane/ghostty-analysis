@@ -2,6 +2,8 @@
 
 This document describes the metadata registry used to classify extracted features and enforce task-specific feature policies.
 
+For conceptual PR×X relation buckets, see `relation-taxonomy.md`.
+
 Code:
 
 - `packages/repo-routing/src/repo_routing/predictor/features/feature_registry.py`
@@ -25,6 +27,8 @@ Examples:
 - `pr.meta.is_draft` → `binary`, `derived_snapshot`, `pr`, `gate`
 - `pair.affinity.*` → `real`, `derived_snapshot`, `pair`, `ranking`
 - `candidate.activity.event_counts_*` → `count`, `recency_based`, `candidate`, `ranking`
+- `pr.silence.*` → `binary`, `derived_snapshot`, `pr`, `calibration`
+- `pr.geometry.*` → `real`, `derived_snapshot`, `pr`, `context`
 
 ## 2) Runtime coverage reporting
 
