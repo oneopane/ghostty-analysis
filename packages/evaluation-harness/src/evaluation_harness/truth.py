@@ -1,21 +1,24 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from repo_routing.paths import repo_db_path
+
+from .models import TruthDiagnostics, TruthStatus
 
 
 def _parse_dt(value: object) -> datetime | None:
     if value is None:
         return None
     if isinstance(value, datetime):
-        return value
+        return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
     s = str(value)
     if s.endswith("Z"):
         s = s[:-1] + "+00:00"
-    return datetime.fromisoformat(s)
+    dt = datetime.fromisoformat(s)
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
 
 
 def _dt_sql(dt: datetime) -> str:
@@ -27,7 +30,68 @@ def _is_bot_login(login: str) -> bool:
     return login.lower().endswith("[bot]")
 
 
-def behavior_truth_first_eligible_review(
+def _truth_coverage_horizon_max(conn: sqlite3.Connection, *, repo_id: int) -> datetime | None:
+    values: list[datetime] = []
+
+    row = conn.execute(
+        "select max(occurred_at) as max_at from events where repo_id = ?",
+        (repo_id,),
+    ).fetchone()
+    if row is not None:
+        dt = _parse_dt(row["max_at"])
+        if dt is not None:
+            values.append(dt)
+
+    row = conn.execute(
+        "select max(submitted_at) as max_at from reviews where repo_id = ?",
+        (repo_id,),
+    ).fetchone()
+    if row is not None:
+        dt = _parse_dt(row["max_at"])
+        if dt is not None:
+            values.append(dt)
+
+    row = conn.execute(
+        "select max(created_at) as max_at from comments where repo_id = ?",
+        (repo_id,),
+    ).fetchone()
+    if row is not None:
+        dt = _parse_dt(row["max_at"])
+        if dt is not None:
+            values.append(dt)
+
+    if not values:
+        return None
+    return max(values)
+
+
+def _truth_gap_resources(conn: sqlite3.Connection, *, repo_id: int) -> list[str]:
+    relevant = {
+        "reviews",
+        "review_comments",
+        "issue_comments",
+        "issue_events",
+        "pulls",
+        "issues",
+    }
+    try:
+        rows = conn.execute(
+            """
+            select distinct resource
+            from ingestion_gaps
+            where repo_id = ?
+            order by resource asc
+            """,
+            (repo_id,),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+
+    resources = [str(r["resource"]) for r in rows if r["resource"] is not None]
+    return [r for r in resources if r in relevant]
+
+
+def behavior_truth_with_diagnostics(
     *,
     repo: str,
     pr_number: int,
@@ -37,13 +101,10 @@ def behavior_truth_first_eligible_review(
     exclude_bots: bool = True,
     window: timedelta = timedelta(hours=48),
     include_review_comments: bool = True,
-) -> str | None:
-    """v1 behavior truth: first eligible post-cutoff review response.
-
-    Default response window is `(cutoff, cutoff+48h]`.
-    Qualifying responses include review submissions and (optionally)
-    review-comments when `comments.review_id` is available.
-    """
+    policy_id: str = "first_response_v1",
+    policy_version: str = "v1",
+) -> TruthDiagnostics:
+    """Behavior truth with explicit coverage diagnostics."""
 
     db = repo_db_path(repo_full_name=repo, data_dir=data_dir)
     conn = sqlite3.connect(str(db))
@@ -67,7 +128,8 @@ def behavior_truth_first_eligible_review(
         author_id = pr["user_id"]
 
         cutoff_s = _dt_sql(cutoff)
-        end_s = _dt_sql(cutoff + window)
+        window_end = cutoff + window
+        end_s = _dt_sql(window_end)
 
         review_rows = conn.execute(
             """
@@ -113,7 +175,6 @@ def behavior_truth_first_eligible_review(
                     (repo_id, pr_id, cutoff_s, end_s),
                 ).fetchall()
             except sqlite3.OperationalError:
-                # Minimal schemas may omit comments.review_id.
                 review_comment_rows = []
 
         rows = sorted(
@@ -121,15 +182,91 @@ def behavior_truth_first_eligible_review(
             key=lambda r: (str(r["ts"]), int(r["event_id"]), str(r["kind"])),
         )
 
+        selected: str | None = None
+        selected_source: str | None = None
+        selected_event_id: int | None = None
+        eligible = 0
         for r in rows:
             if exclude_bots and (r["type"] == "Bot" or _is_bot_login(str(r["login"]))):
                 continue
             if exclude_author and author_id is not None and r["user_id"] == author_id:
                 continue
-            return str(r["login"])
-        return None
+            eligible += 1
+            if selected is None:
+                selected = str(r["login"])
+                selected_source = str(r["kind"])
+                selected_event_id = int(r["event_id"])
+
+        horizon_max = _truth_coverage_horizon_max(conn, repo_id=repo_id)
+        horizon_complete = horizon_max is not None and horizon_max >= window_end
+        gap_resources = _truth_gap_resources(conn, repo_id=repo_id)
+        coverage_complete = bool(horizon_complete and not gap_resources)
+
+        notes: list[str] = []
+        if horizon_max is None:
+            notes.append("truth coverage horizon unavailable")
+        elif not horizon_complete:
+            notes.append("truth window extends beyond ingested horizon")
+        if gap_resources:
+            notes.append("ingestion gaps present for truth-related resources")
+        if include_review_comments:
+            notes.append("first-response scans review_submitted + review_comment")
+        else:
+            notes.append("first-response scans review_submitted only")
+
+        if selected is not None:
+            status = TruthStatus.observed
+        elif coverage_complete:
+            status = TruthStatus.no_post_cutoff_response
+        else:
+            status = TruthStatus.unknown_due_to_ingestion_gap
+
+        return TruthDiagnostics(
+            repo=repo,
+            pr_number=pr_number,
+            cutoff=cutoff,
+            window_end=window_end,
+            status=status,
+            policy_id=policy_id,
+            policy_version=policy_version,
+            selected_login=selected,
+            selected_source=selected_source,
+            selected_event_id=selected_event_id,
+            include_review_comments=include_review_comments,
+            scanned_review_rows=len(review_rows),
+            scanned_review_comment_rows=len(review_comment_rows),
+            eligible_candidates=eligible,
+            coverage_complete=coverage_complete,
+            coverage_horizon_max=horizon_max,
+            gap_resources=gap_resources,
+            notes=notes,
+        )
     finally:
         conn.close()
+
+
+def behavior_truth_first_eligible_review(
+    *,
+    repo: str,
+    pr_number: int,
+    cutoff: datetime,
+    data_dir: str | Path = "data",
+    exclude_author: bool = True,
+    exclude_bots: bool = True,
+    window: timedelta = timedelta(hours=48),
+    include_review_comments: bool = True,
+) -> str | None:
+    diagnostics = behavior_truth_with_diagnostics(
+        repo=repo,
+        pr_number=pr_number,
+        cutoff=cutoff,
+        data_dir=data_dir,
+        exclude_author=exclude_author,
+        exclude_bots=exclude_bots,
+        window=window,
+        include_review_comments=include_review_comments,
+    )
+    return diagnostics.selected_login
 
 
 def intent_truth_from_review_requests(

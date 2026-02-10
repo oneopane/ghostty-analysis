@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -16,6 +17,13 @@ class PRCutoff(BaseModel):
     cutoff: datetime
 
 
+class TruthStatus(StrEnum):
+    observed = "observed"
+    no_post_cutoff_response = "no_post_cutoff_response"
+    unknown_due_to_ingestion_gap = "unknown_due_to_ingestion_gap"
+    policy_unavailable = "policy_unavailable"
+
+
 class TruthLabel(BaseModel):
     repo: str
     pr_number: int
@@ -23,6 +31,29 @@ class TruthLabel(BaseModel):
 
     # v0 supports multi-label but defaults to one.
     targets: list[str] = Field(default_factory=list)
+
+
+class TruthDiagnostics(BaseModel):
+    repo: str
+    pr_number: int
+    cutoff: datetime
+    window_end: datetime
+    status: TruthStatus
+    policy_id: str = "first_response_v1"
+    policy_version: str = "v1"
+    selected_login: str | None = None
+    selected_source: str | None = None
+    selected_event_id: int | None = None
+    include_review_comments: bool = True
+
+    scanned_review_rows: int = 0
+    scanned_review_comment_rows: int = 0
+    eligible_candidates: int = 0
+
+    coverage_complete: bool = False
+    coverage_horizon_max: datetime | None = None
+    gap_resources: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class PRMetrics(BaseModel):
