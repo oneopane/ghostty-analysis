@@ -65,6 +65,7 @@ def test_v1_namespace_keys_exist(tmp_path) -> None:  # type: ignore[no-untyped-d
     assert "pr.meta.title_has_hotfix_signal" in pr
     assert "pr.surface.directory_entropy.depth3" in pr
     assert "pr.surface.status_ratio.renamed" in pr
+    assert "pr.geometry.shape.area_entropy" in pr
     assert "pr.gates.has_risk_section" in pr
     assert "pr.areas.set" in pr
 

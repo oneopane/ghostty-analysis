@@ -129,6 +129,8 @@ def default_feature_registry() -> FeatureRegistry:
     r.register(FeatureSpec("pr.trajectory.head_update_burstiness", "real", "recency_based", "pr", "context"))
     r.register(FeatureSpec("pr.attention.*", "count", "cumulative", "pr", "calibration"), pattern=True)
     r.register(FeatureSpec("pr.request_overlap.*", "real", "derived_snapshot", "pr", "context"), pattern=True)
+    r.register(FeatureSpec("pr.silence.*", "binary", "derived_snapshot", "pr", "calibration"), pattern=True)
+    r.register(FeatureSpec("pr.geometry.*", "real", "derived_snapshot", "pr", "context"), pattern=True)
 
     # Repo priors and similarity
     r.register(FeatureSpec("repo.priors.*", "real", "derived_snapshot", "pr", "calibration"), pattern=True)

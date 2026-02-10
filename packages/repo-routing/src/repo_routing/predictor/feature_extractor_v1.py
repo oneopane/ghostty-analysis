@@ -11,6 +11,7 @@ from .features.candidate_activity import build_candidate_activity_table
 from .features.feature_registry import DEFAULT_FEATURE_REGISTRY, flatten_extracted_feature_keys
 from .features.task_policy import DEFAULT_TASK_POLICY_REGISTRY
 from .features.interaction import build_interaction_features
+from .features.team_roster import expand_team_members, load_team_roster
 from .features.ownership import (
     load_codeowners_text_for_pr,
     match_codeowners_for_changed_files,
@@ -95,7 +96,12 @@ class AttentionRoutingFeatureExtractorV1(FeatureExtractor):
         except Exception:
             pass
 
-        candidate_logins = self._candidate_pool(input, codeowner_logins=codeowner_logins)
+        # Cross-family silence feature (automation channel absent at cutoff).
+        pr_features["pr.silence.no_automation_feedback_pre_cutoff"] = (
+            int(pr_features.get("automation.bot_comment_count", 0) or 0) == 0
+        )
+
+        candidate_logins, candidate_teams = self._candidate_pool(input, codeowner_logins=codeowner_logins)
 
         candidates: dict[str, dict[str, Any]] = {}
         if self.config.include_candidate_features and candidate_logins:
@@ -123,11 +129,14 @@ class AttentionRoutingFeatureExtractorV1(FeatureExtractor):
             "interactions": {k: interactions[k] for k in sorted(interactions, key=str.lower)},
             "meta": {
                 "candidate_pool_size": len(candidate_logins),
+                "candidate_pool_users_count": len(candidate_logins),
+                "candidate_pool_teams_count": len(candidate_teams),
                 "candidate_windows_days": list(self.config.candidate_windows_days),
                 "include_pr_timeline_features": self.config.include_pr_timeline_features,
                 "include_ownership_features": self.config.include_ownership_features,
                 "include_candidate_features": self.config.include_candidate_features,
                 "candidate_logins": candidate_logins,
+                "candidate_teams": candidate_teams,
                 "candidate_gen_version": self.config.candidate_gen_version,
             },
             "labels": {
@@ -168,11 +177,16 @@ class AttentionRoutingFeatureExtractorV1(FeatureExtractor):
         input: PRInputBundle,
         *,
         codeowner_logins: set[str],
-    ) -> list[str]:
+    ) -> tuple[list[str], list[str]]:
         requested_users = {
             rr.reviewer
             for rr in input.review_requests
             if rr.reviewer_type.lower() == "user"
+        }
+        requested_teams = {
+            rr.reviewer
+            for rr in input.review_requests
+            if rr.reviewer_type.lower() == "team"
         }
         mentions = {
             m.group("user")
@@ -180,11 +194,28 @@ class AttentionRoutingFeatureExtractorV1(FeatureExtractor):
         }
         recent = {e.actor_login for e in input.recent_activity}
 
-        pool = set(requested_users) | set(mentions) | set(recent) | set(codeowner_logins)
+        owner_users = {x for x in codeowner_logins if not _looks_like_team_ref(x)}
+        owner_teams = {x for x in codeowner_logins if _looks_like_team_ref(x)}
+
+        team_pool = set(requested_teams) | set(owner_teams)
+
+        roster = load_team_roster(repo=input.repo, data_dir=self.config.data_dir)
+        expanded_team_users = expand_team_members(team_names=team_pool, roster=roster)
+
+        pool = (
+            set(requested_users)
+            | set(mentions)
+            | set(recent)
+            | set(owner_users)
+            | set(expanded_team_users)
+        )
         if input.author_login:
             pool.discard(input.author_login)
 
-        return sorted(pool, key=lambda s: s.lower())
+        return (
+            sorted(pool, key=lambda s: s.lower()),
+            sorted(team_pool, key=lambda s: s.lower()),
+        )
 
 
 def build_feature_extractor_v1(
@@ -204,6 +235,11 @@ def build_feature_extractor_v1(
         task_id=task_id,
     )
     return AttentionRoutingFeatureExtractorV1(config=cfg)
+
+
+def _looks_like_team_ref(value: str) -> bool:
+    v = value.strip().lower()
+    return v.startswith("team:") or "/" in v
 
 
 _USER_MENTION_RE = re.compile(

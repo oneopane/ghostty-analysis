@@ -446,11 +446,17 @@ def build_pr_timeline_features(
     out: dict[str, Any] = {
         # B1 trajectory
         "pr.trajectory.age_seconds": pr_age_seconds_at_cutoff(input),
+        "pr.trajectory.head_updates.count_1d": head_updates_in_window_count(ctx, days=1),
         "pr.trajectory.head_updates.count_7d": head_updates_in_window_count(ctx, days=7),
         "pr.trajectory.head_updates.count_30d": head_updates_in_window_count(ctx, days=30),
         "pr.trajectory.time_since_last_head_update_seconds": time_since_last_head_update_seconds(ctx),
         "pr.trajectory.head_update_burstiness": head_update_burstiness_last_6h(ctx),
         "pr.trajectory.comment_count.author": author_comment_count_pre_cutoff(ctx),
+        # Geometry-lite trajectory (without historical per-head file-shape reconstruction)
+        "pr.geometry.trajectory.head_updates.count_1d": head_updates_in_window_count(ctx, days=1),
+        "pr.geometry.trajectory.head_updates.count_7d": head_updates_in_window_count(ctx, days=7),
+        "pr.geometry.trajectory.time_since_last_head_update_seconds": time_since_last_head_update_seconds(ctx),
+        "pr.geometry.trajectory.update_burstiness_6h": head_update_burstiness_last_6h(ctx),
         "pr.trajectory.comment_count.non_author": non_author_comments,
         "pr.trajectory.unique_participants_count": unique_participants_count(ctx),
         "pr.trajectory.review_count": reviews_n,
@@ -478,6 +484,14 @@ def build_pr_timeline_features(
             else 0.0
         ),
         "pr.request_overlap.overlap_mentions_with_requests.count": len({x.lower() for x in mentioned} & {x.lower() for x in req_users}),
+        # PR x silence/absence relations
+        "pr.silence.no_non_author_attention_pre_cutoff": participants_non_author == 0,
+        "pr.silence.no_owner_overlap_with_requests": len({x.lower() for x in req_users} & {x.lower() for x in (codeowner_logins or set())}) == 0,
+        "pr.silence.no_active_review_requests": len(req_users) + len(req_teams) == 0,
+        "pr.silence.no_recent_author_followup_24h": (
+            author_comment_count_pre_cutoff(ctx) == 0
+            and head_updates_in_window_count(ctx, days=1) == 0
+        ),
         # carry meta signal here until draft state is wired into snapshot
         "pr.meta.is_draft": is_draft_at_cutoff(ctx),
     }

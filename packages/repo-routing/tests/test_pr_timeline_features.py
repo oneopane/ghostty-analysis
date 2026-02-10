@@ -117,3 +117,5 @@ def test_build_pr_timeline_features(tmp_path: Path) -> None:
     assert features["pr.timeline.requested_overlap_codeowners"] is True
     assert features["pr.timeline.mentions_overlap_requests"] is True
     assert features["pr.timeline.title_has_wip_signal"] is True
+    assert "pr.silence.no_active_review_requests" in features
+    assert "pr.geometry.trajectory.update_burstiness_6h" in features

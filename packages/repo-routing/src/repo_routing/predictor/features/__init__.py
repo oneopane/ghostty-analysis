@@ -22,6 +22,11 @@ from .task_policy import (
     TaskPolicySpec,
     default_task_policy_registry,
 )
+from .team_roster import (
+    default_team_roster_path,
+    expand_team_members,
+    load_team_roster,
+)
 from .schemas import (
     CandidateFeatureTable,
     CandidateFeatureVector,
@@ -56,4 +61,7 @@ __all__ = [
     "TaskPolicyRegistry",
     "default_task_policy_registry",
     "DEFAULT_TASK_POLICY_REGISTRY",
+    "default_team_roster_path",
+    "load_team_roster",
+    "expand_team_members",
 ]

@@ -201,6 +201,14 @@ def build_pr_surface_features(input: PRInputBundle) -> dict[str, Any]:
         "pr.areas.max_files_in_one_area": max(area_counts.values()) if area_counts else 0,
         "pr.areas.area_entropy": normalized_entropy(area_counts.values()),
         "pr.areas.is_multi_area": len(areas_sorted) > 1,
+        # Geometry-lite (shape at cutoff)
+        "pr.geometry.shape.area_entropy": normalized_entropy(area_counts.values()),
+        "pr.geometry.shape.area_top_share": safe_ratio(
+            float(max(area_counts.values()) if area_counts else 0),
+            float(files_n),
+        ),
+        "pr.geometry.shape.directory_entropy.depth3": depth3_entropy,
+        "pr.geometry.shape.extension_entropy": normalized_entropy(ext_counts.values()),
         # A3: gates
         "pr.gates.completeness_score": safe_ratio(float(present_count), 3.0),
         "pr.gates.missing_required_fields_count": sum(1 for m in missing_fields if m),
