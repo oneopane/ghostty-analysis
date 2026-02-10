@@ -13,6 +13,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.2.0"]
+mixed-membership = [
+  "numpy>=1.26.0",
+  "polars>=1.0.0",
+  "scikit-learn>=1.4.0",
+]
 
 [project.scripts]
 repo-routing = "repo_routing.cli.app:app"
