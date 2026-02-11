@@ -251,6 +251,9 @@ def run_streaming_eval(
         router_id_for_spec(spec): load_router(spec)
         for spec in specs
     }
+    for router in routers_by_id.values():
+        if hasattr(router, "mode") and isinstance(getattr(router, "mode"), str):
+            setattr(router, "mode", str(cfg.defaults.llm_mode or "replay").strip().lower())
 
     def pkg_version(name: str) -> str | None:
         try:
@@ -444,8 +447,29 @@ def run_streaming_eval(
                             feature_meta[k] = raw_meta[k]
                 if "feature_version" in predictor.last_features:
                     feature_meta["feature_version"] = predictor.last_features["feature_version"]
-                if router_id not in router_feature_meta and feature_meta:
-                    router_feature_meta[router_id] = feature_meta
+
+            router_provenance = getattr(router, "provenance", None)
+            if isinstance(router_provenance, dict):
+                feature_meta["router_provenance"] = router_provenance
+                if router_id not in router_feature_meta:
+                    router_feature_meta[router_id] = dict(feature_meta)
+
+            llm_steps = getattr(router, "last_llm_steps", None)
+            if isinstance(llm_steps, dict):
+                for step in sorted(llm_steps.keys(), key=str.lower):
+                    payload = llm_steps.get(step)
+                    if isinstance(payload, dict):
+                        routing_writer.write_llm_step(
+                            pr_number=pr_number,
+                            router_id=router_id,
+                            step=str(step),
+                            payload=payload,
+                        )
+            llm_provenance = getattr(router, "last_provenance", None)
+            if isinstance(llm_provenance, dict):
+                feature_meta["llm_provenance"] = llm_provenance
+            if feature_meta:
+                router_feature_meta[router_id] = dict(feature_meta)
 
             routing_writer.write_route_result(
                 RouteArtifact(baseline=router_id, result=result, meta=feature_meta)
@@ -613,6 +637,24 @@ def run_streaming_eval(
         for rid, rows in queue_rows_by_router.items()
     }
 
+    llm_telemetry: dict[str, object] = {"routers": {}, "total_cost_usd": 0.0}
+    total_cost = 0.0
+    for rid, meta in router_feature_meta.items():
+        prov = meta.get("llm_provenance")
+        if not isinstance(prov, dict):
+            continue
+        latency = prov.get("latency_ms")
+        cost = prov.get("cost_usd")
+        if isinstance(cost, (int, float)):
+            total_cost += float(cost)
+        llm_telemetry["routers"][rid] = {
+            "mode": prov.get("mode"),
+            "model": prov.get("model"),
+            "latency_ms": latency,
+            "cost_usd": cost,
+        }
+    llm_telemetry["total_cost_usd"] = total_cost
+
     notes: list[str] = []
     if stale_cutoff_note is not None:
         notes.append(stale_cutoff_note)
@@ -648,6 +690,7 @@ def run_streaming_eval(
             },
             "routing_agreement_slices_by_policy": routing_slices_by_policy,
             "routing_denominators_by_policy": routing_denominators_by_policy,
+            "llm_telemetry": llm_telemetry,
         },
     )
     store.write_json("report.json", report.model_dump(mode="json"))
@@ -669,6 +712,7 @@ def run_streaming_eval(
             routing_by_policy=routing_summaries_by_policy,  # type: ignore[arg-type]
             routing_slices_by_policy=routing_slices_by_policy,
             routing_denominators_by_policy=routing_denominators_by_policy,
+            llm_telemetry=llm_telemetry,
             notes=notes,
         ),
     )

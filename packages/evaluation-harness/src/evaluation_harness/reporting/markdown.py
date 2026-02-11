@@ -25,6 +25,7 @@ def render_report_md(
     routing_by_policy: dict[str, dict[str, RoutingAgreementSummary]] | None = None,
     routing_slices_by_policy: dict[str, dict[str, dict[str, dict[str, object]]]] | None = None,
     routing_denominators_by_policy: dict[str, dict[str, dict[str, int]]] | None = None,
+    llm_telemetry: dict[str, object] | None = None,
     notes: list[str] | None = None,
 ) -> str:
     out: list[str] = []
@@ -171,6 +172,24 @@ def render_report_md(
                             out.append(
                                 f"- {policy}.{router_id}.observed_and_router_nonempty.mrr: {float(mrr):.4f}"
                             )
+        out.append("")
+
+    if llm_telemetry:
+        out.append("## LLM Telemetry")
+        out.append("")
+        total_cost = llm_telemetry.get("total_cost_usd")
+        if isinstance(total_cost, (int, float)):
+            out.append(f"- total_cost_usd: {float(total_cost):.6f}")
+        routers = llm_telemetry.get("routers")
+        if isinstance(routers, dict):
+            for rid in sorted(routers.keys(), key=lambda s: str(s).lower()):
+                payload = routers[rid]
+                if not isinstance(payload, dict):
+                    continue
+                out.append(f"- {rid}.mode: {payload.get('mode')}")
+                out.append(f"- {rid}.model: {payload.get('model')}")
+                out.append(f"- {rid}.latency_ms: {payload.get('latency_ms')}")
+                out.append(f"- {rid}.cost_usd: {payload.get('cost_usd')}")
         out.append("")
 
     if notes:
