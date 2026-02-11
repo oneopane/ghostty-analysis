@@ -10,6 +10,15 @@ def test_load_router_builtin_mentions() -> None:
     assert hasattr(router, "route")
 
 
+def test_load_router_builtin_union_and_hybrid() -> None:
+    union = load_router(RouterSpec(type="builtin", name="union"))
+    hybrid = load_router(RouterSpec(type="builtin", name="hybrid_ranker"))
+    llm = load_router(RouterSpec(type="builtin", name="llm_rerank", config_path="replay"))
+    assert hasattr(union, "route")
+    assert hasattr(hybrid, "route")
+    assert hasattr(llm, "route")
+
+
 def test_load_router_import_path_factory(tmp_path: Path, monkeypatch) -> None:
     mod = tmp_path / "fake_router_mod.py"
     mod.write_text(

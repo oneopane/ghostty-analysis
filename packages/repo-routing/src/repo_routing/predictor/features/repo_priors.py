@@ -10,8 +10,7 @@ import fnmatch
 
 from ...exports.area import area_for_path, load_repo_area_overrides
 from ...inputs.models import PRInputBundle
-from ...paths import repo_codeowners_path
-from .ownership import parse_codeowners_rules
+from .ownership import load_codeowners_text, parse_codeowners_rules
 from .sql import connect_repo_db, cutoff_sql
 from .stats import median_int
 
@@ -241,14 +240,14 @@ def build_repo_priors_features(
                 base_sha = pr_base_sha.get(pid)
                 if not base_sha:
                     continue
-                codeowners_p = repo_codeowners_path(
-                    repo_full_name=input.repo,
+                text = load_codeowners_text(
+                    repo=input.repo,
                     base_sha=base_sha,
                     data_dir=data_dir,
                 )
-                if not codeowners_p.exists():
+                if not text:
                     continue
-                rules = parse_codeowners_rules(codeowners_p.read_text(encoding="utf-8"))
+                rules = parse_codeowners_rules(text)
                 if not rules:
                     continue
                 owned = 0

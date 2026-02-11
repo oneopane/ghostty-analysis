@@ -469,3 +469,102 @@ def test_experiment_explain_passes_policy_flag(monkeypatch) -> None:  # type: ig
 
     assert res.exit_code == 0, res.output
     assert captured["policy"] == "first_response_v1"
+
+
+def test_experiment_run_audit_profile_enforces_quality_gates(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    repo = "acme/widgets"
+    data_dir = tmp_path / "data"
+    run_dir = data_dir / "github" / "acme" / "widgets" / "eval" / "run-gates"
+    cohort_path = tmp_path / "cohort.json"
+    spec_path = tmp_path / "experiment.json"
+
+    cohort = _write_hashed_payload(
+        cohort_path,
+        _cohort_payload(repo=repo, pr_number=99, cutoff_iso="2024-01-01T00:00:00Z"),
+    )
+    spec = _spec_payload(
+        repo=repo,
+        cohort_path=str(cohort_path),
+        cohort_hash=str(cohort["hash"]),
+        allow_fetch_missing_artifacts=False,
+    )
+    spec["profile"] = "audit"
+    _write_hashed_payload(spec_path, spec)
+
+    def _fake_run_streaming_eval(**kwargs):  # type: ignore[no-untyped-def]
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "report.json").write_text(
+            json.dumps(
+                {
+                    "kind": "eval_report",
+                    "version": "v0",
+                    "extra": {
+                        "truth_coverage_counts": {
+                            "observed": 0,
+                            "unknown_due_to_ingestion_gap": 1,
+                            "no_post_cutoff_response": 0,
+                            "policy_unavailable": 0,
+                        },
+                        "truth_primary_policy": "first_approval_v1",
+                    },
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        (run_dir / "per_pr.jsonl").write_text(
+            json.dumps(
+                {
+                    "pr_number": 99,
+                    "cutoff": "2024-01-01T00:00:00Z",
+                    "truth_diagnostics": {
+                        "window_end": "2024-01-01T01:00:00Z",
+                    },
+                    "repo_profile": {"coverage": {"codeowners_present": False}},
+                    "routers": {
+                        "mentions": {
+                            "route_result": {"candidates": []},
+                            "routing_agreement_by_policy": {
+                                "first_approval_v1": {"mrr": 0.0, "hit_at_1": 0.0}
+                            },
+                        }
+                    },
+                    "truth": {
+                        "primary_policy": "first_approval_v1",
+                        "policies": {
+                            "first_approval_v1": {
+                                "status": "unknown_due_to_ingestion_gap",
+                                "diagnostics": {},
+                            }
+                        },
+                    },
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return SimpleNamespace(run_dir=run_dir)
+
+    monkeypatch.setattr(unified_experiment, "run_streaming_eval", _fake_run_streaming_eval)
+    monkeypatch.setattr(unified_experiment, "compute_run_id", lambda cfg: "run-gates")
+
+    runner = CliRunner()
+    res = runner.invoke(
+        app,
+        [
+            "experiment",
+            "run",
+            "--spec",
+            str(spec_path),
+            "--data-dir",
+            str(data_dir),
+        ],
+    )
+
+    assert res.exit_code != 0
+    assert "quality_gates_pass False" in res.output

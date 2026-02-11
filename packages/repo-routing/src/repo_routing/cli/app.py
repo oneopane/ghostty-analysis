@@ -20,7 +20,15 @@ from ..time import parse_dt_utc
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
-_VALID_BASELINES = {"mentions", "popularity", "codeowners", "stewards"}
+_VALID_BASELINES = {
+    "mentions",
+    "popularity",
+    "codeowners",
+    "union",
+    "hybrid_ranker",
+    "llm_rerank",
+    "stewards",
+}
 
 
 def _parse_iso_utc(value: str, *, param: str) -> datetime:
@@ -98,7 +106,8 @@ def route(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     pr_number: int = typer.Option(..., help="Pull request number"),
     baseline: str = typer.Option(
-        ..., help="Baseline: mentions | popularity | codeowners | stewards"
+        ...,
+        help="Baseline: mentions | popularity | codeowners | union | hybrid_ranker | llm_rerank | stewards",
     ),
     config: str | None = typer.Option(
         None, help="Scoring config path (required for stewards)"

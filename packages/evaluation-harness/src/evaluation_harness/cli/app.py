@@ -26,7 +26,15 @@ from ..runner import run_streaming_eval
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
-_VALID_ROUTERS = {"mentions", "popularity", "codeowners", "stewards"}
+_VALID_ROUTERS = {
+    "mentions",
+    "popularity",
+    "codeowners",
+    "union",
+    "hybrid_ranker",
+    "llm_rerank",
+    "stewards",
+}
 
 
 def _parse_dt(value: str) -> datetime:

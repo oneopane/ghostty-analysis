@@ -13,7 +13,16 @@ def _setup_files(tmp_path: Path, repo: str, base_sha: str) -> Path:
     owner, name = repo.split("/", 1)
     data_dir = tmp_path / "data"
 
-    co = data_dir / "github" / owner / name / "codeowners" / base_sha / "CODEOWNERS"
+    co = (
+        data_dir
+        / "github"
+        / owner
+        / name
+        / "repo_artifacts"
+        / base_sha
+        / ".github"
+        / "CODEOWNERS"
+    )
     co.parent.mkdir(parents=True, exist_ok=True)
     co.write_text("src/* @alice\n*.md @docs-team\n", encoding="utf-8")
 

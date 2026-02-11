@@ -19,6 +19,7 @@ class EvalDefaults(BaseModel):
     truth_policy_plugin_allowlist: tuple[str, ...] = (
         "evaluation_harness.truth_plugins.",
     )
+    llm_mode: str = "replay"
 
     # Legacy knobs retained during migration (v0 compatibility).
     intent_truth_window: timedelta = timedelta(minutes=60)

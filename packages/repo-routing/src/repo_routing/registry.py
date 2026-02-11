@@ -10,13 +10,16 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from .inputs.builder import build_pr_input_bundle
-from .inputs.models import PRInputBuilderOptions
+from .inputs.models import PRInputBuilderOptions, PRInputBundle
 from .predictor.base import Predictor
 from .predictor.pipeline import PipelinePredictor
 from .router.base import Router
 from .router.baselines.codeowners import CodeownersRouter
 from .router.baselines.mentions import MentionsRouter
 from .router.baselines.popularity import PopularityRouter
+from .router.baselines.union import UnionRouter
+from .router.hybrid_ranker import HybridRankerRouter
+from .router.llm_rerank import LLMRerankRouter
 from .router.stewards import StewardsRouter
 
 
@@ -66,14 +69,17 @@ class PredictorRouterAdapter:
         as_of,
         data_dir: str = "data",
         top_k: int = 5,
+        input_bundle: PRInputBundle | None = None,
     ):
-        bundle = build_pr_input_bundle(
-            repo=repo,
-            pr_number=pr_number,
-            cutoff=as_of,
-            data_dir=data_dir,
-            options=self.input_options,
-        )
+        bundle = input_bundle
+        if bundle is None:
+            bundle = build_pr_input_bundle(
+                repo=repo,
+                pr_number=pr_number,
+                cutoff=as_of,
+                data_dir=data_dir,
+                options=self.input_options,
+            )
         return self.predictor.predict(bundle, top_k=top_k)
 
 
@@ -119,6 +125,33 @@ def _builtin_router(name: str, *, config_path: str | None) -> Router:
         return PopularityRouter(lookback_days=180)
     if n == "codeowners":
         return CodeownersRouter(enabled=True)
+    if n == "union":
+        return UnionRouter()
+    if n == "hybrid_ranker":
+        if config_path is not None and Path(config_path).exists():
+            payload = json.loads(Path(config_path).read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                weights = payload.get("weights")
+                if isinstance(weights, dict):
+                    return HybridRankerRouter(
+                        weights={
+                            str(k): float(v)
+                            for k, v in weights.items()
+                            if isinstance(v, (int, float))
+                        }
+                    )
+        return HybridRankerRouter()
+    if n == "llm_rerank":
+        if config_path is not None and Path(config_path).exists():
+            payload = json.loads(Path(config_path).read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                mode = str(payload.get("mode") or "replay")
+                model = str(payload.get("model_name") or "dummy-llm-v1")
+                cache_dir = str(payload.get("cache_dir") or ".cache/repo-routing/llm-replay")
+                return LLMRerankRouter(mode=mode, model_name=model, cache_dir=cache_dir)
+        if config_path in {"off", "live", "replay"}:
+            return LLMRerankRouter(mode=str(config_path))
+        return LLMRerankRouter(mode="replay")
     if n == "stewards":
         if config_path is None:
             raise ValueError("config_path is required for stewards router")

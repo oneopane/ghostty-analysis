@@ -9,8 +9,7 @@ from typing import Any
 
 from ...exports.area import area_for_path, load_repo_area_overrides
 from ...inputs.models import PRInputBundle
-from ...paths import repo_codeowners_path
-from .ownership import parse_codeowners_rules
+from .ownership import load_codeowners_text, parse_codeowners_rules
 from .sql import connect_repo_db, cutoff_sql
 
 
@@ -49,10 +48,10 @@ def _codeowners_match(pattern: str, path: str) -> bool:
 def _owner_set_for_paths(*, repo: str, data_dir: str | Path, base_sha: str | None, paths: set[str]) -> set[str]:
     if not base_sha or not paths:
         return set()
-    p = repo_codeowners_path(repo_full_name=repo, base_sha=base_sha, data_dir=data_dir)
-    if not p.exists():
+    text = load_codeowners_text(repo=repo, base_sha=base_sha, data_dir=data_dir)
+    if not text:
         return set()
-    rules = parse_codeowners_rules(p.read_text(encoding="utf-8"))
+    rules = parse_codeowners_rules(text)
     out: set[str] = set()
     for fp in sorted(paths):
         for r in rules:

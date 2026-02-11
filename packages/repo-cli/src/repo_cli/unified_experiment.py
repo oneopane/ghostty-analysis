@@ -41,7 +41,15 @@ cohort_app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=Fal
 experiment_app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 profile_app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
-_VALID_ROUTERS = {"mentions", "popularity", "codeowners", "stewards"}
+_VALID_ROUTERS = {
+    "mentions",
+    "popularity",
+    "codeowners",
+    "union",
+    "hybrid_ranker",
+    "llm_rerank",
+    "stewards",
+}
 _EXPERIMENT_MANIFEST_FILENAME = "experiment_manifest.json"
 
 
@@ -285,6 +293,8 @@ def _spec_from_inline(
     allow_fetch_missing_artifacts: bool,
     artifact_paths: list[str],
     critical_artifact_paths: list[str],
+    llm_mode: str,
+    profile: str,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "kind": "experiment_spec",
@@ -307,6 +317,10 @@ def _spec_from_inline(
                 set(critical_artifact_paths), key=str.lower
             ),
         },
+        "llm": {
+            "mode": llm_mode,
+        },
+        "profile": profile,
         "feature_policy_mode": "v0",
         "tags": [],
         "notes": "",
@@ -319,24 +333,33 @@ def _router_specs_from_spec(spec_payload: dict[str, Any]) -> list[RouterSpec]:
     raw = spec_payload.get("routers")
     if not isinstance(raw, list) or not raw:
         return [RouterSpec(type="builtin", name="mentions")]
+    llm_raw = spec_payload.get("llm")
+    llm_mode = "replay"
+    if isinstance(llm_raw, dict):
+        llm_mode = str(llm_raw.get("mode") or "replay").strip().lower()
+
     specs: list[RouterSpec] = []
     for item in raw:
         if not isinstance(item, dict):
             raise typer.BadParameter("invalid experiment spec routers entry")
+        name = str(item.get("name") or "")
+        config_path = (
+            None
+            if item.get("config_path") is None
+            else str(item.get("config_path"))
+        )
+        if str(item.get("type") or "") == "builtin" and name == "llm_rerank" and not config_path:
+            config_path = llm_mode
         specs.append(
             RouterSpec(
                 type=str(item.get("type") or ""),
-                name=str(item.get("name") or ""),
+                name=name,
                 import_path=(
                     None
                     if item.get("import_path") is None
                     else str(item.get("import_path"))
                 ),
-                config_path=(
-                    None
-                    if item.get("config_path") is None
-                    else str(item.get("config_path"))
-                ),
+                config_path=config_path,
             )
         )
     return specs
@@ -635,6 +658,286 @@ def _delta(a: object, b: object) -> str:
     return f"{float(b) - float(a):+.4f}"
 
 
+def _safe_ratio(numer: int, denom: int) -> float:
+    if denom <= 0:
+        return 0.0
+    return float(numer) / float(denom)
+
+
+def _quality_thresholds(*, routers: list[str]) -> dict[str, float]:
+    phase2_like = any(r in {"union", "hybrid_ranker", "llm_rerank"} for r in routers)
+    if phase2_like:
+        return {
+            "unknown_max": 0.02,
+            "availability_min": 0.95,
+            "unavailable_max": 0.01,
+        }
+    return {
+        "unknown_max": 0.03,
+        "availability_min": 0.90,
+        "unavailable_max": 0.02,
+    }
+
+
+def _evaluate_quality_gates(
+    *,
+    rows: list[dict[str, Any]],
+    report: dict[str, Any],
+    routers: list[str],
+) -> dict[str, Any]:
+    thresholds = _quality_thresholds(routers=routers)
+
+    extra = report.get("extra") if isinstance(report.get("extra"), dict) else {}
+    truth_counts_raw = (
+        extra.get("truth_coverage_counts") if isinstance(extra, dict) else {}
+    )
+    truth_counts = truth_counts_raw if isinstance(truth_counts_raw, dict) else {}
+    total_truth = sum(
+        int(v) for v in truth_counts.values() if isinstance(v, (int, float))
+    )
+    unknown_n = int(truth_counts.get("unknown_due_to_ingestion_gap", 0))
+    unknown_rate = _safe_ratio(unknown_n, total_truth if total_truth > 0 else len(rows))
+
+    profile_rows = [r for r in rows if isinstance(r.get("repo_profile"), dict)]
+    codeowners_present = 0
+    for row in profile_rows:
+        coverage = (row.get("repo_profile") or {}).get("coverage")
+        if isinstance(coverage, dict) and bool(coverage.get("codeowners_present")):
+            codeowners_present += 1
+    availability = _safe_ratio(codeowners_present, len(profile_rows))
+
+    unavailable_slots = 0
+    total_slots = 0
+    for row in rows:
+        by_router = row.get("routers")
+        if not isinstance(by_router, dict):
+            continue
+        for rid in routers:
+            payload = by_router.get(rid)
+            if not isinstance(payload, dict):
+                continue
+            total_slots += 1
+            route_result = payload.get("route_result")
+            if not isinstance(route_result, dict):
+                unavailable_slots += 1
+                continue
+            candidates = route_result.get("candidates")
+            if not isinstance(candidates, list) or not candidates:
+                unavailable_slots += 1
+    unavailable_rate = _safe_ratio(unavailable_slots, total_slots)
+
+    window_consistent_n = 0
+    window_total_n = 0
+    for row in rows:
+        diag = row.get("truth_diagnostics")
+        cutoff_raw = row.get("cutoff")
+        if not isinstance(diag, dict) or not isinstance(cutoff_raw, str):
+            continue
+        end_raw = diag.get("window_end")
+        if not isinstance(end_raw, str):
+            continue
+        try:
+            cutoff = parse_dt_utc(cutoff_raw)
+            end = parse_dt_utc(end_raw)
+        except Exception:
+            continue
+        if cutoff is None or end is None:
+            continue
+        window_total_n += 1
+        if end > cutoff:
+            window_consistent_n += 1
+    window_consistency = _safe_ratio(window_consistent_n, window_total_n)
+
+    g2_ok = True
+    for row in rows:
+        truth = row.get("truth")
+        if not isinstance(truth, dict):
+            continue
+        policies = truth.get("policies")
+        if not isinstance(policies, dict):
+            g2_ok = False
+            break
+        for _, payload in policies.items():
+            if not isinstance(payload, dict):
+                g2_ok = False
+                break
+            if "status" not in payload or "diagnostics" not in payload:
+                g2_ok = False
+                break
+        if not g2_ok:
+            break
+
+    deterministic_ok = True
+    hybrid_hashes: set[str] = set()
+    for row in rows:
+        by_router = row.get("routers")
+        if not isinstance(by_router, dict):
+            continue
+        payload = by_router.get("hybrid_ranker")
+        if not isinstance(payload, dict):
+            continue
+        route_result = payload.get("route_result")
+        if not isinstance(route_result, dict):
+            continue
+        notes = route_result.get("notes")
+        if not isinstance(notes, list):
+            continue
+        for note in notes:
+            s = str(note)
+            if s.startswith("weights_hash="):
+                hybrid_hashes.add(s[len("weights_hash="):])
+    if len(hybrid_hashes) > 1:
+        deterministic_ok = False
+
+    gates = {
+        "G1_truth_window_consistency": {
+            "value": window_consistency,
+            "target": 1.0,
+            "pass": window_consistency >= 1.0,
+        },
+        "G2_truth_policy_schema": {"pass": g2_ok},
+        "G3_unknown_ingestion_gap_rate": {
+            "value": unknown_rate,
+            "max": thresholds["unknown_max"],
+            "pass": unknown_rate <= thresholds["unknown_max"],
+        },
+        "G4_ownership_availability": {
+            "value": availability,
+            "min": thresholds["availability_min"],
+            "pass": availability >= thresholds["availability_min"],
+        },
+        "G5_router_unavailable_rate": {
+            "value": unavailable_rate,
+            "max": thresholds["unavailable_max"],
+            "pass": unavailable_rate <= thresholds["unavailable_max"],
+        },
+        "G6_deterministic_reproducibility": {
+            "pass": deterministic_ok,
+            "hybrid_weights_hashes": sorted(hybrid_hashes),
+        },
+    }
+    all_pass = all(bool(v.get("pass")) for v in gates.values())
+    return {
+        "thresholds": thresholds,
+        "gates": gates,
+        "all_pass": all_pass,
+    }
+
+
+def _bootstrap_delta(
+    *,
+    values: list[float],
+    samples: int = 500,
+    seed: int = 42,
+) -> tuple[float, float]:
+    if not values:
+        return 0.0, 0.0
+    rng = random.Random(seed)
+    means: list[float] = []
+    n = len(values)
+    for _ in range(samples):
+        draw = [values[rng.randrange(0, n)] for _ in range(n)]
+        means.append(sum(draw) / float(n))
+    means.sort()
+    lo_idx = int(0.025 * (len(means) - 1))
+    hi_idx = int(0.975 * (len(means) - 1))
+    return means[lo_idx], means[hi_idx]
+
+
+def _evaluate_promotion(
+    *,
+    rows: list[dict[str, Any]],
+    routers: list[str],
+    primary_policy: str,
+    gate_all_pass: bool,
+) -> dict[str, Any]:
+    baseline: str | None = None
+    candidate: str | None = None
+    if "hybrid_ranker" in routers and "popularity" in routers:
+        baseline, candidate = "popularity", "hybrid_ranker"
+    elif "union" in routers and "popularity" in routers:
+        baseline, candidate = "popularity", "union"
+    elif "llm_rerank" in routers and "hybrid_ranker" in routers:
+        baseline, candidate = "hybrid_ranker", "llm_rerank"
+    if baseline is None or candidate is None:
+        return {
+            "eligible": False,
+            "reason": "missing comparable router pair",
+            "primary_policy": primary_policy,
+        }
+
+    deltas_mrr: list[float] = []
+    deltas_hit1: list[float] = []
+    for row in rows:
+        truth = row.get("truth")
+        if not isinstance(truth, dict):
+            continue
+        policies = truth.get("policies")
+        if not isinstance(policies, dict):
+            continue
+        policy_row = policies.get(primary_policy)
+        if not isinstance(policy_row, dict):
+            continue
+        if str(policy_row.get("status") or "") != "observed":
+            continue
+
+        routers_payload = row.get("routers")
+        if not isinstance(routers_payload, dict):
+            continue
+        base_row = routers_payload.get(baseline)
+        cand_row = routers_payload.get(candidate)
+        if not isinstance(base_row, dict) or not isinstance(cand_row, dict):
+            continue
+
+        base_route = base_row.get("route_result")
+        cand_route = cand_row.get("route_result")
+        if not isinstance(base_route, dict) or not isinstance(cand_route, dict):
+            continue
+        if not isinstance(base_route.get("candidates"), list) or not base_route.get("candidates"):
+            continue
+        if not isinstance(cand_route.get("candidates"), list) or not cand_route.get("candidates"):
+            continue
+
+        base_metrics = (base_row.get("routing_agreement_by_policy") or {}).get(primary_policy)
+        cand_metrics = (cand_row.get("routing_agreement_by_policy") or {}).get(primary_policy)
+        if not isinstance(base_metrics, dict) or not isinstance(cand_metrics, dict):
+            continue
+        base_mrr = base_metrics.get("mrr")
+        cand_mrr = cand_metrics.get("mrr")
+        base_hit1 = base_metrics.get("hit_at_1")
+        cand_hit1 = cand_metrics.get("hit_at_1")
+        if not isinstance(base_mrr, (int, float)) or not isinstance(cand_mrr, (int, float)):
+            continue
+        if not isinstance(base_hit1, (int, float)) or not isinstance(cand_hit1, (int, float)):
+            continue
+        deltas_mrr.append(float(cand_mrr) - float(base_mrr))
+        deltas_hit1.append(float(cand_hit1) - float(base_hit1))
+
+    n = len(deltas_mrr)
+    delta_mrr = sum(deltas_mrr) / float(n) if n > 0 else 0.0
+    ci_lo, ci_hi = _bootstrap_delta(values=deltas_mrr)
+    delta_hit1 = sum(deltas_hit1) / float(len(deltas_hit1)) if deltas_hit1 else 0.0
+    pass_rule = (
+        n >= 120
+        and delta_mrr >= 0.015
+        and ci_lo > 0.0
+        and gate_all_pass
+        and delta_hit1 >= -0.01
+    )
+    return {
+        "eligible": True,
+        "primary_policy": primary_policy,
+        "baseline_router": baseline,
+        "candidate_router": candidate,
+        "n_observed_and_router_nonempty": n,
+        "delta_mrr": delta_mrr,
+        "delta_mrr_bootstrap_ci95": [ci_lo, ci_hi],
+        "delta_hit_at_1": delta_hit1,
+        "gates_pass": gate_all_pass,
+        "promote": pass_rule,
+    }
+
+
 @cohort_app.command("create")
 def cohort_create(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
@@ -676,6 +979,14 @@ def experiment_init(
         True,
         "--strict-streaming-eval/--no-strict-streaming-eval",
         help="Fail when DB horizon is before any PR cutoff",
+    ),
+    profile: str = typer.Option(
+        "audit",
+        help="Run profile used for gate enforcement (audit|standard)",
+    ),
+    llm_mode: str = typer.Option(
+        "replay",
+        help="LLM run mode (off|live|replay)",
     ),
     top_k: int = typer.Option(5, help="Router top-k"),
     router: list[str] = typer.Option([], "--router", help="Builtin router id(s)"),
@@ -743,6 +1054,8 @@ def experiment_init(
         allow_fetch_missing_artifacts=allow_fetch_missing_artifacts,
         artifact_paths=list(artifact_path),
         critical_artifact_paths=list(critical_artifact_path),
+        llm_mode=llm_mode,
+        profile=profile,
     )
     out = Path(output)
     _write_json(out, payload)
@@ -917,6 +1230,8 @@ def experiment_run(
             allow_fetch_missing_artifacts=allow_fetch_missing_artifacts,
             artifact_paths=list(DEFAULT_PINNED_ARTIFACT_PATHS),
             critical_artifact_paths=[],
+            llm_mode="replay",
+            profile="audit",
         )
 
     repo_name = str(spec_payload.get("repo") or "")
@@ -990,6 +1305,10 @@ def experiment_run(
         strict_streaming_eval=bool(spec_payload.get("strict_streaming_eval", True)),
         cutoff_policy=active_cutoff_policy,
         top_k=int(spec_payload.get("top_k", 5)),
+        llm_mode=str(
+            ((spec_payload.get("llm") or {}) if isinstance(spec_payload.get("llm"), dict) else {}).get("mode")
+            or "replay"
+        ),
     )
     cfg = EvalRunConfig(
         repo=repo_name,
@@ -1010,6 +1329,38 @@ def experiment_run(
         pr_cutoffs=cutoffs,
     )
 
+    routers_for_run = [router_id_for_spec(s) for s in router_specs]
+    try:
+        report_payload = _load_report(repo=repo_name, run_id=cfg.run_id, data_dir=data_dir)
+    except Exception:
+        report_payload = {"kind": "eval_report", "version": "v0", "extra": {}}
+    per_pr_rows = _load_per_pr_rows(repo=repo_name, run_id=cfg.run_id, data_dir=data_dir)
+    if per_pr_rows and isinstance(report_payload, dict):
+        quality_gates = _evaluate_quality_gates(
+            rows=per_pr_rows,
+            report=report_payload,
+            routers=routers_for_run,
+        )
+    else:
+        quality_gates = {"all_pass": True, "gates": {}, "thresholds": {}}
+    report_extra = report_payload.get("extra")
+    if not isinstance(report_extra, dict):
+        report_extra = {}
+    primary_policy = str(report_extra.get("truth_primary_policy") or "first_approval_v1")
+    promotion_eval = _evaluate_promotion(
+        rows=per_pr_rows,
+        routers=routers_for_run,
+        primary_policy=primary_policy,
+        gate_all_pass=bool(quality_gates.get("all_pass")),
+    )
+    report_extra["quality_gates"] = quality_gates
+    report_extra["promotion_evaluation"] = promotion_eval
+    report_payload["extra"] = report_extra
+    report_path = eval_report_json_path(
+        repo_full_name=repo_name, data_dir=data_dir, run_id=cfg.run_id
+    )
+    _write_json(report_path, report_payload)
+
     cohort_copy = result.run_dir / "cohort.json"
     spec_copy = result.run_dir / "experiment.json"
     _write_json(cohort_copy, cohort_payload)
@@ -1027,11 +1378,18 @@ def experiment_run(
         pr_cutoffs=cutoffs,
         artifact_prefetch=prefetch_summary,
     )
+    context["quality_gates"] = quality_gates
+    context["promotion_evaluation"] = promotion_eval
     _write_json(result.run_dir / _EXPERIMENT_MANIFEST_FILENAME, context)
 
     typer.echo(f"run_dir {result.run_dir}")
     typer.echo(f"cohort_hash {cohort_payload['hash']}")
     typer.echo(f"experiment_spec_hash {spec_payload['hash']}")
+    typer.echo(f"quality_gates_pass {quality_gates.get('all_pass')}")
+
+    profile_mode = str(spec_payload.get("profile") or "audit").strip().lower()
+    if profile_mode == "audit" and not bool(quality_gates.get("all_pass")):
+        raise typer.Exit(code=1)
 
 
 @experiment_app.command("show")
@@ -1214,6 +1572,35 @@ def doctor(
             ).fetchone()
         except sqlite3.OperationalError:
             qa_row = None
+
+        approval_count = 0
+        approval_ready = False
+        try:
+            approval_row = conn.execute(
+                "select count(*) as n from reviews where upper(state) = 'APPROVED'"
+            ).fetchone()
+            approval_count = int(approval_row["n"]) if approval_row is not None else 0
+            approval_ready = approval_count > 0
+        except sqlite3.OperationalError:
+            approval_count = 0
+            approval_ready = False
+
+        merger_actor_count = 0
+        merger_ready = False
+        try:
+            merger_row = conn.execute(
+                """
+                select count(*) as n
+                from events
+                where event_type = 'pull_request.merged'
+                  and actor_id is not null
+                """
+            ).fetchone()
+            merger_actor_count = int(merger_row["n"]) if merger_row is not None else 0
+            merger_ready = merger_actor_count > 0
+        except sqlite3.OperationalError:
+            merger_actor_count = 0
+            merger_ready = False
     finally:
         conn.close()
 
@@ -1278,11 +1665,17 @@ def doctor(
         typer.echo(
             "qa_total_gaps " + str(qa_summary.get("total_gaps"))
         )
+    typer.echo(f"approval_ready {approval_ready}")
+    typer.echo(f"approval_review_count {approval_count}")
+    typer.echo(f"merger_ready {merger_ready}")
+    typer.echo(f"merger_actor_count {merger_actor_count}")
 
     issues = 0
     if stale_prs:
         issues += 1
     if codeowners_missing:
+        issues += 1
+    if not approval_ready:
         issues += 1
     if strict and issues > 0:
         raise typer.Exit(code=1)

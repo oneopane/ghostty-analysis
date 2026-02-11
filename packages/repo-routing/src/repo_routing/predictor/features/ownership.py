@@ -8,7 +8,8 @@ from typing import Any
 
 from ...exports.area import default_area_for_path, load_repo_area_overrides
 from ...inputs.models import PRInputBundle
-from ...paths import repo_codeowners_path
+from ...paths import repo_artifact_path, repo_codeowners_path
+from ...repo_profile.storage import CODEOWNERS_PATH_CANDIDATES
 from ...router.baselines.codeowners import CodeownersMatch
 from ...router.baselines.mentions import extract_targets
 
@@ -21,18 +22,41 @@ class OwnershipMatchSummary:
     total_files: int
 
 
-def load_codeowners_text_for_pr(*, input: PRInputBundle, data_dir: str | Path) -> str | None:
-    base_sha = input.snapshot.base_sha
+def load_codeowners_text(
+    *,
+    repo: str,
+    base_sha: str | None,
+    data_dir: str | Path,
+) -> str | None:
     if not base_sha:
         return None
-    p = repo_codeowners_path(
-        repo_full_name=input.repo,
+    for rel in CODEOWNERS_PATH_CANDIDATES:
+        p = repo_artifact_path(
+            repo_full_name=repo,
+            base_sha=base_sha,
+            relative_path=rel,
+            data_dir=data_dir,
+        )
+        if p.exists():
+            return p.read_text(encoding="utf-8")
+
+    # Backward-compatible fallback for older artifact layout.
+    p_legacy = repo_codeowners_path(
+        repo_full_name=repo,
         base_sha=base_sha,
         data_dir=data_dir,
     )
-    if not p.exists():
-        return None
-    return p.read_text(encoding="utf-8")
+    if p_legacy.exists():
+        return p_legacy.read_text(encoding="utf-8")
+    return None
+
+
+def load_codeowners_text_for_pr(*, input: PRInputBundle, data_dir: str | Path) -> str | None:
+    return load_codeowners_text(
+        repo=input.repo,
+        base_sha=input.snapshot.base_sha,
+        data_dir=data_dir,
+    )
 
 
 def parse_codeowners_rules(codeowners_text: str) -> list[CodeownersMatch]:
