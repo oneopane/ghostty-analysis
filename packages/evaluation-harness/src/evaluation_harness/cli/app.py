@@ -226,6 +226,7 @@ def explain(
     pr_number: int = typer.Option(..., "--pr", help="Pull request number"),
     baseline: str | None = typer.Option(None, help="Router id (deprecated name)"),
     router: str | None = typer.Option(None, help="Router id (default: first present)"),
+    policy: str | None = typer.Option(None, "--policy", help="Truth policy id"),
     data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
 ):
     import json
@@ -260,11 +261,38 @@ def explain(
     print(f"[bold]pr[/bold] {pr_number}")
     print(f"[bold]cutoff[/bold] {row.get('cutoff')}")
     print(f"[bold]router[/bold] {chosen}")
+
+    selected_policy = policy
+    truth_block = row.get("truth")
+    truth_policies = {}
+    if isinstance(truth_block, dict):
+        raw = truth_block.get("policies")
+        if isinstance(raw, dict):
+            truth_policies = raw
+            if selected_policy is None:
+                raw_primary = truth_block.get("primary_policy")
+                if isinstance(raw_primary, str) and raw_primary.strip():
+                    selected_policy = raw_primary.strip()
+    if selected_policy is None and truth_policies:
+        selected_policy = sorted(truth_policies.keys(), key=lambda s: str(s).lower())[0]
+    if selected_policy is not None and truth_policies and selected_policy not in truth_policies:
+        raise typer.BadParameter(f"truth policy not found: {selected_policy}")
+    if selected_policy is not None:
+        print(f"[bold]truth_policy[/bold] {selected_policy}")
     print("")
 
     print("[bold]truth_behavior[/bold]")
-    for t in row.get("truth_behavior") or []:
+    if selected_policy is not None and truth_policies:
+        targets = (truth_policies.get(selected_policy) or {}).get("targets") or []
+    else:
+        targets = row.get("truth_behavior") or []
+    for t in targets:
         print(f"- {t}")
+    if selected_policy is not None and truth_policies:
+        policy_entry = truth_policies.get(selected_policy) or {}
+        print(
+            f"- status: {policy_entry.get('status')}"
+        )
     print("")
 
     b = routers[chosen]
@@ -281,9 +309,17 @@ def explain(
     print("")
 
     print("[bold]routing_agreement[/bold]")
+    routing_agreement = b.get("routing_agreement") or {}
+    by_policy = b.get("routing_agreement_by_policy")
+    if (
+        selected_policy is not None
+        and isinstance(by_policy, dict)
+        and isinstance(by_policy.get(selected_policy), dict)
+    ):
+        routing_agreement = by_policy.get(selected_policy) or {}
     print(
         json.dumps(
-            b.get("routing_agreement") or {},
+            routing_agreement,
             sort_keys=True,
             indent=2,
             ensure_ascii=True,

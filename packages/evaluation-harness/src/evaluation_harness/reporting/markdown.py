@@ -20,6 +20,11 @@ def render_report_md(
     routing: RoutingAgreementSummary | dict[str, RoutingAgreementSummary] | None,
     gates: GateCorrelationSummary | None,
     queue: QueueSummary | dict[str, QueueSummary] | None,
+    truth_coverage_counts: dict[str, int] | None = None,
+    truth_primary_policy: str | None = None,
+    routing_by_policy: dict[str, dict[str, RoutingAgreementSummary]] | None = None,
+    routing_slices_by_policy: dict[str, dict[str, dict[str, dict[str, object]]]] | None = None,
+    routing_denominators_by_policy: dict[str, dict[str, dict[str, int]]] | None = None,
     notes: list[str] | None = None,
 ) -> str:
     out: list[str] = []
@@ -119,6 +124,53 @@ def render_report_md(
                     out.append(f"- {risk}.ttfr_seconds_mean: {b.ttfr_seconds_mean:.2f}")
                 if b.ttfc_seconds_mean is not None:
                     out.append(f"- {risk}.ttfc_seconds_mean: {b.ttfc_seconds_mean:.2f}")
+        out.append("")
+
+    if truth_coverage_counts:
+        out.append("## Truth Coverage")
+        out.append("")
+        if truth_primary_policy:
+            out.append(f"- primary_policy: {truth_primary_policy}")
+        for key in sorted(truth_coverage_counts.keys(), key=lambda s: s.lower()):
+            out.append(f"- {key}: {int(truth_coverage_counts[key])}")
+        out.append("")
+
+    if routing_by_policy:
+        out.append("## Routing By Policy")
+        out.append("")
+        for policy in sorted(routing_by_policy.keys(), key=lambda s: s.lower()):
+            out.append(f"- policy: {policy}")
+            by_router = routing_by_policy[policy]
+            for router_id in sorted(by_router.keys(), key=lambda s: s.lower()):
+                summary = by_router[router_id]
+                out.append(f"- {policy}.{router_id}.n: {summary.n}")
+                if summary.mrr is not None:
+                    out.append(f"- {policy}.{router_id}.mrr: {summary.mrr:.4f}")
+        out.append("")
+
+    if routing_denominators_by_policy:
+        out.append("## Denominator Slices")
+        out.append("")
+        for policy in sorted(routing_denominators_by_policy.keys(), key=lambda s: s.lower()):
+            out.append(f"- policy: {policy}")
+            by_router = routing_denominators_by_policy[policy]
+            for router_id in sorted(by_router.keys(), key=lambda s: s.lower()):
+                den = by_router[router_id]
+                out.append(f"- {policy}.{router_id}.all: {int(den.get('all', 0))}")
+                out.append(
+                    f"- {policy}.{router_id}.observed_and_router_nonempty: {int(den.get('observed_and_router_nonempty', 0))}"
+                )
+                if routing_slices_by_policy:
+                    router_slices = (
+                        routing_slices_by_policy.get(policy, {}).get(router_id, {})
+                    )
+                    obs_nonempty = router_slices.get("observed_and_router_nonempty", {})
+                    if isinstance(obs_nonempty, dict):
+                        mrr = obs_nonempty.get("mrr")
+                        if isinstance(mrr, (int, float)):
+                            out.append(
+                                f"- {policy}.{router_id}.observed_and_router_nonempty.mrr: {float(mrr):.4f}"
+                            )
         out.append("")
 
     if notes:

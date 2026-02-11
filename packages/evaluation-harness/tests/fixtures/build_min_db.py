@@ -56,7 +56,7 @@ def build_min_db(
             "create table pull_request_files (id integer primary key, repo_id integer, pull_request_id integer, head_sha text, path text, status text, additions integer, deletions integer, changes integer)"
         )
         c.execute(
-            "create table reviews (id integer primary key, repo_id integer, pull_request_id integer, user_id integer, submitted_at text)"
+            "create table reviews (id integer primary key, repo_id integer, pull_request_id integer, user_id integer, state text, submitted_at text)"
         )
         c.execute(
             "create table comments (id integer primary key, repo_id integer, pull_request_id integer, review_id integer, user_id integer, created_at text)"
@@ -196,12 +196,13 @@ def build_min_db(
 
         # One review and one comment after cutoff.
         c.execute(
-            "insert into reviews (id, repo_id, pull_request_id, user_id, submitted_at) values (?, ?, ?, ?, ?)",
+            "insert into reviews (id, repo_id, pull_request_id, user_id, state, submitted_at) values (?, ?, ?, ?, ?, ?)",
             (
                 500,
                 1,
                 100,
                 11,
+                "APPROVED",
                 datetime.fromisoformat("2024-01-01T01:00:00+00:00")
                 .replace(tzinfo=None)
                 .isoformat(sep=" "),

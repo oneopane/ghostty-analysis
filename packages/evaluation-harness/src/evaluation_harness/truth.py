@@ -7,6 +7,7 @@ from pathlib import Path
 from repo_routing.paths import repo_db_path
 
 from .models import TruthDiagnostics, TruthStatus
+from .truth_policy import TruthPolicySpec
 
 
 def _parse_dt(value: object) -> datetime | None:
@@ -101,6 +102,7 @@ def behavior_truth_with_diagnostics(
     exclude_bots: bool = True,
     window: timedelta = timedelta(hours=48),
     include_review_comments: bool = True,
+    review_states: set[str] | None = None,
     policy_id: str = "first_response_v1",
     policy_version: str = "v1",
 ) -> TruthDiagnostics:
@@ -136,6 +138,7 @@ def behavior_truth_with_diagnostics(
             select r.user_id as user_id,
                    u.login as login,
                    u.type as type,
+                   r.state as review_state,
                    r.submitted_at as ts,
                    r.id as event_id,
                    'review_submitted' as kind
@@ -191,6 +194,10 @@ def behavior_truth_with_diagnostics(
                 continue
             if exclude_author and author_id is not None and r["user_id"] == author_id:
                 continue
+            if review_states is not None and str(r["kind"]) == "review_submitted":
+                state = str(r["review_state"] or "").upper()
+                if state not in review_states:
+                    continue
             eligible += 1
             if selected is None:
                 selected = str(r["login"])
@@ -209,10 +216,15 @@ def behavior_truth_with_diagnostics(
             notes.append("truth window extends beyond ingested horizon")
         if gap_resources:
             notes.append("ingestion gaps present for truth-related resources")
+        if review_states:
+            notes.append(
+                "review-state filter="
+                + ",".join(sorted({s.upper() for s in review_states}, key=str.lower))
+            )
         if include_review_comments:
-            notes.append("first-response scans review_submitted + review_comment")
+            notes.append("truth scans review_submitted + review_comment")
         else:
-            notes.append("first-response scans review_submitted only")
+            notes.append("truth scans review_submitted only")
 
         if selected is not None:
             status = TruthStatus.observed
@@ -267,6 +279,72 @@ def behavior_truth_first_eligible_review(
         include_review_comments=include_review_comments,
     )
     return diagnostics.selected_login
+
+
+def truth_with_policy(
+    *,
+    policy: TruthPolicySpec,
+    repo: str,
+    pr_number: int,
+    cutoff: datetime,
+    data_dir: str | Path = "data",
+    exclude_author: bool = True,
+    exclude_bots: bool = True,
+) -> TruthDiagnostics:
+    window = timedelta(seconds=policy.window_seconds)
+    policy_id = policy.id
+
+    if policy_id == "first_response_v1":
+        return behavior_truth_with_diagnostics(
+            repo=repo,
+            pr_number=pr_number,
+            cutoff=cutoff,
+            data_dir=data_dir,
+            exclude_author=exclude_author,
+            exclude_bots=exclude_bots,
+            window=window,
+            include_review_comments=True,
+            policy_id=policy.id,
+            policy_version=policy.version,
+        )
+
+    if policy_id == "first_approval_v1":
+        return behavior_truth_with_diagnostics(
+            repo=repo,
+            pr_number=pr_number,
+            cutoff=cutoff,
+            data_dir=data_dir,
+            exclude_author=exclude_author,
+            exclude_bots=exclude_bots,
+            window=window,
+            include_review_comments=False,
+            review_states={"APPROVED"},
+            policy_id=policy.id,
+            policy_version=policy.version,
+        )
+
+    # Stubbed readiness-gated policies remain unavailable until ingestion readiness
+    # is explicitly implemented.
+    return TruthDiagnostics(
+        repo=repo,
+        pr_number=pr_number,
+        cutoff=cutoff,
+        window_end=cutoff + window,
+        status=TruthStatus.policy_unavailable,
+        policy_id=policy.id,
+        policy_version=policy.version,
+        selected_login=None,
+        selected_source=None,
+        selected_event_id=None,
+        include_review_comments=False,
+        scanned_review_rows=0,
+        scanned_review_comment_rows=0,
+        eligible_candidates=0,
+        coverage_complete=False,
+        coverage_horizon_max=None,
+        gap_resources=[],
+        notes=["policy readiness gate is closed"],
+    )
 
 
 def intent_truth_from_review_requests(

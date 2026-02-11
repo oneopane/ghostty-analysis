@@ -13,8 +13,12 @@ class EvalDefaults(BaseModel):
 
     truth_window: timedelta = timedelta(minutes=60)
     truth_include_review_comments: bool = True
-    truth_policies: tuple[str, ...] = ("first_response_v1",)
-    truth_primary_policy: str = "first_response_v1"
+    truth_policies: tuple[str, ...] = ("first_response_v1", "first_approval_v1")
+    truth_primary_policy: str = "first_approval_v1"
+    truth_policy_plugins: tuple[str, ...] = ()
+    truth_policy_plugin_allowlist: tuple[str, ...] = (
+        "evaluation_harness.truth_plugins.",
+    )
 
     # Legacy knobs retained during migration (v0 compatibility).
     intent_truth_window: timedelta = timedelta(minutes=60)

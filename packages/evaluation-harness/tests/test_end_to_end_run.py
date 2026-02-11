@@ -71,9 +71,25 @@ def test_truth_window_in_manifest_matches_effective_diagnostics(tmp_path) -> Non
 
     row = json.loads((res.run_dir / "per_pr.jsonl").read_text(encoding="utf-8").splitlines()[0])
     manifest = json.loads((res.run_dir / "manifest.json").read_text(encoding="utf-8"))
+    report = json.loads((res.run_dir / "report.json").read_text(encoding="utf-8"))
 
     diag = row["truth_diagnostics"]
     assert row["truth_status"] == "no_post_cutoff_response"
     assert diag["include_review_comments"] is False
+    assert row["truth"]["primary_policy"] == "first_approval_v1"
+    assert set((row["truth"]["policies"] or {}).keys()) == {
+        "first_approval_v1",
+        "first_response_v1",
+    }
+    metrics_by_policy = row["routers"]["mentions"]["routing_agreement_by_policy"]
+    assert set(metrics_by_policy.keys()) == {"first_approval_v1", "first_response_v1"}
+
     assert manifest["truth"]["effective_window_seconds"] == 600
     assert manifest["truth"]["include_review_comments"] is False
+    assert set((manifest["truth"]["policy_hashes"] or {}).keys()) == {
+        "first_approval_v1",
+        "first_response_v1",
+    }
+    assert report["extra"]["truth_primary_policy"] == "first_approval_v1"
+    assert "first_response_v1" in report["extra"]["routing_agreement_by_policy"]
+    assert "first_approval_v1" in report["extra"]["routing_denominators_by_policy"]

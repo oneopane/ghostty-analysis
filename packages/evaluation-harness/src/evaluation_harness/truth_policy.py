@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import re
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
@@ -60,6 +62,14 @@ class TruthPolicySpec(BaseModel):
         payload = self.model_dump(mode="json")
         data = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
         return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
+class ResolvedTruthPolicy:
+    spec: TruthPolicySpec
+    source: str
+    source_ref: str
+    policy_hash: str
 
 
 def builtin_truth_policy_specs() -> dict[str, TruthPolicySpec]:
@@ -122,3 +132,102 @@ def builtin_truth_policy_specs() -> dict[str, TruthPolicySpec]:
         ),
     ]
     return {spec.id: spec for spec in specs}
+
+
+def _is_allowed_import(import_path: str, allowlist_prefixes: tuple[str, ...]) -> bool:
+    if not allowlist_prefixes:
+        return False
+    return any(import_path.startswith(prefix) for prefix in allowlist_prefixes)
+
+
+def _load_import_target(import_path: str):  # type: ignore[no-untyped-def]
+    if ":" not in import_path:
+        raise ValueError(
+            f"invalid truth policy import path (expected module:attr): {import_path}"
+        )
+    module_name, attr_name = import_path.split(":", 1)
+    mod = importlib.import_module(module_name)
+    try:
+        return getattr(mod, attr_name)
+    except AttributeError as exc:
+        raise ValueError(f"missing truth policy attribute: {import_path}") from exc
+
+
+def _coerce_loaded_policy(obj: object, *, import_path: str) -> TruthPolicySpec:
+    if isinstance(obj, TruthPolicySpec):
+        return obj
+    if isinstance(obj, dict):
+        return TruthPolicySpec.model_validate(obj)
+    raise TypeError(
+        f"truth policy plugin {import_path} must return TruthPolicySpec or dict"
+    )
+
+
+def load_plugin_truth_policies(
+    *,
+    import_paths: tuple[str, ...],
+    allowlist_prefixes: tuple[str, ...],
+) -> dict[str, ResolvedTruthPolicy]:
+    out: dict[str, ResolvedTruthPolicy] = {}
+    for import_path in import_paths:
+        normalized = import_path.strip()
+        if not normalized:
+            continue
+        if not _is_allowed_import(normalized, allowlist_prefixes):
+            raise ValueError(
+                f"truth policy import path not allowlisted: {normalized}"
+            )
+        target = _load_import_target(normalized)
+        loaded = target() if callable(target) else target
+        spec = _coerce_loaded_policy(loaded, import_path=normalized)
+        if spec.id in out:
+            raise ValueError(f"duplicate truth policy id from plugins: {spec.id}")
+        out[spec.id] = ResolvedTruthPolicy(
+            spec=spec,
+            source="plugin",
+            source_ref=normalized,
+            policy_hash=spec.stable_hash(),
+        )
+    return out
+
+
+def resolve_truth_policies(
+    *,
+    policy_ids: tuple[str, ...],
+    plugin_import_paths: tuple[str, ...],
+    plugin_allowlist_prefixes: tuple[str, ...],
+) -> dict[str, ResolvedTruthPolicy]:
+    builtins = builtin_truth_policy_specs()
+    plugins = load_plugin_truth_policies(
+        import_paths=plugin_import_paths,
+        allowlist_prefixes=plugin_allowlist_prefixes,
+    )
+
+    catalog: dict[str, ResolvedTruthPolicy] = {
+        pid: ResolvedTruthPolicy(
+            spec=spec,
+            source="builtin",
+            source_ref=pid,
+            policy_hash=spec.stable_hash(),
+        )
+        for pid, spec in builtins.items()
+    }
+    for pid, resolved in plugins.items():
+        if pid in catalog:
+            raise ValueError(f"plugin policy id collides with builtin policy: {pid}")
+        catalog[pid] = resolved
+
+    requested = tuple(pid.strip() for pid in policy_ids if pid.strip())
+    if not requested:
+        requested = ("first_response_v1",)
+
+    missing = [pid for pid in requested if pid not in catalog]
+    if missing:
+        raise ValueError(
+            "unknown truth policy ids: " + ", ".join(sorted(set(missing), key=str.lower))
+        )
+
+    resolved: dict[str, ResolvedTruthPolicy] = {}
+    for pid in requested:
+        resolved[pid] = catalog[pid]
+    return resolved
