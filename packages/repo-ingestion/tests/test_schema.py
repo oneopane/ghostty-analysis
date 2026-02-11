@@ -40,3 +40,14 @@ def test_schema_creation(tmp_path):
         "object_snapshots",
     }
     assert expected.issubset(tables)
+
+
+def test_pull_request_files_indexes_exist(tmp_path):
+    db_path = tmp_path / "schema-indexes.db"
+    engine = get_engine(db_path)
+    init_db(engine)
+    inspector = inspect(engine)
+
+    index_names = {idx["name"] for idx in inspector.get_indexes("pull_request_files")}
+    assert "ix_pr_files_repo_pr_head" in index_names
+    assert "ix_pr_files_repo_path" in index_names
