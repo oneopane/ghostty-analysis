@@ -9,29 +9,35 @@ This repository is a **Python `uv` workspace monorepo** for offline routing expe
 
 Core workspace members are defined in `pyproject.toml` and include:
 
-- `packages/repo-ingestion`
-- `packages/repo-routing`
-- `packages/evaluation-harness`
-- `packages/repo-cli`
+- `packages/ingestion`
+- `packages/inference`
+- `packages/experimentation`
+- `packages/evaluation`
+- `packages/cli`
+
+**Start here for no-code execution:**
+
+- [`examples/e2e-unified-cli.md`](./examples/e2e-unified-cli.md) (canonical end-to-end workflow)
+- [`examples/README.md`](./examples/README.md) (artifact strategy)
 
 Key architecture properties already implemented:
 
-- **Deterministic, local-first data substrate** (`data/github/<owner>/<repo>/history.sqlite`) (`packages/repo-routing/src/repo_routing/paths.py`, `packages/evaluation-harness/src/evaluation_harness/paths.py`).
-- **As-of cutoff reads** for PR state via interval tables (`packages/repo-routing/src/repo_routing/history/reader.py`, `packages/repo-ingestion/src/gh_history_ingestion/intervals/rebuild.py`).
-- **Strict streaming eval guardrail** (fail loud if cutoff exceeds DB event horizon in strict mode) (`packages/evaluation-harness/src/evaluation_harness/runner.py`, `packages/evaluation-harness/tests/test_leakage_guards.py`).
-- **Router plugin model** (builtin + import-path) (`packages/repo-routing/src/repo_routing/registry.py`).
+- **Deterministic, local-first data substrate** (`data/github/<owner>/<repo>/history.sqlite`) (`packages/inference/src/repo_routing/paths.py`, `packages/evaluation/src/evaluation_harness/paths.py`).
+- **As-of cutoff reads** for PR state via interval tables (`packages/inference/src/repo_routing/history/reader.py`, `packages/ingestion/src/gh_history_ingestion/intervals/rebuild.py`).
+- **Strict streaming eval guardrail** (fail loud if cutoff exceeds DB event horizon in strict mode) (`packages/evaluation/src/evaluation_harness/runner.py`, `packages/evaluation/tests/test_leakage_guards.py`).
+- **Router plugin model** (builtin + import-path) (`packages/inference/src/repo_routing/registry.py`).
 
 Recently completed work is reflected in docs/code:
 
-- 001 changed-files signal implemented (`pull_request_files`) (`docs/plans/evaluation-harness/001-add-pr-changed-files-signal.md`, `packages/repo-ingestion/src/gh_history_ingestion/storage/schema.py`).
-- 002 truth-signal ingestion effectively implemented (`pull-requests --with-truth`) (`docs/plans/evaluation-harness/002-ensure-truth-signals.md`, `packages/repo-ingestion/src/gh_history_ingestion/ingest/pull_requests.py`).
-- 024 leakage guardrail tests implemented (`docs/plans/evaluation-harness/024-tests-guardrails.md`, `packages/evaluation-harness/tests/test_leakage_guards.py`).
-- 026/027 docs implemented (`packages/evaluation-harness/docs/runbook.md`, `packages/evaluation-harness/docs/metrics.md`, `packages/evaluation-harness/docs/baselines.md`).
+- 001 changed-files signal implemented (`pull_request_files`) (`docs/plans/evaluation-harness/001-add-pr-changed-files-signal.md`, `packages/ingestion/src/gh_history_ingestion/storage/schema.py`).
+- 002 truth-signal ingestion effectively implemented (`pull-requests --with-truth`) (`docs/plans/evaluation-harness/002-ensure-truth-signals.md`, `packages/ingestion/src/gh_history_ingestion/ingest/pull_requests.py`).
+- 024 leakage guardrail tests implemented (`docs/plans/evaluation-harness/024-tests-guardrails.md`, `packages/evaluation/tests/test_leakage_guards.py`).
+- 026/027 docs implemented (`packages/evaluation/docs/runbook.md`, `packages/evaluation/docs/metrics.md`, `packages/evaluation/docs/baselines.md`).
 
 **Critical caveat (still open):** evaluation currently does **not** clearly separate:
 - “true no post-cutoff response” vs
 - “truth missing due to ingestion gaps,”  
-even though ingestion gaps are tracked (`ingestion_gaps`, `qa_reports`) (`packages/repo-ingestion/src/gh_history_ingestion/storage/schema.py`, `packages/repo-ingestion/src/gh_history_ingestion/ingest/qa.py`).
+even though ingestion gaps are tracked (`ingestion_gaps`, `qa_reports`) (`packages/ingestion/src/gh_history_ingestion/storage/schema.py`, `packages/ingestion/src/gh_history_ingestion/ingest/qa.py`).
 
 ---
 
@@ -41,14 +47,17 @@ even though ingestion gaps are tracked (`ingestion_gaps`, `qa_reports`) (`packag
 
 - Workspace members: `pyproject.toml`
 - Script entrypoints:
-  - `repo-ingestion = gh_history_ingestion.cli.app:app` (`packages/repo-ingestion/pyproject.toml`)
-  - `repo-routing = repo_routing.cli.app:app` (`packages/repo-routing/pyproject.toml`)
-  - `evaluation-harness = evaluation_harness.cli.app:app` (`packages/evaluation-harness/pyproject.toml`)
-  - `repo = repo_cli.cli:app` (`packages/repo-cli/pyproject.toml`)
+  - `ingestion = gh_history_ingestion.cli.app:app` (`packages/ingestion/pyproject.toml`)
+  - `inference = repo_routing.cli.app:app` (`packages/inference/pyproject.toml`)
+  - `evaluation = evaluation_harness.cli.app:app` (`packages/evaluation/pyproject.toml`)
+  - `repo = repo_cli.cli:app` (`packages/cli/pyproject.toml`)
+- Experiment workflow internals live in `packages/experimentation` and are mounted into the `repo` CLI.
 
 ## High-level directory layout
 
 - `packages/` → code packages (src-layout) (`AGENTS.md`)
+- `experiments/` → reproducible experiment configs/extract scripts/marimo notebooks
+- `notebooks/` → exploratory marimo notebooks and demos
 - `docs/attention-routing/` → current architecture + feature policy docs (`docs/attention-routing/README.md`)
 - `docs/plans/evaluation-harness/` → atomic implementation plan/checklist (`docs/plans/evaluation-harness/README.md`)
 - `scripts/` → validation/quality scripts (`scripts/validate_feature_stack.sh`, `scripts/check_feature_quality.py`)
@@ -57,27 +66,35 @@ even though ingestion gaps are tracked (`ingestion_gaps`, `qa_reports`) (`packag
 ## Package dependency graph (code deps + data deps)
 
 ```text
-repo-cli
- ├─ repo-ingestion
- ├─ repo-routing
- └─ evaluation-harness ──(python dependency)──> repo-routing
+cli
+ ├─ ingestion
+ ├─ inference
+ ├─ evaluation
+ └─ experimentation
+
+experimentation
+ ├─ ingestion
+ ├─ inference
+ └─ evaluation
+
+evaluation ──(python dependency)──> inference
 
 Data dependency:
-repo-ingestion ──writes──> data/github/<owner>/<repo>/history.sqlite
-repo-routing + evaluation-harness ──read──> same history.sqlite
-evaluation-harness + repo-routing ──write──> data/github/<owner>/<repo>/eval/<run_id>/
+ingestion ──writes──> data/github/<owner>/<repo>/history.sqlite
+inference + evaluation ──read──> same history.sqlite
+evaluation + inference ──write──> data/github/<owner>/<repo>/eval/<run_id>/
 ```
 
-- Python dependency evidence: `evaluation-harness` depends on `repo-routing` (`packages/evaluation-harness/pyproject.toml`).
-- `repo-routing` is explicitly offline/local data only (`packages/repo-routing/README.md`).
+- Python dependency evidence: `evaluation` depends on `inference` (`packages/evaluation/pyproject.toml`).
+- `inference` is explicitly offline/local data only (`packages/inference/README.md`).
 
 ---
 
 # Package-by-Package Architecture
 
-## 1) `packages/repo-ingestion` (GitHub → SQLite canonical history)
+## 1) `packages/ingestion` (GitHub → SQLite canonical history)
 
-**Entry CLI:** `packages/repo-ingestion/src/gh_history_ingestion/cli/app.py`
+**Entry CLI:** `packages/ingestion/src/gh_history_ingestion/cli/app.py`
 
 ### Main command surfaces
 - `ingest` (full backfill): calls `backfill_repo(...)` (`.../ingest/backfill.py`)
@@ -86,7 +103,7 @@ evaluation-harness + repo-routing ──write──> data/github/<owner>/<repo>/
 - `explore`: local read-only SQLite explorer (`.../explorer/server.py`)
 
 ### Storage model + upserts
-- Schema definitions: `packages/repo-ingestion/src/gh_history_ingestion/storage/schema.py`
+- Schema definitions: `packages/ingestion/src/gh_history_ingestion/storage/schema.py`
 - Upsert primitives: `.../storage/upsert.py`
   - includes `upsert_pull_request_file`, `upsert_review`, `upsert_comment`, `insert_event`, `upsert_watermark`, `insert_gap`.
 - Changed-files table exists: `pull_request_files` with composite key and indexes (`.../storage/schema.py`).
@@ -105,9 +122,9 @@ evaluation-harness + repo-routing ──write──> data/github/<owner>/<repo>/
 
 ---
 
-## 2) `packages/repo-routing` (offline PR inputs + routers + artifacts)
+## 2) `packages/inference` (offline PR inputs + routers + artifacts)
 
-**Entry CLI:** `packages/repo-routing/src/repo_routing/cli/app.py`
+**Entry CLI:** `packages/inference/src/repo_routing/cli/app.py`
 
 ### Core responsibilities
 - **As-of PR snapshots:** `HistoryReader.pull_request_snapshot(...)` (`.../history/reader.py`)
@@ -131,9 +148,9 @@ evaluation-harness + repo-routing ──write──> data/github/<owner>/<repo>/
 
 ---
 
-## 3) `packages/evaluation-harness` (streaming eval + metrics + reports)
+## 3) `packages/evaluation` (streaming eval + metrics + reports)
 
-**Entry CLI:** `packages/evaluation-harness/src/evaluation_harness/cli/app.py`
+**Entry CLI:** `packages/evaluation/src/evaluation_harness/cli/app.py`
 
 ### Main command surfaces
 - `run`, `sample`, `cutoff`, `show`, `list`, `explain` (`.../cli/app.py`)
@@ -159,9 +176,14 @@ evaluation-harness + repo-routing ──write──> data/github/<owner>/<repo>/
 
 ---
 
-## 4) `packages/repo-cli` (unified command surface)
+## 4) `packages/experimentation` (cohort/spec workflows + gates)
 
-- Wraps ingestion CLI as root app and mounts routing/eval typers if available (`packages/repo-cli/src/repo_cli/cli.py`).
+- Cohort/spec lifecycle, experiment run orchestration, quality gates, promotion checks, doctor/profile flows (`packages/experimentation/src/experimentation/unified_experiment.py`).
+- Reusable marimo workflow components (`packages/experimentation/src/experimentation/marimo_components.py`).
+
+## 5) `packages/cli` (unified command surface)
+
+- Wraps ingestion CLI as root app and mounts experimentation + inference + evaluation typers (`packages/cli/src/repo_cli/cli.py`).
 
 ---
 
@@ -171,7 +193,7 @@ evaluation-harness + repo-routing ──write──> data/github/<owner>/<repo>/
 GitHub REST API
    │
    ▼
-repo-ingestion (backfill/incremental/pull_requests --with-truth)
+ingestion (backfill/incremental/pull_requests --with-truth)
    ├─ upsert raw entities + events
    ├─ rebuild interval tables
    ├─ update watermarks
@@ -179,12 +201,12 @@ repo-ingestion (backfill/incremental/pull_requests --with-truth)
    ▼
 data/github/<owner>/<repo>/history.sqlite
    │
-   ├─ repo-routing HistoryReader (strict as-of snapshots)
-   ├─ repo-routing inputs.builder (PRInputBundle)
+   ├─ inference HistoryReader (strict as-of snapshots)
+   ├─ inference inputs.builder (PRInputBundle)
    ├─ builtin/import routers -> RouteResult
    └─ deterministic artifacts under eval/<run_id>/prs/<pr>/*
    ▼
-evaluation-harness runner
+evaluation runner
    ├─ cutoff_for_pr
    ├─ behavior truth extraction
    ├─ per-router metrics
@@ -196,16 +218,16 @@ evaluation-harness runner
 
 | Contract | Producer | Consumer | Key fields | Source path |
 |---|---|---|---|---|
-| `repos`, `users`, `pull_requests`, `issues` | ingestion upserts | routing/eval queries | repo identity, PR number/author/timestamps | `packages/repo-ingestion/src/gh_history_ingestion/storage/schema.py`, `.../storage/upsert.py` |
+| `repos`, `users`, `pull_requests`, `issues` | ingestion upserts | routing/eval queries | repo identity, PR number/author/timestamps | `packages/ingestion/src/gh_history_ingestion/storage/schema.py`, `.../storage/upsert.py` |
 | `events` | ingestion normalizers | intervals + eval merge-as-of checks | `occurred_at`, `event_type`, subject/object IDs | `.../events/normalizers/*.py`, `.../storage/upsert.py` |
-| Interval tables (`pull_request_head_intervals`, `pull_request_review_request_intervals`, etc.) | `rebuild_intervals(...)` | `HistoryReader`, cutoff logic | start/end event IDs for as-of state | `.../intervals/rebuild.py`, `packages/repo-routing/src/repo_routing/history/reader.py` |
+| Interval tables (`pull_request_head_intervals`, `pull_request_review_request_intervals`, etc.) | `rebuild_intervals(...)` | `HistoryReader`, cutoff logic | start/end event IDs for as-of state | `.../intervals/rebuild.py`, `packages/inference/src/repo_routing/history/reader.py` |
 | `pull_request_files` | PR file ingest | snapshots/features/baselines | path/churn keyed by PR+head_sha | `.../ingest/pull_request_files.py`, `.../storage/schema.py` |
-| `reviews`, `comments` | ingestion | truth + queue + features | post-cutoff responses, activity history | `.../storage/schema.py`, `packages/evaluation-harness/src/evaluation_harness/truth.py` |
-| `watermarks` | ingestion | strict stale-cutoff guard | endpoint freshness markers | `.../storage/upsert.py`, `packages/evaluation-harness/src/evaluation_harness/db.py` |
+| `reviews`, `comments` | ingestion | truth + queue + features | post-cutoff responses, activity history | `.../storage/schema.py`, `packages/evaluation/src/evaluation_harness/truth.py` |
+| `watermarks` | ingestion | strict stale-cutoff guard | endpoint freshness markers | `.../storage/upsert.py`, `packages/evaluation/src/evaluation_harness/db.py` |
 | `ingestion_gaps`, `qa_reports` | ingestion QA | (currently mostly manual) | pagination anomaly evidence | `.../ingest/qa.py`, `.../storage/schema.py` |
-| `PRInputBundle` JSON | routing input builder | import-path predictors/rankers | canonical per-PR@cutoff feature input | `packages/repo-routing/src/repo_routing/inputs/models.py` |
-| `RouteArtifact` JSON | router execution | eval explanation/reporting | candidates/evidence/risk/confidence | `packages/repo-routing/src/repo_routing/artifacts/models.py` |
-| Eval outputs (`per_pr.jsonl`, `report.json/md`, `manifest.json`) | evaluation runner | user analysis + reproducibility | metrics summaries + run metadata | `packages/evaluation-harness/src/evaluation_harness/runner.py` |
+| `PRInputBundle` JSON | routing input builder | import-path predictors/rankers | canonical per-PR@cutoff feature input | `packages/inference/src/repo_routing/inputs/models.py` |
+| `RouteArtifact` JSON | router execution | eval explanation/reporting | candidates/evidence/risk/confidence | `packages/inference/src/repo_routing/artifacts/models.py` |
+| Eval outputs (`per_pr.jsonl`, `report.json/md`, `manifest.json`) | evaluation runner | user analysis + reproducibility | metrics summaries + run metadata | `packages/evaluation/src/evaluation_harness/runner.py` |
 
 ---
 
@@ -213,7 +235,7 @@ evaluation-harness runner
 
 ## Execution model
 
-`run_streaming_eval(...)` orchestrates a strict offline pass (`packages/evaluation-harness/src/evaluation_harness/runner.py`):
+`run_streaming_eval(...)` orchestrates a strict offline pass (`packages/evaluation/src/evaluation_harness/runner.py`):
 
 1. normalize routers (`RouterSpec`) and load routers (`repo_routing.registry`)
 2. compute cutoffs per PR (`.../cutoff.py`)
@@ -236,7 +258,7 @@ evaluation-harness runner
 
 ## Truth and metric definitions (implemented)
 
-- Behavior truth = first eligible post-cutoff review response in window (default 48h) with bot/author exclusions (`.../truth.py`, `packages/evaluation-harness/docs/metrics.md`).
+- Behavior truth = first eligible post-cutoff review response in window (default 48h) with bot/author exclusions (`.../truth.py`, `packages/evaluation/docs/metrics.md`).
 - Routing metrics: hit@1/3/5 and MRR (`.../metrics/routing_agreement.py`).
 - Queue metrics: TTFR; TTFC is supported by function but currently not enabled in main runner call (`include_ttfc=False`) (`.../metrics/queue.py`, `.../runner.py`).
 - Gate correlation from parsed PR body fields + merged-as-of signal (`.../metrics/gates.py`).
@@ -251,11 +273,11 @@ Per-PR output currently writes both `routers` and `baselines` aliases for backwa
 
 ## Implemented guardrails
 
-- **As-of strictness:** `HistoryReader` enforces interval-based as-of state; missing interval rows can fail in strict mode (`packages/repo-routing/src/repo_routing/history/reader.py`).
-- **Strict stale-cutoff guard:** runtime abort when cutoff > max ingested event timestamp in strict mode (`packages/evaluation-harness/src/evaluation_harness/runner.py`).
-- **Deterministic output writes:** sorted JSON keys and stable ordering in artifacts/reports (`packages/repo-routing/src/repo_routing/artifacts/writer.py`, `packages/evaluation-harness/src/evaluation_harness/reporting/formatters.py`).
-- **Bot/author filtering in truth/queue:** (`packages/evaluation-harness/src/evaluation_harness/truth.py`, `.../metrics/queue.py`).
-- **CODEOWNERS leakage warning + pinned path requirement:** (`packages/evaluation-harness/docs/baselines.md`, `packages/repo-routing/src/repo_routing/router/baselines/codeowners.py`).
+- **As-of strictness:** `HistoryReader` enforces interval-based as-of state; missing interval rows can fail in strict mode (`packages/inference/src/repo_routing/history/reader.py`).
+- **Strict stale-cutoff guard:** runtime abort when cutoff > max ingested event timestamp in strict mode (`packages/evaluation/src/evaluation_harness/runner.py`).
+- **Deterministic output writes:** sorted JSON keys and stable ordering in artifacts/reports (`packages/inference/src/repo_routing/artifacts/writer.py`, `packages/evaluation/src/evaluation_harness/reporting/formatters.py`).
+- **Bot/author filtering in truth/queue:** (`packages/evaluation/src/evaluation_harness/truth.py`, `.../metrics/queue.py`).
+- **CODEOWNERS leakage warning + pinned path requirement:** (`packages/evaluation/docs/baselines.md`, `packages/inference/src/repo_routing/router/baselines/codeowners.py`).
 
 ## Risk matrix
 
@@ -275,11 +297,11 @@ Current eval treats “no truth found” as a single state (`truth_login is None
 - potentially missing truth because ingestion is incomplete.
 
 ### Non-breaking implementation (recommended first)
-1. Add a diagnostics model in `packages/evaluation-harness/src/evaluation_harness/models.py`:
+1. Add a diagnostics model in `packages/evaluation/src/evaluation_harness/models.py`:
    - `truth_status: observed | no_post_cutoff_response | unknown_due_to_ingestion_gap`
    - counts: eligible reviews/comments scanned
    - supporting fields: truth window bounds, gap resources flagged.
-2. Add `behavior_truth_with_diagnostics(...)` in `packages/evaluation-harness/src/evaluation_harness/truth.py`:
+2. Add `behavior_truth_with_diagnostics(...)` in `packages/evaluation/src/evaluation_harness/truth.py`:
    - retain existing selection logic,
    - additionally query `ingestion_gaps`/latest `qa_reports` for relevant resources.
 3. In `run_streaming_eval(...)` (`.../runner.py`):
@@ -302,21 +324,21 @@ Add `ingestion_coverage` table in ingestion package to record per-resource cover
 
 | Item | Status | Evidence |
 |---|---|---|
-| 001 PR changed-files signal | Complete | `pull_request_files` schema/upsert/ingest path implemented (`packages/repo-ingestion/src/gh_history_ingestion/storage/schema.py`, `.../storage/upsert.py`, `.../ingest/pull_request_files.py`), plus tests (`packages/repo-ingestion/tests/test_pull_request_files.py`) |
-| 002 Truth-signal ingestion flow | Effectively implemented | PR-window path supports `--with-truth` and ingests issue-events/comments/reviews/review-comments (`packages/repo-ingestion/src/gh_history_ingestion/ingest/pull_requests.py`), documented in README (`packages/repo-ingestion/README.md`) |
-| 024 Strict leakage guardrail | Complete/hardened | strict stale-cutoff runtime error + test coverage (`packages/evaluation-harness/src/evaluation_harness/runner.py`, `packages/evaluation-harness/tests/test_leakage_guards.py`) |
-| 026 Runbook + metric definitions | Complete | `packages/evaluation-harness/docs/runbook.md`, `packages/evaluation-harness/docs/metrics.md` |
-| 027 Baseline limitations + CODEOWNERS leakage warning | Complete | `packages/evaluation-harness/docs/baselines.md` |
+| 001 PR changed-files signal | Complete | `pull_request_files` schema/upsert/ingest path implemented (`packages/ingestion/src/gh_history_ingestion/storage/schema.py`, `.../storage/upsert.py`, `.../ingest/pull_request_files.py`), plus tests (`packages/ingestion/tests/test_pull_request_files.py`) |
+| 002 Truth-signal ingestion flow | Effectively implemented | PR-window path supports `--with-truth` and ingests issue-events/comments/reviews/review-comments (`packages/ingestion/src/gh_history_ingestion/ingest/pull_requests.py`), documented in README (`packages/ingestion/README.md`) |
+| 024 Strict leakage guardrail | Complete/hardened | strict stale-cutoff runtime error + test coverage (`packages/evaluation/src/evaluation_harness/runner.py`, `packages/evaluation/tests/test_leakage_guards.py`) |
+| 026 Runbook + metric definitions | Complete | `packages/evaluation/docs/runbook.md`, `packages/evaluation/docs/metrics.md` |
+| 027 Baseline limitations + CODEOWNERS leakage warning | Complete | `packages/evaluation/docs/baselines.md` |
 
 ## Outstanding / partially addressed
 
 | Area | Current state | Why it matters | Evidence |
 |---|---|---|---|
-| Truth coverage disambiguation | Not implemented in eval outputs | Metrics conflates true no-response with missing data | `packages/evaluation-harness/src/evaluation_harness/truth.py`, `.../runner.py`, `packages/repo-ingestion/src/gh_history_ingestion/ingest/qa.py` |
-| Intent truth in eval reporting | Function exists, runner does not use it | Leaves planned “intent vs behavior” split underutilized | `packages/evaluation-harness/src/evaluation_harness/truth.py` (`intent_truth_from_review_requests`), `.../runner.py` |
-| Eval CLI configurability | Run CLI lacks explicit strict/cutoff/ttfc knobs | Harder exploratory sweeps without code-level config changes | `packages/evaluation-harness/src/evaluation_harness/cli/app.py`, `.../config.py` |
-| TTFC metric usage | Implemented functionally, disabled in runner | Queue diagnostics less complete | `packages/evaluation-harness/src/evaluation_harness/metrics/queue.py`, `.../runner.py` |
-| CODEOWNERS artifact provisioning | **Assumption/Needs verification:** no automated ingestion path found in reviewed files | `codeowners` baseline quality depends on pinned file availability | `packages/repo-routing/src/repo_routing/router/baselines/codeowners.py` |
+| Truth coverage disambiguation | Not implemented in eval outputs | Metrics conflates true no-response with missing data | `packages/evaluation/src/evaluation_harness/truth.py`, `.../runner.py`, `packages/ingestion/src/gh_history_ingestion/ingest/qa.py` |
+| Intent truth in eval reporting | Function exists, runner does not use it | Leaves planned “intent vs behavior” split underutilized | `packages/evaluation/src/evaluation_harness/truth.py` (`intent_truth_from_review_requests`), `.../runner.py` |
+| Eval CLI configurability | Run CLI lacks explicit strict/cutoff/ttfc knobs | Harder exploratory sweeps without code-level config changes | `packages/evaluation/src/evaluation_harness/cli/app.py`, `.../config.py` |
+| TTFC metric usage | Implemented functionally, disabled in runner | Queue diagnostics less complete | `packages/evaluation/src/evaluation_harness/metrics/queue.py`, `.../runner.py` |
+| CODEOWNERS artifact provisioning | **Assumption/Needs verification:** no automated ingestion path found in reviewed files | `codeowners` baseline quality depends on pinned file availability | `packages/inference/src/repo_routing/router/baselines/codeowners.py` |
 | Docs consistency | Some planning docs appear stale | Can mislead future implementation decisions | `docs/plans/evaluation-harness/011-truth-extraction.md` (unchecked), `docs/plans/evaluation-harness/README.md` (index checked) |
 
 ---
@@ -328,26 +350,26 @@ Below is a practical, rigorous loop using current tooling.
 ## A) One-time setup
 - [ ] Create env + install workspace:
   - `uv venv`
-  - `uv pip install -e .`
+  - `uv sync`
 - [ ] Keep validation scripts available:
   - `scripts/validate_feature_stack.sh`
   - `scripts/check_feature_quality.py`
 
 ## B) Build/refresh local substrate
 - [ ] Full ingest (recommended):
-  - `uv run --project packages/repo-ingestion repo-ingestion ingest --repo <owner>/<repo>`
-  - `uv run --project packages/repo-ingestion repo-ingestion incremental --repo <owner>/<repo>`
+  - `uv run --project packages/ingestion ingestion ingest --repo <owner>/<repo>`
+  - `uv run --project packages/ingestion ingestion incremental --repo <owner>/<repo>`
 - [ ] Or PR-window ingest with truth:
-  - `uv run --project packages/repo-ingestion repo-ingestion pull-requests --repo <owner>/<repo> --start-at <iso> --end-at <iso> --with-truth`
+  - `uv run --project packages/ingestion ingestion pull-requests --repo <owner>/<repo> --start-at <iso> --end-at <iso> --with-truth`
 
 ## C) Freeze cohort before modeling
 - [ ] Sample PRs deterministically:
-  - `uv run --project packages/evaluation-harness evaluation-harness sample --repo <owner>/<repo> --from <iso> --end-at <iso> --limit <n>`
+  - `uv run --project packages/evaluation evaluation sample --repo <owner>/<repo> --from <iso> --end-at <iso> --limit <n>`
 - [ ] Save sampled PR list externally (single source for all router comparisons).
 
 ## D) Run baseline references first
 - [ ] Run baseline pack on frozen cohort:
-  - `uv run --project packages/evaluation-harness evaluation-harness run --repo <owner>/<repo> --pr ... --router mentions --router popularity --router codeowners`
+  - `uv run --project packages/evaluation evaluation run --repo <owner>/<repo> --pr ... --router mentions --router popularity --router codeowners`
 - [ ] (Optional) add stewards with config:
   - `--router stewards --router-config <path/to/config.json>`
 
@@ -358,9 +380,9 @@ Below is a practical, rigorous loop using current tooling.
 
 ## F) Analyze and sanity-check
 - [ ] Inspect report:
-  - `evaluation-harness show --repo ... --run-id ...`
+  - `evaluation show --repo ... --run-id ...`
 - [ ] Spot-check hard PRs:
-  - `evaluation-harness explain --repo ... --run-id ... --pr <n> --router <id>`
+  - `evaluation explain --repo ... --run-id ... --pr <n> --router <id>`
 - [ ] Validate feature-policy quality:
   - `python scripts/check_feature_quality.py --run-dir data/github/<owner>/<repo>/eval/<run_id>`
 
@@ -438,15 +460,15 @@ Below is a practical, rigorous loop using current tooling.
 ## Core commands
 
 - Unified CLI:
-  - `uv run --project packages/repo-cli repo --help`
+  - `uv run --project packages/cli repo --help`
 - Ingestion:
-  - `uv run --project packages/repo-ingestion repo-ingestion ingest --repo <owner>/<repo>`
-  - `uv run --project packages/repo-ingestion repo-ingestion incremental --repo <owner>/<repo>`
-  - `uv run --project packages/repo-ingestion repo-ingestion pull-requests --repo <owner>/<repo> --start-at <iso> --end-at <iso> --with-truth`
+  - `uv run --project packages/ingestion ingestion ingest --repo <owner>/<repo>`
+  - `uv run --project packages/ingestion ingestion incremental --repo <owner>/<repo>`
+  - `uv run --project packages/ingestion ingestion pull-requests --repo <owner>/<repo> --start-at <iso> --end-at <iso> --with-truth`
 - Evaluation:
-  - `uv run --project packages/evaluation-harness evaluation-harness run --repo <owner>/<repo> --pr ... --router mentions`
-  - `uv run --project packages/evaluation-harness evaluation-harness show --repo <owner>/<repo> --run-id <run_id>`
-  - `uv run --project packages/evaluation-harness evaluation-harness explain --repo <owner>/<repo> --run-id <run_id> --pr <n> --router <id>`
+  - `uv run --project packages/evaluation evaluation run --repo <owner>/<repo> --pr ... --router mentions`
+  - `uv run --project packages/evaluation evaluation show --repo <owner>/<repo> --run-id <run_id>`
+  - `uv run --project packages/evaluation evaluation explain --repo <owner>/<repo> --run-id <run_id> --pr <n> --router <id>`
 - Validation:
   - `./scripts/validate_feature_stack.sh`
   - `python scripts/check_feature_quality.py --run-dir data/github/<owner>/<repo>/eval/<run_id>`
@@ -462,22 +484,22 @@ Below is a practical, rigorous loop using current tooling.
 
 | Symbol | Role | Path |
 |---|---|---|
-| `backfill_repo` | Full ingestion flow | `packages/repo-ingestion/src/gh_history_ingestion/ingest/backfill.py` |
-| `incremental_update` | Watermark-driven updates | `packages/repo-ingestion/src/gh_history_ingestion/ingest/incremental.py` |
-| `backfill_pull_requests` | PR-window ingest (+truth option) | `packages/repo-ingestion/src/gh_history_ingestion/ingest/pull_requests.py` |
-| `rebuild_intervals` | Build as-of interval tables | `packages/repo-ingestion/src/gh_history_ingestion/intervals/rebuild.py` |
-| `insert_event` / upserts | Canonical write primitives | `packages/repo-ingestion/src/gh_history_ingestion/storage/upsert.py` |
-| `HistoryReader.pull_request_snapshot` | As-of snapshot reads | `packages/repo-routing/src/repo_routing/history/reader.py` |
-| `build_pr_input_bundle` | Canonical model input | `packages/repo-routing/src/repo_routing/inputs/builder.py` |
-| `RouteResult` | Router output contract | `packages/repo-routing/src/repo_routing/router/base.py` |
-| `load_router` / `RouterSpec` | Router plugin loading | `packages/repo-routing/src/repo_routing/registry.py` |
-| `ArtifactWriter` | Deterministic artifact writes | `packages/repo-routing/src/repo_routing/artifacts/writer.py` |
-| `run_streaming_eval` | Main eval orchestration | `packages/evaluation-harness/src/evaluation_harness/runner.py` |
-| `behavior_truth_first_eligible_review` | Behavior truth extraction | `packages/evaluation-harness/src/evaluation_harness/truth.py` |
-| `per_pr_metrics` | Routing metrics | `packages/evaluation-harness/src/evaluation_harness/metrics/routing_agreement.py` |
-| `per_pr_gate_metrics` | Gate metrics | `packages/evaluation-harness/src/evaluation_harness/metrics/gates.py` |
-| `per_pr_queue_metrics` | Queue timing metrics | `packages/evaluation-harness/src/evaluation_harness/metrics/queue.py` |
-| `render_report_md` | Human-readable report | `packages/evaluation-harness/src/evaluation_harness/reporting/markdown.py` |
+| `backfill_repo` | Full ingestion flow | `packages/ingestion/src/gh_history_ingestion/ingest/backfill.py` |
+| `incremental_update` | Watermark-driven updates | `packages/ingestion/src/gh_history_ingestion/ingest/incremental.py` |
+| `backfill_pull_requests` | PR-window ingest (+truth option) | `packages/ingestion/src/gh_history_ingestion/ingest/pull_requests.py` |
+| `rebuild_intervals` | Build as-of interval tables | `packages/ingestion/src/gh_history_ingestion/intervals/rebuild.py` |
+| `insert_event` / upserts | Canonical write primitives | `packages/ingestion/src/gh_history_ingestion/storage/upsert.py` |
+| `HistoryReader.pull_request_snapshot` | As-of snapshot reads | `packages/inference/src/repo_routing/history/reader.py` |
+| `build_pr_input_bundle` | Canonical model input | `packages/inference/src/repo_routing/inputs/builder.py` |
+| `RouteResult` | Router output contract | `packages/inference/src/repo_routing/router/base.py` |
+| `load_router` / `RouterSpec` | Router plugin loading | `packages/inference/src/repo_routing/registry.py` |
+| `ArtifactWriter` | Deterministic artifact writes | `packages/inference/src/repo_routing/artifacts/writer.py` |
+| `run_streaming_eval` | Main eval orchestration | `packages/evaluation/src/evaluation_harness/runner.py` |
+| `behavior_truth_first_eligible_review` | Behavior truth extraction | `packages/evaluation/src/evaluation_harness/truth.py` |
+| `per_pr_metrics` | Routing metrics | `packages/evaluation/src/evaluation_harness/metrics/routing_agreement.py` |
+| `per_pr_gate_metrics` | Gate metrics | `packages/evaluation/src/evaluation_harness/metrics/gates.py` |
+| `per_pr_queue_metrics` | Queue timing metrics | `packages/evaluation/src/evaluation_harness/metrics/queue.py` |
+| `render_report_md` | Human-readable report | `packages/evaluation/src/evaluation_harness/reporting/markdown.py` |
 
 ---
 
@@ -490,6 +512,6 @@ Below is a practical, rigorous loop using current tooling.
 5. Do you want automatic CODEOWNERS artifact readiness checks to hard-fail runs or just warn?
 6. Is adding `ingestion_coverage` worth the schema complexity now, or should we start with `ingestion_gaps` heuristics only?
 7. Should there be a first-party “experimental router template” command/file generator for faster iteration?
-8. Do you want a minimal “run compare” utility in `evaluation-harness` CLI (e.g., `compare --run-a --run-b`)?
+8. Do you want a minimal “run compare” utility in `evaluation` CLI (e.g., `compare --run-a --run-b`)?
 9. **Assumption/Needs verification:** Is doc drift cleanup (e.g., stale task checkboxes) important enough to include in near-term milestones?
 10. **Assumption/Needs verification:** Should mixed-membership stay notebook-only for now, or become an optional feature family in the main extractor path?

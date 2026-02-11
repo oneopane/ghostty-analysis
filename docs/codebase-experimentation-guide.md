@@ -6,6 +6,16 @@ This document is a single, practical guide to the repository so you can:
 2. run experiments reproducibly,
 3. and start writing new experiment code (routers, features, truth policies, profile logic).
 
+## Start here (no-code end-to-end path)
+
+If your goal is to complete the full CLI workflow without reading source code, use:
+
+- [`examples/e2e-unified-cli.md`](./examples/e2e-unified-cli.md)
+
+For artifact curation guidance (what to keep vs ignore):
+
+- [`examples/README.md`](./examples/README.md)
+
 ---
 
 ## 1) What this repository is
@@ -14,10 +24,11 @@ This repo is a **Python `uv` workspace monorepo** for offline, cutoff-safe exper
 
 Workspace members (`pyproject.toml`):
 
-- `packages/repo-ingestion`
-- `packages/repo-routing`
-- `packages/evaluation-harness`
-- `packages/repo-cli`
+- `packages/ingestion`
+- `packages/inference`
+- `packages/experimentation`
+- `packages/evaluation`
+- `packages/cli`
 
 Core idea:
 
@@ -33,18 +44,18 @@ Core idea:
 
 ```text
 GitHub API
-  -> repo-ingestion (backfill/incremental/pull-requests --with-truth)
+  -> ingestion (backfill/incremental/pull-requests --with-truth)
   -> data/github/<owner>/<repo>/history.sqlite
-  -> repo-routing (HistoryReader + input bundle + routers + artifacts)
-  -> evaluation-harness (streaming eval + truth + metrics + reports)
+  -> inference (HistoryReader + input bundle + routers + artifacts)
+  -> evaluation (streaming eval + truth + metrics + reports)
   -> data/github/<owner>/<repo>/eval/<run_id>/...
 ```
 
 And the **recommended user-facing entry point** is now:
 
-- `repo` CLI from `packages/repo-cli`
+- `repo` CLI from `packages/cli`
 
-It exposes ingestion, experiments, profile building, diagnostics, and also the legacy `routing` and `eval` subcommands.
+It exposes ingestion, experiments, profile building, diagnostics, and direct `inference` / `evaluation` subcommands.
 
 ---
 
@@ -55,17 +66,18 @@ It exposes ingestion, experiments, profile building, diagnostics, and also the l
 - `data/` → local DB + run outputs
 - `docs/` → architecture + plans + task docs
 - `notebooks/` → marimo exploratory notebooks
+- `experiments/` → reproducible experiment configs + export scripts + marimo experiment notebooks
 - `scripts/` → validation scripts
 
 ### Package responsibilities
 
-#### `packages/repo-ingestion`
+#### `packages/ingestion`
 
 Builds/updates canonical `history.sqlite`.
 
 Key files:
 
-- CLI: `packages/repo-ingestion/src/gh_history_ingestion/cli/app.py`
+- CLI: `packages/ingestion/src/gh_history_ingestion/cli/app.py`
 - Full backfill: `.../ingest/backfill.py`
 - Incremental: `.../ingest/incremental.py`
 - PR-window backfill: `.../ingest/pull_requests.py`
@@ -74,13 +86,13 @@ Key files:
 - Interval rebuild: `.../intervals/rebuild.py`
 - Pinned artifact fetcher: `.../repo_artifacts/fetcher.py`
 
-#### `packages/repo-routing`
+#### `packages/inference`
 
 Reads local DB, reconstructs cutoff-safe snapshots, runs routers, writes routing artifacts.
 
 Key files:
 
-- CLI: `packages/repo-routing/src/repo_routing/cli/app.py`
+- CLI: `packages/inference/src/repo_routing/cli/app.py`
 - As-of reader: `.../history/reader.py`
 - Input bundle builder: `.../inputs/builder.py`
 - Router contracts: `.../router/base.py`
@@ -90,13 +102,13 @@ Key files:
 - Repo profile builder: `.../repo_profile/builder.py`
 - Feature extractor v1: `.../predictor/feature_extractor_v1.py`
 
-#### `packages/evaluation-harness`
+#### `packages/evaluation`
 
 Streaming offline eval with truth extraction, metrics, reports, manifests.
 
 Key files:
 
-- CLI: `packages/evaluation-harness/src/evaluation_harness/cli/app.py`
+- CLI: `packages/evaluation/src/evaluation_harness/cli/app.py`
 - Runner: `.../runner.py`
 - Cutoff policy: `.../cutoff.py`
 - Truth extraction: `.../truth.py`
@@ -105,14 +117,22 @@ Key files:
 - Reporting: `.../reporting/*.py`
 - Paths: `.../paths.py`
 
-#### `packages/repo-cli`
+#### `packages/experimentation`
 
-Unified orchestration layer around everything else.
+Experiment orchestration, cohort/spec artifacts, quality gates, and notebook helper utilities.
 
 Key files:
 
-- CLI wiring: `packages/repo-cli/src/repo_cli/cli.py`
-- Unified workflow logic: `.../unified_experiment.py`
+- Unified workflow logic: `packages/experimentation/src/experimentation/unified_experiment.py`
+- Reusable notebook helpers: `packages/experimentation/src/experimentation/marimo_components.py`
+
+#### `packages/cli`
+
+Unified command surface around ingestion + experimentation + inference + evaluation.
+
+Key files:
+
+- CLI wiring: `packages/cli/src/repo_cli/cli.py`
 
 ---
 
@@ -178,7 +198,7 @@ Implementation anchors:
 ## 6.1 Main front door
 
 ```bash
-uv run --project packages/repo-cli repo --help
+uv run --project packages/cli repo --help
 ```
 
 Top-level commands currently include:
@@ -188,8 +208,8 @@ Top-level commands currently include:
 - `cohort create`
 - `experiment init|run|show|list|explain|diff`
 - `profile build`
-- `routing ...` (legacy direct routing package CLI)
-- `eval ...` (legacy direct evaluation-harness CLI)
+- `inference ...` (direct inference package CLI)
+- `evaluation ...` (direct evaluation package CLI)
 
 ## 6.2 Recommended reproducible workflow
 
@@ -206,7 +226,7 @@ Top-level commands currently include:
 
 ```bash
 uv venv
-uv pip install -e .
+uv sync
 ```
 
 ## Step 1: ingest data
@@ -214,14 +234,14 @@ uv pip install -e .
 Full ingest:
 
 ```bash
-uv run --project packages/repo-cli repo ingest --repo <owner>/<repo>
-uv run --project packages/repo-cli repo incremental --repo <owner>/<repo>
+uv run --project packages/cli repo ingest --repo <owner>/<repo>
+uv run --project packages/cli repo incremental --repo <owner>/<repo>
 ```
 
 PR-window ingest with truth signals:
 
 ```bash
-uv run --project packages/repo-cli repo pull-requests \
+uv run --project packages/cli repo pull-requests \
   --repo <owner>/<repo> \
   --from <iso> --end-at <iso> \
   --with-truth
@@ -230,7 +250,7 @@ uv run --project packages/repo-cli repo pull-requests \
 ## Step 2: preflight sanity
 
 ```bash
-uv run --project packages/repo-cli repo doctor --repo <owner>/<repo>
+uv run --project packages/cli repo doctor --repo <owner>/<repo>
 ```
 
 This checks (among others):
@@ -244,13 +264,13 @@ This checks (among others):
 ## Step 3: cohort + spec
 
 ```bash
-uv run --project packages/repo-cli repo cohort create \
+uv run --project packages/cli repo cohort create \
   --repo <owner>/<repo> \
   --from <iso> --end-at <iso> \
   --limit 200 --seed 4242 \
   --output cohort.json
 
-uv run --project packages/repo-cli repo experiment init \
+uv run --project packages/cli repo experiment init \
   --repo <owner>/<repo> \
   --cohort cohort.json \
   --router mentions --router popularity --router codeowners \
@@ -260,7 +280,7 @@ uv run --project packages/repo-cli repo experiment init \
 ## Step 4: run
 
 ```bash
-uv run --project packages/repo-cli repo experiment run \
+uv run --project packages/cli repo experiment run \
   --spec experiment.json \
   --data-dir data
 ```
@@ -268,15 +288,15 @@ uv run --project packages/repo-cli repo experiment run \
 ## Step 5: inspect
 
 ```bash
-uv run --project packages/repo-cli repo experiment show --repo <owner>/<repo> --run-id <run_id>
-uv run --project packages/repo-cli repo experiment explain --repo <owner>/<repo> --run-id <run_id> --pr <n> --router <router_id>
-uv run --project packages/repo-cli repo experiment list --repo <owner>/<repo>
+uv run --project packages/cli repo experiment show --repo <owner>/<repo> --run-id <run_id>
+uv run --project packages/cli repo experiment explain --repo <owner>/<repo> --run-id <run_id> --pr <n> --router <router_id>
+uv run --project packages/cli repo experiment list --repo <owner>/<repo>
 ```
 
 ## Step 6: compare runs
 
 ```bash
-uv run --project packages/repo-cli repo experiment diff \
+uv run --project packages/cli repo experiment diff \
   --repo <owner>/<repo> \
   --run-a <run_a> --run-b <run_b>
 ```
@@ -399,7 +419,7 @@ You can add a custom router without changing core registry by implementing a fac
 
 Reference implementation:
 
-- `packages/repo-routing/src/repo_routing/examples/llm_router_example.py`
+- `packages/inference/src/repo_routing/examples/llm_router_example.py`
 
 Contract:
 
@@ -411,7 +431,7 @@ Contract:
 1. Add router class under `repo_routing/router/...`
 2. Wire it in `repo_routing/registry.py`
 3. Add validation entries where needed in CLI
-4. Add tests (`repo-routing/tests` + runner integration tests)
+4. Add tests (`packages/inference/tests` + runner integration tests)
 
 ---
 
@@ -503,7 +523,7 @@ Files to copy inspiration from:
 - add/adjust policy in `evaluation_harness/truth_policy.py`
 - implement extraction branch in `evaluation_harness/truth.py`
 - ensure outputs follow `TruthDiagnostics`/policy-keyed contract
-- add tests under `packages/evaluation-harness/tests`
+- add tests under `packages/evaluation/tests`
 
 ## D) “I want richer repo profile understanding”
 
@@ -540,7 +560,7 @@ Notebook utilities exist for interactive workflows:
 
 - `notebooks/ghostty_marimo_pipeline.py` (ingest/export/eval loop)
 - `notebooks/experiment_audit_...py` (run auditing)
-- reusable marimo components in `repo_cli/marimo_components.py`
+- reusable marimo components in `experimentation/marimo_components.py` (`packages/experimentation/src/experimentation/marimo_components.py`)
 
 These are helpful for exploration, but CLI artifacts remain the canonical source of reproducible experiment state.
 
