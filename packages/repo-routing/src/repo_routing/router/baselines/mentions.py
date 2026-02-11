@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from ...history.reader import HistoryReader
+
+if TYPE_CHECKING:
+    from ...inputs.models import PRInputBundle
 from ..base import Evidence, RouteCandidate, RouteResult, Target, TargetType
 
 
@@ -50,6 +54,7 @@ class MentionsRouter:
         as_of: datetime,
         data_dir: str = "data",
         top_k: int = 5,
+        input_bundle: PRInputBundle | None = None,
     ) -> RouteResult:
         with HistoryReader(repo_full_name=repo, data_dir=data_dir) as reader:
             pr = reader.pull_request_snapshot(number=pr_number, as_of=as_of)

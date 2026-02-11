@@ -1,4 +1,10 @@
 from gh_history_ingestion.cli.app import app as app
+from .unified_experiment import cohort_app, doctor, experiment_app, profile_app
+
+app.add_typer(cohort_app, name="cohort")
+app.add_typer(experiment_app, name="experiment")
+app.add_typer(profile_app, name="profile")
+app.command("doctor")(doctor)
 
 try:
     from repo_routing.cli.app import app as routing_app

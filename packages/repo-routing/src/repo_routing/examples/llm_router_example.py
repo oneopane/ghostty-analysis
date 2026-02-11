@@ -39,6 +39,8 @@ class PromptLikeFeatureExtractor(FeatureExtractor):
                 for rr in input.review_requests
             ],
             "changed_files": [f.path for f in input.changed_files],
+            "repo_profile_path": input.repo_profile_path,
+            "repo_profile_qa": input.repo_profile_qa,
         }
         prompt_json = json.dumps(
             prompt_payload,
@@ -70,6 +72,12 @@ class PromptLikeFeatureExtractor(FeatureExtractor):
             "requested_users": requested,
             "pseudo_llm_ranked_users": pseudo_llm_ranked,
             "areas": list(input.areas),
+            "repo_profile_path": input.repo_profile_path,
+            "repo_profile_codeowners_present": bool(
+                ((input.repo_profile_qa or {}).get("coverage") or {}).get(
+                    "codeowners_present", False
+                )
+            ),
             "meta": {
                 "candidate_gen_version": "cg.v1",
             },

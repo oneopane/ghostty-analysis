@@ -10,6 +10,7 @@ from typing import Iterable
 from ..history.reader import HistoryReader
 from ..inputs.builder import build_pr_input_bundle
 from ..inputs.models import PRInputBuilderOptions, PRInputBundle
+from ..repo_profile.models import RepoProfile, RepoProfileQAReport
 from ..paths import repo_db_path
 from ..registry import RouterSpec, load_router
 from ..router.base import RouteResult
@@ -19,6 +20,8 @@ from .paths import (
     pr_features_path,
     pr_inputs_path,
     pr_llm_step_path,
+    pr_repo_profile_path,
+    pr_repo_profile_qa_path,
     pr_route_result_path,
     pr_snapshot_path,
 )
@@ -85,6 +88,22 @@ class ArtifactWriter:
             step=step,
         )
 
+    def repo_profile_path(self, *, pr_number: int) -> Path:
+        return pr_repo_profile_path(
+            repo_full_name=self.repo,
+            data_dir=self.data_dir,
+            run_id=self.run_id,
+            pr_number=pr_number,
+        )
+
+    def repo_profile_qa_path(self, *, pr_number: int) -> Path:
+        return pr_repo_profile_qa_path(
+            repo_full_name=self.repo,
+            data_dir=self.data_dir,
+            run_id=self.run_id,
+            pr_number=pr_number,
+        )
+
     def write_pr_snapshot(self, artifact: PRSnapshotArtifact) -> Path:
         p = self.pr_snapshot_path(pr_number=artifact.pr_number)
         _write_json_deterministic(p, artifact.model_dump(mode="json"))
@@ -119,6 +138,18 @@ class ArtifactWriter:
             pr_number=artifact.result.pr_number, baseline=artifact.baseline
         )
         _write_json_deterministic(p, artifact.model_dump(mode="json"))
+        return p
+
+    def write_repo_profile(self, *, pr_number: int, profile: RepoProfile) -> Path:
+        p = self.repo_profile_path(pr_number=pr_number)
+        _write_json_deterministic(p, profile.model_dump(mode="json"))
+        return p
+
+    def write_repo_profile_qa(
+        self, *, pr_number: int, qa_report: RepoProfileQAReport
+    ) -> Path:
+        p = self.repo_profile_qa_path(pr_number=pr_number)
+        _write_json_deterministic(p, qa_report.model_dump(mode="json"))
         return p
 
 

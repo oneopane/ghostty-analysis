@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    from ..inputs.models import PRInputBundle
 
 from pydantic import BaseModel, Field
 
@@ -50,4 +53,5 @@ class Router(Protocol):
         as_of: datetime,
         data_dir: str = "data",
         top_k: int = 5,
+        input_bundle: PRInputBundle | None = None,
     ) -> RouteResult: ...

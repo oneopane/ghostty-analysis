@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..analysis.engine import analyze_pr
+
+if TYPE_CHECKING:
+    from ..inputs.models import PRInputBundle
 from ..router.base import RouteCandidate, RouteResult, Target, TargetType
 
 
@@ -19,6 +23,7 @@ class StewardsRouter:
         as_of: datetime,
         data_dir: str = "data",
         top_k: int = 5,
+        input_bundle: PRInputBundle | None = None,
     ) -> RouteResult:
         analysis = analyze_pr(
             repo=repo,

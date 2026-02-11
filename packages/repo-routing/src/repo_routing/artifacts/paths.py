@@ -130,3 +130,45 @@ def pr_route_result_path(
         )
         / f"{rid}.json"
     )
+
+
+def pr_repo_profile_dir(
+    *, repo_full_name: str, data_dir: str | Path, run_id: str, pr_number: int
+) -> Path:
+    return (
+        pr_dir(
+            repo_full_name=repo_full_name,
+            data_dir=data_dir,
+            run_id=run_id,
+            pr_number=pr_number,
+        )
+        / "repo_profile"
+    )
+
+
+def pr_repo_profile_path(
+    *, repo_full_name: str, data_dir: str | Path, run_id: str, pr_number: int
+) -> Path:
+    return (
+        pr_repo_profile_dir(
+            repo_full_name=repo_full_name,
+            data_dir=data_dir,
+            run_id=run_id,
+            pr_number=pr_number,
+        )
+        / "profile.json"
+    )
+
+
+def pr_repo_profile_qa_path(
+    *, repo_full_name: str, data_dir: str | Path, run_id: str, pr_number: int
+) -> Path:
+    return (
+        pr_repo_profile_dir(
+            repo_full_name=repo_full_name,
+            data_dir=data_dir,
+            run_id=run_id,
+            pr_number=pr_number,
+        )
+        / "qa.json"
+    )

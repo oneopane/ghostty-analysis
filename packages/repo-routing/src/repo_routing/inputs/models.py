@@ -43,6 +43,8 @@ class PRInputBundle(BaseModel):
     areas: list[str] = Field(default_factory=list)
 
     recent_activity: list[RecentActivityEvent] = Field(default_factory=list)
+    repo_profile_path: str | None = None
+    repo_profile_qa: dict[str, object] = Field(default_factory=dict)
 
 
 class PRInputBuilderOptions(BaseModel):
