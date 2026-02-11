@@ -1,6 +1,6 @@
 # 026 - Add evaluation runbook + metric definitions
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Make it easy to run evaluation and interpret results.

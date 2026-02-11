@@ -1,6 +1,6 @@
 # 024 - Add leakage + bot filtering guardrail tests
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Prevent accidental leakage and noisy truths.

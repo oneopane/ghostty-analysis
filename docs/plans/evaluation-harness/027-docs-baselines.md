@@ -1,6 +1,6 @@
 # 027 - Document baseline limitations (CODEOWNERS leakage warnings)
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Prevent misleading conclusions from leaky or mis-specified baselines.

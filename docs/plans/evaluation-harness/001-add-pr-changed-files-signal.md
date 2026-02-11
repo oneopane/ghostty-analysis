@@ -1,6 +1,6 @@
 # 001 - Add PR changed files signal to history DB
 
-- [ ] Done
+- [x] Done
 
 ## Goal
 Persist per-PR changed file paths in the canonical per-repo SQLite database so routing and baselines can be evaluated offline.
