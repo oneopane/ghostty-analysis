@@ -6,6 +6,7 @@ from .inputs.models import PRInputBundle
 from .predictor.base import Predictor
 from .registry import RouterSpec, load_router
 from .router.base import RouteResult, Router
+from .router_specs import build_router_specs
 
 __all__ = [
     "BoundaryModel",
@@ -15,5 +16,6 @@ __all__ = [
     "RouteResult",
     "Router",
     "RouterSpec",
+    "build_router_specs",
     "load_router",
 ]

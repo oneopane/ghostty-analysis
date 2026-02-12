@@ -17,8 +17,9 @@ from ..boundary.pipeline import write_boundary_model_artifacts
 from ..config import RepoRoutingConfig
 from ..paths import repo_codeowners_dir, repo_db_path
 from ..registry import RouterSpec
+from ..runtime_defaults import DEFAULT_DATA_DIR, DEFAULT_TOP_K, parse_dt_utc
 from ..router_specs import build_router_specs
-from ..time import cutoff_key_utc, parse_dt_utc
+from ..time import cutoff_key_utc
 
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
@@ -60,7 +61,7 @@ def _build_specs_for_baselines(
 @app.command()
 def info(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     """Show resolved paths for a repository."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
@@ -79,7 +80,7 @@ def snapshot(
     pr_number: int = typer.Option(..., help="Pull request number"),
     run_id: str = typer.Option(..., help="Evaluation run id"),
     as_of: str = typer.Option(..., help="ISO timestamp cutoff"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     """Build a deterministic PR snapshot artifact."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
@@ -105,8 +106,8 @@ def route(
     ),
     run_id: str = typer.Option(..., help="Evaluation run id"),
     as_of: str = typer.Option(..., help="ISO timestamp cutoff"),
-    top_k: int = typer.Option(5, help="Number of candidates to emit"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    top_k: int = typer.Option(DEFAULT_TOP_K, help="Number of candidates to emit"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     """Run one baseline and emit a RouteResult artifact."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
@@ -132,7 +133,7 @@ def route(
 def boundary_build(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     as_of: str = typer.Option(..., help="ISO timestamp cutoff"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
     strategy: str = typer.Option(
         "hybrid_path_cochange.v1", help="Boundary strategy id"
     ),
@@ -196,7 +197,7 @@ def build_artifacts(
         None,
         help="ISO timestamp cutoff; defaults per-PR to created_at",
     ),
-    top_k: int = typer.Option(5, help="Number of candidates to emit"),
+    top_k: int = typer.Option(DEFAULT_TOP_K, help="Number of candidates to emit"),
     start_at: str | None = typer.Option(
         None, "--from", "--start-at", help="ISO created_at window start"
     ),
@@ -213,7 +214,7 @@ def build_artifacts(
     config: str | None = typer.Option(
         None, help="Scoring config path (used by stewards)"
     ),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     """Build snapshot + baseline routing artifacts for a PR list/window."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
