@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 
 from ..github.client import PaginationGap
 from ..storage.schema import IngestionGap
-from ..storage.upsert import insert_gap, insert_qa_report
+from gh.storage.upsert import insert_gap, insert_qa_report
 
 
 class GapRecorder:

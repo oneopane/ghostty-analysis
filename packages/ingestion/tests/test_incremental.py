@@ -5,13 +5,17 @@ from gh_history_ingestion.ingest.incremental import incremental_update
 from gh_history_ingestion.storage.db import get_engine, get_session, init_db
 from gh_history_ingestion.storage.schema import (
     Commit,
+    IngestionCheckpoint,
     Issue,
     PullRequest,
     PullRequestFile,
     Repo,
     Watermark,
 )
-from gh_history_ingestion.storage.upsert import upsert_repo
+from gh.storage.upsert import (
+    upsert_ingestion_checkpoint,
+    upsert_repo,
+)
 from gh_history_ingestion.utils.time import parse_datetime
 
 
@@ -257,3 +261,55 @@ async def test_incremental_uses_watermarks_and_updates(tmp_path):
         "2024-01-07T00:00:00Z"
     )
     assert parse_datetime(pr_wm.updated_at) == parse_datetime("2024-01-06T00:00:00Z")
+
+
+@pytest.mark.asyncio
+async def test_incremental_resume_skips_completed_stages(tmp_path):
+    db_path = tmp_path / "incremental-resume.db"
+    engine = get_engine(db_path)
+    init_db(engine)
+    session = get_session(engine)
+
+    repo_id = upsert_repo(
+        session,
+        {
+            "id": 1,
+            "name": "repo",
+            "full_name": "octo/repo",
+            "owner": {"id": 2, "login": "octo", "type": "User"},
+            "private": False,
+            "default_branch": "main",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-02T00:00:00Z",
+            "pushed_at": "2024-01-02T00:00:00Z",
+        },
+    )
+    for stage in (
+        "repo_seed",
+        "commits",
+        "refs_and_releases",
+        "issues",
+        "pull_requests",
+        "issue_activity",
+        "pull_request_activity",
+        "intervals_rebuilt",
+        "qa_report_written",
+    ):
+        upsert_ingestion_checkpoint(
+            session,
+            repo_id=repo_id,
+            flow="incremental",
+            stage=stage,
+            details_json="{}",
+        )
+    session.commit()
+
+    client = StubIncrementalClient()
+    await incremental_update("octo/repo", db_path, client=client, resume=True)
+
+    paths = [call[0] for call in client.calls]
+    assert paths == ["/repos/octo/repo"]
+
+    session = get_session(engine)
+    checkpoints = session.scalars(select(IngestionCheckpoint.stage)).all()
+    assert "qa_report_written" in checkpoints

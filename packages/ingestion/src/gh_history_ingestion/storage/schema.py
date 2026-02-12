@@ -284,6 +284,19 @@ class IngestionGap(Base):
     detected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class IngestionCheckpoint(Base):
+    __tablename__ = "ingestion_checkpoints"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    repo_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("repos.id"))
+    flow: Mapped[str] = mapped_column(String, nullable=False)
+    stage: Mapped[str] = mapped_column(String, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    details_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (UniqueConstraint("repo_id", "flow", "stage", name="uq_ingest_checkpoint"),)
+
+
 class QaReport(Base):
     __tablename__ = "qa_reports"
 

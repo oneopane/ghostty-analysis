@@ -16,7 +16,7 @@ from ..github.client import GitHubRestClient
 from ..intervals.rebuild import rebuild_intervals
 from ..storage.db import get_engine, get_session, init_db
 from ..storage.schema import Issue
-from ..storage.upsert import (
+from gh.storage.upsert import (
     insert_event,
     upsert_comment,
     upsert_issue,

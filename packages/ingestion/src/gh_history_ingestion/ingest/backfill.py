@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from sqlalchemy import select
+
 from ..events.normalize import (
     normalize_issue_closed,
     normalize_issue_comment,
@@ -15,8 +17,9 @@ from ..intervals.rebuild import rebuild_intervals
 from .qa import GapRecorder, write_qa_report
 from .pipeline import IngestStagePipeline
 from ..storage.db import get_engine, get_session, init_db
+from ..storage.schema import Issue, PullRequest
 from .pull_request_files import ingest_pull_request_files
-from ..storage.upsert import (
+from gh.storage.upsert import (
     insert_event,
     upsert_comment,
     upsert_commit,
@@ -43,6 +46,7 @@ async def backfill_repo(
     max_pages: int | None = None,
     start_at: str | None = None,
     end_at: str | None = None,
+    resume: bool = False,
 ) -> None:
     owner, name = repo_full_name.split("/", 1)
     engine = get_engine(db_path)
@@ -63,6 +67,7 @@ async def backfill_repo(
                 max_pages=max_pages,
                 start_at=start_at,
                 end_at=end_at,
+                resume=resume,
             )
     else:
         await _run_backfill(
@@ -73,6 +78,7 @@ async def backfill_repo(
             max_pages=max_pages,
             start_at=start_at,
             end_at=end_at,
+            resume=resume,
         )
 
 
@@ -85,14 +91,20 @@ async def _run_backfill(
     max_pages: int | None,
     start_at: str | None,
     end_at: str | None,
+    resume: bool,
 ) -> None:
-    pipeline = IngestStagePipeline(flow="backfill")
-
     repo = await client.get_json(f"/repos/{owner}/{name}")
     upsert_user(session, repo.get("owner"))
     repo_id = upsert_repo(session, repo)
     session.commit()
-    pipeline.checkpoint("repo_seed", repo_id=repo_id)
+    pipeline = IngestStagePipeline(
+        flow="backfill",
+        session=session,
+        repo_id=repo_id,
+        resume=resume,
+    )
+    if not pipeline.should_skip("repo_seed"):
+        pipeline.checkpoint("repo_seed", repo_id=repo_id)
 
     window_start, window_end = resolve_window(start_at, end_at)
 
@@ -100,273 +112,300 @@ async def _run_backfill(
     max_issue_updated = None
     max_pr_updated = None
 
-    async for commit in client.paginate(
-        f"/repos/{owner}/{name}/commits",
-        params={"per_page": 100},
-        on_gap=GapRecorder(session, repo_id, "commits"),
-        resource="commits",
-        max_pages=max_pages,
-    ):
-        committed_at = parse_datetime(
-            (commit.get("commit") or {}).get("committer", {}).get("date")
+    if not pipeline.should_skip("commits"):
+        async for commit in client.paginate(
+            f"/repos/{owner}/{name}/commits",
+            params={"per_page": 100},
+            on_gap=GapRecorder(session, repo_id, "commits"),
+            resource="commits",
+            max_pages=max_pages,
+        ):
+            committed_at = parse_datetime(
+                (commit.get("commit") or {}).get("committer", {}).get("date")
+            )
+            if not in_window(committed_at, window_start, window_end):
+                continue
+            upsert_user(session, commit.get("author"))
+            upsert_user(session, commit.get("committer"))
+            upsert_commit(session, repo_id, commit)
+            if committed_at and (max_commit_time is None or committed_at > max_commit_time):
+                max_commit_time = committed_at
+        session.commit()
+        pipeline.checkpoint(
+            "commits",
+            max_commit_time=str(max_commit_time) if max_commit_time else None,
         )
-        if not in_window(committed_at, window_start, window_end):
-            continue
-        upsert_user(session, commit.get("author"))
-        upsert_user(session, commit.get("committer"))
-        upsert_commit(session, repo_id, commit)
-        if committed_at and (max_commit_time is None or committed_at > max_commit_time):
-            max_commit_time = committed_at
-    session.commit()
-    pipeline.checkpoint("commits", max_commit_time=str(max_commit_time) if max_commit_time else None)
 
-    async for branch in client.paginate(
-        f"/repos/{owner}/{name}/branches",
-        params={"per_page": 100},
-        on_gap=GapRecorder(session, repo_id, "branches"),
-        resource="branches",
-        max_pages=max_pages,
-    ):
-        upsert_ref(
-            session,
-            repo_id,
-            ref_type="branch",
-            name=branch.get("name"),
-            sha=(branch.get("commit") or {}).get("sha"),
-            is_protected=branch.get("protected"),
-        )
-    session.commit()
-    pipeline.checkpoint("branches")
+    if not pipeline.should_skip("branches"):
+        async for branch in client.paginate(
+            f"/repos/{owner}/{name}/branches",
+            params={"per_page": 100},
+            on_gap=GapRecorder(session, repo_id, "branches"),
+            resource="branches",
+            max_pages=max_pages,
+        ):
+            upsert_ref(
+                session,
+                repo_id,
+                ref_type="branch",
+                name=branch.get("name"),
+                sha=(branch.get("commit") or {}).get("sha"),
+                is_protected=branch.get("protected"),
+            )
+        session.commit()
+        pipeline.checkpoint("branches")
 
-    async for tag in client.paginate(
-        f"/repos/{owner}/{name}/tags",
-        params={"per_page": 100},
-        on_gap=GapRecorder(session, repo_id, "tags"),
-        resource="tags",
-        max_pages=max_pages,
-    ):
-        upsert_ref(
-            session,
-            repo_id,
-            ref_type="tag",
-            name=tag.get("name"),
-            sha=(tag.get("commit") or {}).get("sha"),
-            is_protected=None,
-        )
-    session.commit()
-    pipeline.checkpoint("tags")
+    if not pipeline.should_skip("tags"):
+        async for tag in client.paginate(
+            f"/repos/{owner}/{name}/tags",
+            params={"per_page": 100},
+            on_gap=GapRecorder(session, repo_id, "tags"),
+            resource="tags",
+            max_pages=max_pages,
+        ):
+            upsert_ref(
+                session,
+                repo_id,
+                ref_type="tag",
+                name=tag.get("name"),
+                sha=(tag.get("commit") or {}).get("sha"),
+                is_protected=None,
+            )
+        session.commit()
+        pipeline.checkpoint("tags")
 
-    async for release in client.paginate(
-        f"/repos/{owner}/{name}/releases",
-        params={"per_page": 100},
-        on_gap=GapRecorder(session, repo_id, "releases"),
-        resource="releases",
-        max_pages=max_pages,
-    ):
-        release_time = release.get("published_at") or release.get("created_at")
-        if not in_window(release_time, window_start, window_end):
-            continue
-        upsert_user(session, release.get("author"))
-        upsert_release(session, repo_id, release)
-    session.commit()
-    pipeline.checkpoint("releases")
+    if not pipeline.should_skip("releases"):
+        async for release in client.paginate(
+            f"/repos/{owner}/{name}/releases",
+            params={"per_page": 100},
+            on_gap=GapRecorder(session, repo_id, "releases"),
+            resource="releases",
+            max_pages=max_pages,
+        ):
+            release_time = release.get("published_at") or release.get("created_at")
+            if not in_window(release_time, window_start, window_end):
+                continue
+            upsert_user(session, release.get("author"))
+            upsert_release(session, repo_id, release)
+        session.commit()
+        pipeline.checkpoint("releases")
 
     pr_by_number: dict[int, dict] = {}
     pr_id_by_number: dict[int, int] = {}
 
-    async for pr in client.paginate(
-        f"/repos/{owner}/{name}/pulls",
-        params={"state": "all", "per_page": 100},
-        on_gap=GapRecorder(session, repo_id, "pulls"),
-        resource="pulls",
-        max_pages=max_pages,
-    ):
-        if not _include_object_in_window(pr, window_start, window_end):
-            continue
-        upsert_user(session, pr.get("user"))
-        pr_by_number[pr.get("number")] = pr
-        pr_id = upsert_pull_request(session, repo_id, pr, issue_id=None)
-        pr_id_by_number[pr.get("number")] = pr_id
-        await ingest_pull_request_files(
-            session,
-            client,
-            owner,
-            name,
-            repo_id=repo_id,
-            pull_request_number=pr.get("number"),
-            pull_request_id=pr_id,
-            head_sha=(pr.get("head") or {}).get("sha"),
+    if not pipeline.should_skip("pull_requests"):
+        async for pr in client.paginate(
+            f"/repos/{owner}/{name}/pulls",
+            params={"state": "all", "per_page": 100},
+            on_gap=GapRecorder(session, repo_id, "pulls"),
+            resource="pulls",
             max_pages=max_pages,
-        )
-        _insert_events(
-            session, normalize_pull_request(pr, repo_id), window_start, window_end
-        )
-        pr_updated = parse_datetime(pr.get("updated_at"))
-        if pr_updated and (max_pr_updated is None or pr_updated > max_pr_updated):
-            max_pr_updated = pr_updated
-    session.commit()
-    pipeline.checkpoint("pull_requests", count=len(pr_by_number))
+        ):
+            if not _include_object_in_window(pr, window_start, window_end):
+                continue
+            upsert_user(session, pr.get("user"))
+            pr_by_number[pr.get("number")] = pr
+            pr_id = upsert_pull_request(session, repo_id, pr, issue_id=None)
+            pr_id_by_number[pr.get("number")] = pr_id
+            await ingest_pull_request_files(
+                session,
+                client,
+                owner,
+                name,
+                repo_id=repo_id,
+                pull_request_number=pr.get("number"),
+                pull_request_id=pr_id,
+                head_sha=(pr.get("head") or {}).get("sha"),
+                max_pages=max_pages,
+            )
+            _insert_events(
+                session, normalize_pull_request(pr, repo_id), window_start, window_end
+            )
+            pr_updated = parse_datetime(pr.get("updated_at"))
+            if pr_updated and (max_pr_updated is None or pr_updated > max_pr_updated):
+                max_pr_updated = pr_updated
+        session.commit()
+        pipeline.checkpoint("pull_requests", count=len(pr_by_number))
+    else:
+        pr_rows = session.execute(
+            select(PullRequest.number, PullRequest.id).where(PullRequest.repo_id == repo_id)
+        ).all()
+        pr_by_number = {int(n): {"number": int(n)} for n, _ in pr_rows}
+        pr_id_by_number = {int(n): int(pid) for n, pid in pr_rows}
 
     issues: list[dict] = []
     issue_id_by_number: dict[int, int] = {}
-    async for issue in client.paginate(
-        f"/repos/{owner}/{name}/issues",
-        params={"state": "all", "per_page": 100},
-        on_gap=GapRecorder(session, repo_id, "issues"),
-        resource="issues",
-        max_pages=max_pages,
-    ):
-        if not _include_object_in_window(issue, window_start, window_end):
-            continue
-        upsert_user(session, issue.get("user"))
-        for label in issue.get("labels") or []:
-            upsert_label(session, repo_id, label)
-        if issue.get("milestone"):
-            upsert_milestone(session, repo_id, issue.get("milestone"))
-        issue_id = upsert_issue(session, repo_id, issue)
-        issue_id_by_number[issue.get("number")] = issue_id
-        issues.append(issue)
-        _insert_events(
-            session, normalize_issue_opened(issue, repo_id), window_start, window_end
-        )
-        _insert_events(
-            session, normalize_issue_closed(issue, repo_id), window_start, window_end
-        )
-        issue_updated = parse_datetime(issue.get("updated_at"))
-        if issue_updated and (
-            max_issue_updated is None or issue_updated > max_issue_updated
-        ):
-            max_issue_updated = issue_updated
-    session.commit()
-    pipeline.checkpoint("issues", count=len(issue_id_by_number))
-
-    for number, pr in pr_by_number.items():
-        issue_id = issue_id_by_number.get(number)
-        if issue_id is not None:
-            upsert_pull_request(session, repo_id, pr, issue_id=issue_id)
-    session.commit()
-    pipeline.checkpoint("issue_pr_linking")
-
-    for issue in issues:
-        number = issue.get("number")
-        issue_id = issue_id_by_number[number]
-        pr_id = pr_id_by_number.get(number)
-
-        async for event_payload in client.paginate(
-            f"/repos/{owner}/{name}/issues/{number}/events",
-            params={"per_page": 100},
-            on_gap=GapRecorder(session, repo_id, "issue_events"),
-            resource="issue_events",
+    if not pipeline.should_skip("issues"):
+        async for issue in client.paginate(
+            f"/repos/{owner}/{name}/issues",
+            params={"state": "all", "per_page": 100},
+            on_gap=GapRecorder(session, repo_id, "issues"),
+            resource="issues",
             max_pages=max_pages,
         ):
-            _upsert_related_for_issue_event(session, repo_id, event_payload)
+            if not _include_object_in_window(issue, window_start, window_end):
+                continue
+            upsert_user(session, issue.get("user"))
+            for label in issue.get("labels") or []:
+                upsert_label(session, repo_id, label)
+            if issue.get("milestone"):
+                upsert_milestone(session, repo_id, issue.get("milestone"))
+            issue_id = upsert_issue(session, repo_id, issue)
+            issue_id_by_number[issue.get("number")] = issue_id
+            issues.append(issue)
             _insert_events(
-                session,
-                normalize_issue_event(
+                session, normalize_issue_opened(issue, repo_id), window_start, window_end
+            )
+            _insert_events(
+                session, normalize_issue_closed(issue, repo_id), window_start, window_end
+            )
+            issue_updated = parse_datetime(issue.get("updated_at"))
+            if issue_updated and (
+                max_issue_updated is None or issue_updated > max_issue_updated
+            ):
+                max_issue_updated = issue_updated
+        session.commit()
+        pipeline.checkpoint("issues", count=len(issue_id_by_number))
+    else:
+        issue_rows = session.execute(
+            select(Issue.number, Issue.id).where(Issue.repo_id == repo_id)
+        ).all()
+        issue_id_by_number = {int(n): int(iid) for n, iid in issue_rows}
+        issues = [{"number": int(n)} for n, _ in issue_rows]
+
+    if not pipeline.should_skip("issue_pr_linking"):
+        for number, pr in pr_by_number.items():
+            issue_id = issue_id_by_number.get(number)
+            if issue_id is not None and "id" in pr:
+                upsert_pull_request(session, repo_id, pr, issue_id=issue_id)
+        session.commit()
+        pipeline.checkpoint("issue_pr_linking")
+
+    if not pipeline.should_skip("issue_activity"):
+        for issue in issues:
+            number = issue.get("number")
+            issue_id = issue_id_by_number[number]
+            pr_id = pr_id_by_number.get(number)
+
+            async for event_payload in client.paginate(
+                f"/repos/{owner}/{name}/issues/{number}/events",
+                params={"per_page": 100},
+                on_gap=GapRecorder(session, repo_id, "issue_events"),
+                resource="issue_events",
+                max_pages=max_pages,
+            ):
+                _upsert_related_for_issue_event(session, repo_id, event_payload)
+                _insert_events(
+                    session,
+                    normalize_issue_event(
+                        issue_id=issue_id,
+                        repo_id=repo_id,
+                        payload=event_payload,
+                        pull_request_id=pr_id,
+                    ),
+                    window_start,
+                    window_end,
+                )
+
+            async for comment in client.paginate(
+                f"/repos/{owner}/{name}/issues/{number}/comments",
+                params={"per_page": 100},
+                on_gap=GapRecorder(session, repo_id, "issue_comments"),
+                resource="issue_comments",
+                max_pages=max_pages,
+            ):
+                if not _include_comment_in_window(comment, window_start, window_end):
+                    continue
+                upsert_user(session, comment.get("user"))
+                upsert_comment(
+                    session,
+                    repo_id,
+                    comment,
                     issue_id=issue_id,
-                    repo_id=repo_id,
-                    payload=event_payload,
                     pull_request_id=pr_id,
-                ),
-                window_start,
-                window_end,
-            )
+                    comment_type="issue",
+                )
+                _insert_events(
+                    session,
+                    normalize_issue_comment(comment, repo_id, issue_id),
+                    window_start,
+                    window_end,
+                )
+        session.commit()
+        pipeline.checkpoint("issue_activity")
 
-        async for comment in client.paginate(
-            f"/repos/{owner}/{name}/issues/{number}/comments",
-            params={"per_page": 100},
-            on_gap=GapRecorder(session, repo_id, "issue_comments"),
-            resource="issue_comments",
-            max_pages=max_pages,
-        ):
-            if not _include_comment_in_window(comment, window_start, window_end):
+    if not pipeline.should_skip("pull_request_activity"):
+        for number, pr in pr_by_number.items():
+            pr_id = pr_id_by_number.get(number)
+            if pr_id is None:
                 continue
-            upsert_user(session, comment.get("user"))
-            upsert_comment(
-                session,
-                repo_id,
-                comment,
-                issue_id=issue_id,
-                pull_request_id=pr_id,
-                comment_type="issue",
-            )
-            _insert_events(
-                session,
-                normalize_issue_comment(comment, repo_id, issue_id),
-                window_start,
-                window_end,
-            )
-    session.commit()
-    pipeline.checkpoint("issue_activity")
+            async for review in client.paginate(
+                f"/repos/{owner}/{name}/pulls/{number}/reviews",
+                params={"per_page": 100},
+                on_gap=GapRecorder(session, repo_id, "reviews"),
+                resource="reviews",
+                max_pages=max_pages,
+            ):
+                if not in_window(review.get("submitted_at"), window_start, window_end):
+                    continue
+                upsert_user(session, review.get("user"))
+                upsert_review(session, repo_id, pr_id, review)
+                _insert_events(
+                    session,
+                    normalize_review(review, repo_id, pr_id),
+                    window_start,
+                    window_end,
+                )
 
-    for number, pr in pr_by_number.items():
-        pr_id = pr_id_by_number.get(number)
-        if pr_id is None:
-            continue
-        async for review in client.paginate(
-            f"/repos/{owner}/{name}/pulls/{number}/reviews",
-            params={"per_page": 100},
-            on_gap=GapRecorder(session, repo_id, "reviews"),
-            resource="reviews",
-            max_pages=max_pages,
-        ):
-            if not in_window(review.get("submitted_at"), window_start, window_end):
-                continue
-            upsert_user(session, review.get("user"))
-            upsert_review(session, repo_id, pr_id, review)
-            _insert_events(
-                session,
-                normalize_review(review, repo_id, pr_id),
-                window_start,
-                window_end,
-            )
+            async for comment in client.paginate(
+                f"/repos/{owner}/{name}/pulls/{number}/comments",
+                params={"per_page": 100},
+                on_gap=GapRecorder(session, repo_id, "review_comments"),
+                resource="review_comments",
+                max_pages=max_pages,
+            ):
+                if not _include_comment_in_window(comment, window_start, window_end):
+                    continue
+                upsert_user(session, comment.get("user"))
+                review_id = comment.get("pull_request_review_id")
+                upsert_comment(
+                    session,
+                    repo_id,
+                    comment,
+                    pull_request_id=pr_id,
+                    review_id=review_id,
+                    comment_type="review",
+                )
+                _insert_events(
+                    session,
+                    normalize_review_comment(comment, repo_id, pr_id, review_id),
+                    window_start,
+                    window_end,
+                )
+        session.commit()
+        pipeline.checkpoint("pull_request_activity")
 
-        async for comment in client.paginate(
-            f"/repos/{owner}/{name}/pulls/{number}/comments",
-            params={"per_page": 100},
-            on_gap=GapRecorder(session, repo_id, "review_comments"),
-            resource="review_comments",
-            max_pages=max_pages,
-        ):
-            if not _include_comment_in_window(comment, window_start, window_end):
-                continue
-            upsert_user(session, comment.get("user"))
-            review_id = comment.get("pull_request_review_id")
-            upsert_comment(
-                session,
-                repo_id,
-                comment,
-                pull_request_id=pr_id,
-                review_id=review_id,
-                comment_type="review",
-            )
-            _insert_events(
-                session,
-                normalize_review_comment(comment, repo_id, pr_id, review_id),
-                window_start,
-                window_end,
-            )
-    session.commit()
-    pipeline.checkpoint("pull_request_activity")
+    if not pipeline.should_skip("watermarks"):
+        if max_commit_time:
+            upsert_watermark(session, repo_id, "commits", updated_at=max_commit_time)
+        if max_issue_updated:
+            upsert_watermark(session, repo_id, "issues", updated_at=max_issue_updated)
+        if max_pr_updated:
+            upsert_watermark(session, repo_id, "pulls", updated_at=max_pr_updated)
+        session.commit()
+        pipeline.checkpoint(
+            "watermarks",
+            commits=max_commit_time.isoformat() if max_commit_time else None,
+            issues=max_issue_updated.isoformat() if max_issue_updated else None,
+            pulls=max_pr_updated.isoformat() if max_pr_updated else None,
+        )
 
-    if max_commit_time:
-        upsert_watermark(session, repo_id, "commits", updated_at=max_commit_time)
-    if max_issue_updated:
-        upsert_watermark(session, repo_id, "issues", updated_at=max_issue_updated)
-    if max_pr_updated:
-        upsert_watermark(session, repo_id, "pulls", updated_at=max_pr_updated)
-    session.commit()
-    pipeline.checkpoint(
-        "watermarks",
-        commits=max_commit_time.isoformat() if max_commit_time else None,
-        issues=max_issue_updated.isoformat() if max_issue_updated else None,
-        pulls=max_pr_updated.isoformat() if max_pr_updated else None,
-    )
-
-    rebuild_intervals(session, repo_id)
-    pipeline.checkpoint("intervals_rebuilt")
-    write_qa_report(session, repo_id)
-    pipeline.checkpoint("qa_report_written", checkpoints=len(pipeline.checkpoints))
+    if not pipeline.should_skip("intervals_rebuilt"):
+        rebuild_intervals(session, repo_id)
+        pipeline.checkpoint("intervals_rebuilt")
+    if not pipeline.should_skip("qa_report_written"):
+        write_qa_report(session, repo_id)
+        pipeline.checkpoint("qa_report_written", checkpoints=len(pipeline.checkpoints))
 
 
 def _upsert_related_for_issue_event(session, repo_id: int, payload: dict) -> None:

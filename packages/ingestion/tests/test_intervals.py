@@ -10,7 +10,7 @@ from gh_history_ingestion.storage.schema import (
     Label,
     Repo,
 )
-from gh_history_ingestion.storage.upsert import insert_event
+from gh.storage.upsert import insert_event
 
 
 def test_interval_rebuild_for_issue_state_and_labels(tmp_path):

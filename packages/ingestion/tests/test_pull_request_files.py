@@ -2,7 +2,7 @@ from sqlalchemy import select
 
 from gh_history_ingestion.storage.db import get_engine, get_session, init_db
 from gh_history_ingestion.storage.schema import PullRequestFile
-from gh_history_ingestion.storage.upsert import (
+from gh.storage.upsert import (
     upsert_pull_request,
     upsert_pull_request_file,
     upsert_repo,

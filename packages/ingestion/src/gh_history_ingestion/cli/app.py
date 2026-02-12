@@ -8,6 +8,7 @@ from ..explorer.server import create_app
 from ..ingest.backfill import backfill_repo
 from ..ingest.incremental import incremental_update
 from ..ingest.pull_requests import backfill_pull_requests
+from ..runtime_defaults import DEFAULT_DATA_DIR, DEFAULT_EXPLORER_DATA_ROOT
 from .paths import default_db_path
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
@@ -18,7 +19,7 @@ def ingest(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     db: str | None = typer.Option(None, help="SQLite database path"),
     data_dir: str = typer.Option(
-        "data",
+        DEFAULT_DATA_DIR,
         help="Base directory for per-repo SQLite databases",
     ),
     max_pages: int | None = typer.Option(
@@ -28,6 +29,11 @@ def ingest(
         None, "--from", "--start-at", help="ISO timestamp to start at (inclusive)"
     ),
     end_at: str | None = typer.Option(None, help="ISO timestamp to end at (inclusive)"),
+    resume: bool = typer.Option(
+        False,
+        "--resume",
+        help="Resume from persisted checkpoint stages when possible",
+    ),
 ):
     """Run a one-shot full backfill for a GitHub repository."""
     db_path = (
@@ -42,6 +48,7 @@ def ingest(
             max_pages=max_pages,
             start_at=start_at,
             end_at=end_at,
+            resume=resume,
         )
     )
 
@@ -51,8 +58,13 @@ def incremental(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     db: str | None = typer.Option(None, help="SQLite database path"),
     data_dir: str = typer.Option(
-        "data",
+        DEFAULT_DATA_DIR,
         help="Base directory for per-repo SQLite databases",
+    ),
+    resume: bool = typer.Option(
+        False,
+        "--resume",
+        help="Resume from persisted checkpoint stages when possible",
     ),
 ):
     """Run an incremental update using stored watermarks."""
@@ -61,7 +73,7 @@ def incremental(
     )
     db_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"[bold]Incremental update[/bold] {repo} -> {db_path}")
-    asyncio.run(incremental_update(repo, db_path))
+    asyncio.run(incremental_update(repo, db_path, resume=resume))
 
 
 @app.command()
@@ -69,7 +81,7 @@ def pull_requests(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     db: str | None = typer.Option(None, help="SQLite database path"),
     data_dir: str = typer.Option(
-        "data",
+        DEFAULT_DATA_DIR,
         help="Base directory for per-repo SQLite databases",
     ),
     with_truth: bool = typer.Option(
@@ -105,7 +117,7 @@ def pull_requests(
 @app.command()
 def explore(
     data_root: str = typer.Option(
-        "data/github",
+        DEFAULT_EXPLORER_DATA_ROOT,
         help="Root directory to scan for SQLite files",
     ),
     host: str = typer.Option("127.0.0.1", help="Host interface to bind"),

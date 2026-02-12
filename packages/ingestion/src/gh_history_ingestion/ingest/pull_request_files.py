@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..providers.github.client import GitHubRestClient
-from ..storage.upsert import upsert_pull_request_file
+from gh.storage.upsert import upsert_pull_request_file
 from .qa import GapRecorder
 
 

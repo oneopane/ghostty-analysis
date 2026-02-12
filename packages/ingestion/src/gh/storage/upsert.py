@@ -5,10 +5,11 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 
 from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy import select
 
-from ..events.normalize import EventRecord
-from ..utils.time import parse_datetime
-from .schema import (
+from gh_history_ingestion.events.normalize import EventRecord
+from gh_history_ingestion.utils.time import parse_datetime
+from gh_history_ingestion.storage.schema import (
     Comment,
     Commit,
     Event,
@@ -26,6 +27,7 @@ from .schema import (
     User,
     Watermark,
     IngestionGap,
+    IngestionCheckpoint,
 )
 
 
@@ -364,6 +366,40 @@ def insert_qa_report(session, repo_id: int, summary_json: str) -> None:
             summary_json=summary_json,
         )
     )
+
+
+def upsert_ingestion_checkpoint(
+    session,
+    *,
+    repo_id: int,
+    flow: str,
+    stage: str,
+    details_json: str,
+    completed_at: datetime | None = None,
+) -> None:
+    values = {
+        "repo_id": repo_id,
+        "flow": flow,
+        "stage": stage,
+        "details_json": details_json,
+        "completed_at": completed_at or datetime.now(timezone.utc),
+    }
+    _upsert(session, IngestionCheckpoint, values, ["repo_id", "flow", "stage"])
+
+
+def list_ingestion_checkpoint_stages(
+    session,
+    *,
+    repo_id: int,
+    flow: str,
+) -> set[str]:
+    rows = session.execute(
+        select(IngestionCheckpoint.stage).where(
+            IngestionCheckpoint.repo_id == repo_id,
+            IngestionCheckpoint.flow == flow,
+        )
+    ).all()
+    return {str(stage) for (stage,) in rows}
 
 
 def insert_event(session, event: EventRecord) -> None:

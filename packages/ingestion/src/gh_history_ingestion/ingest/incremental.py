@@ -13,12 +13,12 @@ from ..events.normalize import (
     normalize_review,
     normalize_review_comment,
 )
-from ..github.auth import select_auth_token
-from ..github.client import GitHubRestClient
+from ..providers.github.auth import select_auth_token
+from ..providers.github.client import GitHubRestClient
 from ..intervals.rebuild import rebuild_intervals
 from ..storage.db import get_engine, get_session, init_db
 from ..storage.schema import Issue, PullRequest
-from ..storage.upsert import (
+from gh.storage.upsert import (
     get_watermark,
     insert_event,
     upsert_comment,
@@ -46,6 +46,7 @@ async def incremental_update(
     db_path,
     *,
     client: GitHubRestClient | None = None,
+    resume: bool = False,
 ) -> None:
     owner, name = repo_full_name.split("/", 1)
     engine = get_engine(db_path)
@@ -58,54 +59,79 @@ async def incremental_update(
 
     if hasattr(client, "__aenter__"):
         async with client:
-            await _run_incremental(session, client, owner, name)
+            await _run_incremental(session, client, owner, name, resume=resume)
     else:
-        await _run_incremental(session, client, owner, name)
+        await _run_incremental(session, client, owner, name, resume=resume)
 
 
 async def _run_incremental(
-    session, client: GitHubRestClient, owner: str, name: str
+    session, client: GitHubRestClient, owner: str, name: str, *, resume: bool
 ) -> None:
-    pipeline = IngestStagePipeline(flow="incremental")
-
     repo = await client.get_json(f"/repos/{owner}/{name}")
     upsert_user(session, repo.get("owner"))
     repo_id = upsert_repo(session, repo)
     session.commit()
-    pipeline.checkpoint("repo_seed", repo_id=repo_id)
+    pipeline = IngestStagePipeline(
+        flow="incremental",
+        session=session,
+        repo_id=repo_id,
+        resume=resume,
+    )
+    if not pipeline.should_skip("repo_seed"):
+        pipeline.checkpoint("repo_seed", repo_id=repo_id)
 
     updated_issue_ids: list[int] = []
     updated_pr_ids: list[int] = []
 
-    await _incremental_commits(session, client, owner, name, repo_id)
-    pipeline.checkpoint("commits")
-    await _incremental_refs_and_releases(session, client, owner, name, repo_id)
-    pipeline.checkpoint("refs_and_releases")
-    updated_issue_ids = await _incremental_issues(session, client, owner, name, repo_id)
-    pipeline.checkpoint("issues", count=len(updated_issue_ids))
-    updated_pr_ids = await _incremental_pull_requests(
-        session, client, owner, name, repo_id
-    )
-    pipeline.checkpoint("pull_requests", count=len(updated_pr_ids))
+    if not pipeline.should_skip("commits"):
+        await _incremental_commits(session, client, owner, name, repo_id)
+        pipeline.checkpoint("commits")
+    if not pipeline.should_skip("refs_and_releases"):
+        await _incremental_refs_and_releases(session, client, owner, name, repo_id)
+        pipeline.checkpoint("refs_and_releases")
+    if not pipeline.should_skip("issues"):
+        updated_issue_ids = await _incremental_issues(session, client, owner, name, repo_id)
+        pipeline.checkpoint("issues", count=len(updated_issue_ids))
+    else:
+        updated_issue_ids = [
+            int(i)
+            for (i,) in session.execute(select(Issue.id).where(Issue.repo_id == repo_id)).all()
+        ]
+    if not pipeline.should_skip("pull_requests"):
+        updated_pr_ids = await _incremental_pull_requests(
+            session, client, owner, name, repo_id
+        )
+        pipeline.checkpoint("pull_requests", count=len(updated_pr_ids))
+    else:
+        updated_pr_ids = [
+            int(i)
+            for (i,) in session.execute(
+                select(PullRequest.id).where(PullRequest.repo_id == repo_id)
+            ).all()
+        ]
 
-    await _incremental_issue_activity(
-        session, client, owner, name, repo_id, updated_issue_ids
-    )
-    pipeline.checkpoint("issue_activity")
-    await _incremental_pr_activity(
-        session, client, owner, name, repo_id, updated_pr_ids
-    )
-    pipeline.checkpoint("pull_request_activity")
+    if not pipeline.should_skip("issue_activity"):
+        await _incremental_issue_activity(
+            session, client, owner, name, repo_id, updated_issue_ids
+        )
+        pipeline.checkpoint("issue_activity")
+    if not pipeline.should_skip("pull_request_activity"):
+        await _incremental_pr_activity(
+            session, client, owner, name, repo_id, updated_pr_ids
+        )
+        pipeline.checkpoint("pull_request_activity")
 
-    rebuild_intervals(
-        session,
-        repo_id,
-        issue_ids=updated_issue_ids or None,
-        pr_ids=updated_pr_ids or None,
-    )
-    pipeline.checkpoint("intervals_rebuilt")
-    write_qa_report(session, repo_id)
-    pipeline.checkpoint("qa_report_written", checkpoints=len(pipeline.checkpoints))
+    if not pipeline.should_skip("intervals_rebuilt"):
+        rebuild_intervals(
+            session,
+            repo_id,
+            issue_ids=updated_issue_ids or None,
+            pr_ids=updated_pr_ids or None,
+        )
+        pipeline.checkpoint("intervals_rebuilt")
+    if not pipeline.should_skip("qa_report_written"):
+        write_qa_report(session, repo_id)
+        pipeline.checkpoint("qa_report_written", checkpoints=len(pipeline.checkpoints))
 
 
 async def _incremental_commits(
