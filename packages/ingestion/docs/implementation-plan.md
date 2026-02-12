@@ -35,7 +35,7 @@ Use GitHub REST API endpoints for:
 
 ## Project Layout
 Workspace package location:
-- `packages/repo-ingestion/`
+- `packages/ingestion/`
 
 Core modules (planned):
 - `src/gh_history_ingestion/providers/github/` (API client, pagination, rate limits)

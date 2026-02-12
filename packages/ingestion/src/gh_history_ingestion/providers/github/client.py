@@ -71,7 +71,7 @@ class GitHubRestClient:
                     headers={
                         "Authorization": f"Bearer {token}",
                         "Accept": "application/vnd.github+json",
-                        "User-Agent": "repo-ingestion",
+                        "User-Agent": "ingestion",
                     },
                     timeout=timeout,
                 )

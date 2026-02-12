@@ -1,5 +1,5 @@
 [project]
-name = "repo-ingestion"
+name = "ingestion"
 version = "0.1.0"
 description = "Repository-agnostic repo history ingestion (GitHub first)"
 readme = "README.md"
@@ -20,8 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-repo-ingestion = "gh_history_ingestion.cli.app:app"
-gh-history-ingestion = "gh_history_ingestion.cli.app:app"
+ingestion = "gh_history_ingestion.cli.app:app"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
