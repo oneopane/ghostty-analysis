@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import typer
-from gh_history_ingestion.cli.app import app as app
+from gh_history_ingestion.cli.app import app as ingestion_app
 from experimentation.unified_experiment import cohort_app, doctor, experiment_app, profile_app
 
+app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
+app.add_typer(ingestion_app, name="ingestion")
 app.add_typer(cohort_app, name="cohort")
 app.add_typer(experiment_app, name="experiment")
 app.add_typer(profile_app, name="profile")

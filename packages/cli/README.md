@@ -12,7 +12,7 @@ Artifact strategy + what to keep as source-of-truth artifacts:
 
 Unified `repo` command surface wiring together:
 
-- `ingestion` (history database creation/updates)
+- `ingestion` command group (history database creation/updates)
 - `inference` (routing/inference artifact tooling)
 - `experimentation` (cohort/spec workflows, quality gates, profile/doctor)
 - `evaluation` (offline scoring/reporting)
@@ -20,6 +20,10 @@ Unified `repo` command surface wiring together:
 Run:
 
 `repo --help`
+
+Ingestion help:
+
+`repo ingestion --help`
 
 Unified experiment workflow:
 
