@@ -13,12 +13,16 @@ from ..artifacts.writer import (
     iter_pr_numbers_created_in_window,
     pr_created_at,
 )
+from ..boundary.models import MembershipMode
+from ..boundary.pipeline import write_boundary_model_artifacts
 from ..config import RepoRoutingConfig
 from ..paths import repo_codeowners_dir, repo_db_path
-from ..time import parse_dt_utc
+from ..time import cutoff_key_utc, parse_dt_utc
 
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
+boundary_app = typer.Typer(help="Boundary model inference commands")
+app.add_typer(boundary_app, name="boundary")
 
 _VALID_BASELINES = {
     "mentions",
@@ -135,6 +139,53 @@ def route(
     writer = ArtifactWriter(repo=cfg.repo, data_dir=cfg.data_dir, run_id=run_id)
     out = writer.write_route_result(artifact)
     print(f"[bold]wrote[/bold] {out}")
+
+
+@boundary_app.command("build")
+def boundary_build(
+    repo: str = typer.Option(..., help="Repository in owner/name format"),
+    as_of: str = typer.Option(..., help="ISO timestamp cutoff"),
+    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    strategy: str = typer.Option(
+        "hybrid_path_cochange.v1", help="Boundary strategy id"
+    ),
+    membership_mode: str = typer.Option(
+        "mixed", help="Membership mode: hard | overlap | mixed"
+    ),
+    path_weight: float = typer.Option(1.0, help="Path prior weight"),
+    cochange_weight: float = typer.Option(0.35, help="Co-change signal weight"),
+):
+    """Build deterministic boundary model artifacts for a repo/cutoff."""
+    cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
+    cutoff = _parse_iso_utc(as_of, param="--as-of")
+
+    try:
+        mode = MembershipMode(membership_mode.lower())
+    except ValueError as exc:
+        raise typer.BadParameter(
+            "--membership-mode must be one of: hard, overlap, mixed"
+        ) from exc
+
+    artifact = write_boundary_model_artifacts(
+        repo_full_name=cfg.repo,
+        cutoff_utc=cutoff,
+        cutoff_key=cutoff_key_utc(cutoff),
+        strategy_id=strategy,
+        data_dir=cfg.data_dir,
+        membership_mode=mode,
+        strategy_config={
+            "path_weight": path_weight,
+            "cochange_weight": cochange_weight,
+        },
+    )
+
+    print(
+        "[bold]wrote[/bold] "
+        f"strategy={artifact.manifest.strategy_id} "
+        f"hash={artifact.manifest.model_hash} "
+        f"units={artifact.manifest.unit_count} "
+        f"boundaries={artifact.manifest.boundary_count}"
+    )
 
 
 @app.command("build-artifacts")

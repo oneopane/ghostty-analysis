@@ -1,6 +1,7 @@
 from .artifacts import BoundaryManifest, BoundaryModelArtifact
 from .config import BoundaryConfig, BoundaryDeterminismConfig, BoundaryHashConfig
 from .hash import boundary_model_hash, canonical_boundary_payload
+from .inference import BoundaryInferenceContext, BoundaryInferenceStrategy, get_boundary_strategy
 from .io import read_boundary_artifact, write_boundary_artifact
 from .models import (
     BoundaryDef,
@@ -18,12 +19,15 @@ from .paths import (
     boundary_signals_path,
     repo_boundary_artifacts_dir,
 )
+from .pipeline import build_boundary_model, write_boundary_model_artifacts
 
 __all__ = [
     "BoundaryConfig",
     "BoundaryDef",
     "BoundaryDeterminismConfig",
     "BoundaryHashConfig",
+    "BoundaryInferenceContext",
+    "BoundaryInferenceStrategy",
     "BoundaryManifest",
     "BoundaryModel",
     "BoundaryModelArtifact",
@@ -37,8 +41,11 @@ __all__ = [
     "boundary_model_hash",
     "boundary_model_path",
     "boundary_signals_path",
+    "build_boundary_model",
     "canonical_boundary_payload",
+    "get_boundary_strategy",
     "read_boundary_artifact",
     "repo_boundary_artifacts_dir",
     "write_boundary_artifact",
+    "write_boundary_model_artifacts",
 ]

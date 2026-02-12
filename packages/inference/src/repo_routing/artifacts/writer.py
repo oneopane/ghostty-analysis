@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
+from ..boundary.pipeline import write_boundary_model_artifacts
 from ..history.reader import HistoryReader
 from ..inputs.builder import build_pr_input_bundle
 from ..inputs.models import PRInputBuilderOptions, PRInputBundle
@@ -14,7 +15,7 @@ from ..repo_profile.models import RepoProfile, RepoProfileQAReport
 from ..paths import repo_db_path
 from ..registry import RouterSpec, load_router
 from ..router.base import RouteResult
-from ..time import dt_sql_utc, parse_dt_utc, require_dt_utc
+from ..time import cutoff_key_utc, dt_sql_utc, parse_dt_utc, require_dt_utc
 from .models import PRSnapshotArtifact, RouteArtifact
 from .paths import (
     pr_features_path,
@@ -309,3 +310,27 @@ def pr_created_at(
         return parse_dt_utc(pr["created_at"])
     finally:
         conn.close()
+
+
+def build_and_write_boundary_model_artifact(
+    *,
+    repo: str,
+    cutoff: datetime,
+    data_dir: str | Path = "data",
+    strategy_id: str = "hybrid_path_cochange.v1",
+    membership_mode: str = "mixed",
+    strategy_config: dict[str, object] | None = None,
+):
+    from ..boundary.models import MembershipMode
+
+    cutoff_utc = require_dt_utc(cutoff, name="cutoff")
+    mode = MembershipMode(membership_mode)
+    return write_boundary_model_artifacts(
+        repo_full_name=repo,
+        cutoff_utc=cutoff_utc,
+        cutoff_key=cutoff_key_utc(cutoff_utc),
+        strategy_id=strategy_id,
+        data_dir=data_dir,
+        membership_mode=mode,
+        strategy_config=strategy_config,
+    )

@@ -46,3 +46,8 @@ def dt_sql_utc(dt: datetime, *, timespec: str | None = None) -> str:
     if timespec is None:
         return naive.isoformat(sep=" ")
     return naive.isoformat(sep=" ", timespec=timespec)
+
+
+def cutoff_key_utc(dt: datetime) -> str:
+    normalized = require_dt_utc(dt)
+    return normalized.strftime("%Y-%m-%dT%H-%M-%SZ")

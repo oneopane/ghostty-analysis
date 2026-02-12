@@ -358,3 +358,11 @@ def test_build_artifacts_does_not_write_partial_files_on_route_failure(
     )
     assert not (pr_dir / "snapshot.json").exists()
     assert not (pr_dir / "routes" / "mentions.json").exists()
+
+
+def test_boundary_subcommand_is_available() -> None:
+    runner = CliRunner()
+    result = runner.invoke(app, ["boundary", "--help"])
+
+    assert result.exit_code == 0
+    assert "build" in result.output
