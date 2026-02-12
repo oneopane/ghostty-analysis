@@ -21,7 +21,7 @@ Recent architecture hardening changes reflected in code:
 
 - Unified CLI now exposes explicit degraded-mode command groups when optional package wiring fails (`packages/cli/src/repo_cli/cli.py`).
 - Router option parsing/validation is centralized in inference and reused by other CLIs (`packages/inference/src/repo_routing/router_specs.py`).
-- Evaluation now exposes service-level APIs (`run`, `show`, `list`, `explain`) used by experimentation instead of importing evaluation CLI command functions (`packages/evaluation/src/evaluation_harness/service.py`).
+- Evaluation now exposes a stable package API surface (`evaluation_harness.api`) used by experimentation (`packages/evaluation/src/evaluation_harness/api.py`).
 - Experimentation workflow code is split into focused modules (`workflow_cohort.py`, `workflow_spec.py`, `workflow_run.py`, `workflow_quality.py`, `workflow_diff.py`, `workflow_doctor.py`, `workflow_profile.py`).
 - Experiment post-processing writes synchronized `report.json` and `report.md` updates to prevent report drift (`packages/experimentation/src/experimentation/workflow_quality.py`).
 - Boundary strategy/parser registries now support registration maps/hooks rather than hardcoded branching (`packages/inference/src/repo_routing/boundary/*/registry.py`).
@@ -194,7 +194,7 @@ evaluation + inference ──write──> data/github/<owner>/<repo>/eval/<run_i
 
 ## 5) `packages/cli` (unified command surface)
 
-- Wraps ingestion CLI as root app and mounts experimentation + inference + evaluation typers (`packages/cli/src/repo_cli/cli.py`).
+- Owns a dedicated `repo` root app and mounts `ingestion`, `cohort`, `experiment`, `profile`, `doctor`, plus optional `inference`/`evaluation` groups (`packages/cli/src/repo_cli/cli.py`).
 
 ---
 
@@ -506,6 +506,15 @@ Below is a practical, rigorous loop using current tooling.
 | `load_router` / `RouterSpec` | Router plugin loading | `packages/inference/src/repo_routing/registry.py` |
 | `ArtifactWriter` | Deterministic artifact writes | `packages/inference/src/repo_routing/artifacts/writer.py` |
 | `run_streaming_eval` | Main eval orchestration | `packages/evaluation/src/evaluation_harness/runner.py` |
+
+## Architecture Ownership Map
+
+| Module Area | Primary Owner |
+|---|---|
+| Evaluation runner orchestration/stages (`packages/evaluation/src/evaluation_harness/runner*.py`) | @oneopane |
+| Experimentation workflows (`packages/experimentation/src/experimentation/workflow_*.py`) | @oneopane |
+| Inference router registry/specs (`packages/inference/src/repo_routing/registry.py`, `packages/inference/src/repo_routing/router_specs.py`) | @oneopane |
+| Ingestion orchestration pipeline (`packages/ingestion/src/gh_history_ingestion/ingest/*.py`) | @oneopane |
 | `behavior_truth_first_eligible_review` | Behavior truth extraction | `packages/evaluation/src/evaluation_harness/truth.py` |
 | `per_pr_metrics` | Routing metrics | `packages/evaluation/src/evaluation_harness/metrics/routing_agreement.py` |
 | `per_pr_gate_metrics` | Gate metrics | `packages/evaluation/src/evaluation_harness/metrics/gates.py` |

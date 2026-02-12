@@ -1,0 +1,6 @@
+# Architecture stewardship
+/packages/evaluation/src/evaluation_harness/runner*.py @oneopane
+/packages/experimentation/src/experimentation/workflow_*.py @oneopane
+/packages/inference/src/repo_routing/registry.py @oneopane
+/packages/inference/src/repo_routing/router_specs.py @oneopane
+/packages/ingestion/src/gh_history_ingestion/ingest/ @oneopane

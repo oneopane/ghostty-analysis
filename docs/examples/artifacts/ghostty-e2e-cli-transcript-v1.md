@@ -34,7 +34,7 @@ Expected command groups include:
 ## 1) Ingest
 
 ```bash
-$ uv run --project packages/cli repo pull-requests \
+$ uv run --project packages/cli repo ingestion pull-requests \
     --repo ghostty-org/ghostty \
     --data-dir data \
     --start-at 2025-08-01T00:00:00Z \

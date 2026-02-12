@@ -40,7 +40,7 @@ export OUT_DIR="artifacts/examples/ghostty-e2e"
 mkdir -p "$OUT_DIR"
 
 # 1) ingest (fast windowed path)
-uv run --project packages/cli repo pull-requests \
+uv run --project packages/cli repo ingestion pull-requests \
   --repo "$REPO" \
   --data-dir "$DATA_DIR" \
   --start-at "$START_AT" \
@@ -141,7 +141,7 @@ You have two supported ingestion profiles:
 Use this for first pass validation and rapid iteration.
 
 ```bash
-uv run --project packages/cli repo pull-requests \
+uv run --project packages/cli repo ingestion pull-requests \
   --repo "$REPO" \
   --data-dir "$DATA_DIR" \
   --start-at "$START_AT" \
@@ -154,8 +154,8 @@ uv run --project packages/cli repo pull-requests \
 Use this before publishing conclusions.
 
 ```bash
-uv run --project packages/cli repo ingest --repo "$REPO" --data-dir "$DATA_DIR"
-uv run --project packages/cli repo incremental --repo "$REPO" --data-dir "$DATA_DIR"
+uv run --project packages/cli repo ingestion ingest --repo "$REPO" --data-dir "$DATA_DIR"
+uv run --project packages/cli repo ingestion incremental --repo "$REPO" --data-dir "$DATA_DIR"
 ```
 
 Expected artifact:
@@ -467,7 +467,7 @@ Symptoms:
 
 Fix:
 
-- run `repo incremental`, or rerun ingestion over the needed time window.
+- run `repo ingestion incremental`, or rerun ingestion over the needed time window.
 
 ### 4) Repo profile strict coverage failures
 
