@@ -5,8 +5,7 @@ from datetime import datetime, timezone
 import typer
 from gh_history_ingestion.repo_artifacts.fetcher import fetch_pinned_repo_artifacts_sync
 from repo_routing.artifacts.writer import ArtifactWriter
-from repo_routing.history.reader import HistoryReader
-from repo_routing.repo_profile.builder import build_repo_profile
+from repo_routing.api import HistoryReader, build_repo_profile
 
 from .workflow_artifacts import _missing_artifact_paths
 from .workflow_helpers import (

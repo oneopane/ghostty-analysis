@@ -10,8 +10,7 @@ from evaluation_harness.paths import (
     eval_per_pr_jsonl_path,
     eval_report_json_path,
 )
-from repo_routing.registry import RouterSpec, router_id_for_spec
-from repo_routing.time import require_dt_utc
+from repo_routing.api import RouterSpec, require_dt_utc, router_id_for_spec
 
 
 EXPERIMENT_MANIFEST_FILENAME = "experiment_manifest.json"

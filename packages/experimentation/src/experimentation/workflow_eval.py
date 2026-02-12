@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import typer
-from evaluation_harness.service import explain as eval_explain
-from evaluation_harness.service import list_runs as eval_list_runs
-from evaluation_harness.service import show as eval_show
+from evaluation_harness.api import explain as eval_explain
+from evaluation_harness.api import list_runs as eval_list_runs
+from evaluation_harness.api import show as eval_show
 
 
 def experiment_show(

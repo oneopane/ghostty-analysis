@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import typer
-from evaluation_harness.run_id import compute_run_id
-from evaluation_harness.service import explain as eval_explain_cmd
-from evaluation_harness.service import list_runs as eval_list_runs_cmd
-from evaluation_harness.service import run as run_streaming_eval
-from evaluation_harness.service import show as eval_show_cmd
+from evaluation_harness.api import compute_run_id
+from evaluation_harness.api import explain as eval_explain_cmd
+from evaluation_harness.api import list_runs as eval_list_runs_cmd
+from evaluation_harness.api import run as run_streaming_eval
+from evaluation_harness.api import show as eval_show_cmd
 
 from .workflow_cohort import cohort_create
 from .workflow_diff import experiment_diff
@@ -43,7 +43,7 @@ from .workflow_quality import (
     evaluate_quality_gates,
     persist_report_post_processing,
 )
-from .workflow_reports import (
+from workflow.reports import (
     EXPERIMENT_MANIFEST_FILENAME,
     _delta,
     _load_per_pr_rows,

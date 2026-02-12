@@ -4,10 +4,9 @@ from pathlib import Path
 from typing import Any
 
 import typer
-from evaluation_harness.config import EvalDefaults, EvalRunConfig
-from evaluation_harness.run_id import compute_run_id
-from evaluation_harness.service import run as run_eval
-from repo_routing.registry import RouterSpec, router_id_for_spec
+from evaluation_harness.api import EvalDefaults, EvalRunConfig, compute_run_id, run as run_eval
+from repo_routing.api import RouterSpec, router_id_for_spec
+from repo_routing.runtime_defaults import DEFAULT_DATA_DIR
 
 from .workflow_artifacts import (
     _build_repo_profile_settings,
@@ -28,7 +27,7 @@ from .workflow_helpers import (
     _validate_hashed_payload,
     _write_json,
 )
-from .workflow_reports import (
+from workflow.reports import (
     EXPERIMENT_MANIFEST_FILENAME,
     _load_per_pr_rows,
     _load_report,
@@ -43,7 +42,7 @@ from .workflow_quality import (
 
 def experiment_run(
     repo: str | None = typer.Option(None, help="Repository in owner/name format"),
-    data_dir: str = typer.Option("data", help="Base directory for repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for repo data"),
     run_id: str | None = typer.Option(None, help="Run id (default: computed)"),
     spec: str | None = typer.Option(None, help="Experiment spec JSON path"),
     cohort: str | None = typer.Option(None, help="Cohort JSON path"),
@@ -277,6 +276,12 @@ def experiment_run(
         strict_streaming_eval=bool(spec_payload.get("strict_streaming_eval", True)),
         cutoff_policy=active_cutoff_policy,
         top_k=int(spec_payload.get("top_k", 5)),
+        execution_mode=str(spec_payload.get("execution_mode") or "sequential"),
+        max_workers=(
+            int(spec_payload.get("max_workers"))
+            if spec_payload.get("max_workers") is not None
+            else None
+        ),
         llm_mode=str(
             ((spec_payload.get("llm") or {}) if isinstance(spec_payload.get("llm"), dict) else {}).get("mode")
             or "replay"

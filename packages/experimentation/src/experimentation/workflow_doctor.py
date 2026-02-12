@@ -6,8 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import typer
-from repo_routing.history.reader import HistoryReader
-from repo_routing.time import parse_dt_utc
+from repo_routing.api import HistoryReader, parse_dt_utc
 
 from .workflow_helpers import (
     CODEOWNERS_PATH_CANDIDATES,

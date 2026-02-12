@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from evaluation_harness.paths import eval_report_json_path, eval_report_md_path
-from repo_routing.time import parse_dt_utc
+from repo_routing.api import parse_dt_utc
 
 from .workflow_helpers import _write_json
 
