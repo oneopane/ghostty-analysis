@@ -22,7 +22,7 @@
 - `users` (author type)
 - Pinned artifacts:
   - `codeowners/<base_sha>/CODEOWNERS`
-  - `routing/area_overrides.json`
+  - `artifacts/routing/boundary_model/<strategy_id>/<cutoff_key>/...`
   - `snapshot.json`, `inputs.json` (per eval run)
 
 ### Leakage checklist (must pass)
@@ -49,7 +49,7 @@
 - **Primary (noisy) label:** `out_of_scope=1` if, within `(cutoff, cutoff+7d]`, PR receives explicit maintainer signal of wrong scope (configured regex on maintainer comments/labels) and no valid owner request is added.
 - **Negative:** PR receives at least one eligible non-author/non-bot review or owner request in `(cutoff, cutoff+7d]`.
 - **Eligibility filters:** exclude author/bot actors; exclude PRs closed within 10 minutes as accidental duplicates.
-- **Fallback proxy label (recommended):** deterministic `proxy_out_of_scope=1` if zero CODEOWNERS matches on changed files **and** zero mapped areas from `routing/area_overrides.json`.
+- **Fallback proxy label (recommended):** deterministic `proxy_out_of_scope=1` if zero CODEOWNERS matches on changed files **and** zero mapped boundaries from boundary artifacts.
 
 ## 7. Baselines
 - **Baseline A (trivial non-ML):** Always in-scope (`out_of_scope=0`).
@@ -82,7 +82,7 @@
 - Need policy on what action is allowed when high risk is predicted.
 
 ## 14. Logging / Evidence Requirements
-- Log owner-match counts, area coverage count, request-count-at-cutoff, and reasons list.
+- Log owner-match counts, boundary coverage count, request-count-at-cutoff, and reasons list.
 - Store label source (`explicit|proxy`) for audit.
 
 ## 15. Versioning Notes (candidate generation, schema, label version)

@@ -36,7 +36,11 @@ Files:
 - Snapshot root must be explicitly pinned via `parser_snapshot_root`.
 - Missing snapshot root in fallback mode records diagnostics and continues.
 - Missing snapshot root in strict mode raises deterministic failure.
-- Python backend id: `python.ast.v1`.
+- Supported backend IDs:
+  - `python.ast.v1`
+  - `zig.regex.v1`
+  - `typescript_javascript.regex.v1`
+- See language details in [`boundary-language-support.md`](./boundary-language-support.md).
 
 ## Determinism contract
 

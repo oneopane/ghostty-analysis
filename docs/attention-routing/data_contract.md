@@ -55,7 +55,7 @@ Scope:
   - run-level: `manifest.json`, `per_pr.jsonl`, `report.json`, `report.md`
 - **Pinned artifact directories:**
   - CODEOWNERS: `data/github/<owner>/<repo>/codeowners/<base_sha>/CODEOWNERS` (`repo_routing.paths.repo_codeowners_path`)
-  - Area overrides: `data/github/<owner>/<repo>/routing/area_overrides.json` (`repo_routing.exports.area.load_repo_area_overrides`)
+  - Boundary model artifacts: `data/github/<owner>/<repo>/artifacts/routing/boundary_model/<strategy_id>/<cutoff_key>/`
 - Team roster expansion (optional): `data/github/<owner>/<repo>/routing/team_roster.json`
 - **Naming/versioning in artifacts:**
   - `snapshot.json`: `kind=pr_snapshot`, `version=v0`
@@ -156,21 +156,21 @@ Source of truth: `packages/ingestion/src/gh_history_ingestion/storage/schema.py`
   - Per file: `path`, `status`, `additions`, `deletions`, `changes`.
 - **Ownership context**
   - CODEOWNERS pinned path: `codeowners/<base_sha>/CODEOWNERS`.
-  - Area mapping: `routing/area_overrides.json` + fallback `default_area_for_path(path)`.
+  - Boundary mapping from `boundary_model` artifacts at the same cutoff.
 - **Active review requests**
   - From `pull_request_review_request_intervals` active at cutoff; users/teams resolved from `users`/`teams`.
 - **Snapshot bundle artifacts written during eval/routing**
   - `snapshot.json` (`PRSnapshotArtifact`)
-  - `inputs.json` (`PRInputBundle`: includes gates, areas, review requests, recent activity if enabled)
+  - `inputs.json` (`PRInputBundle`: includes gates, boundaries, review requests, recent activity if enabled)
 
 ## 8. Pinned Artifacts
 - **CODEOWNERS**
   - Contract path: `data/github/<owner>/<repo>/codeowners/<base_sha>/CODEOWNERS`.
   - Keyed by PR `base_sha` (from as-of PR snapshot).
   - Used by CODEOWNERS baseline only when available; otherwise high-risk/empty output.
-- **Area/module mapping**
-  - `data/github/<owner>/<repo>/routing/area_overrides.json`
-  - Supported shapes: object map or list entries (`{pattern,area}` etc.), parsed in `exports/area.py`.
+- **Boundary model artifacts**
+  - `data/github/<owner>/<repo>/artifacts/routing/boundary_model/<strategy_id>/<cutoff_key>/`
+  - Core files: `boundary_model.json`, `memberships.parquet`, optional `signals.parquet`, `manifest.json`.
 - **Other pinned configs discovered**
   - Router scoring config JSON (e.g., `experiments/configs/v0.json`) used by `stewards` router.
   - Eval run `manifest.json` captures router/config identity for reproducibility.
@@ -267,7 +267,7 @@ Size/format constraints:
 - Verified artifact paths for `snapshot.json`, `inputs.json`, routes under eval run dir.
 - Verified `snapshot.json` and `inputs.json` field shapes by executing a local eval sample run (`/tmp/attention_contract_eval/...`).
 - Verified pinned CODEOWNERS path function: `codeowners/<base_sha>/CODEOWNERS`.
-- Verified area overrides path and parser: `routing/area_overrides.json`.
+- Verified boundary model artifact path and reader: `artifacts/routing/boundary_model/...`.
 - Verified harness unit is PR at cutoff and routing metrics consume `TruthLabel(repo, pr_number, cutoff, targets)`.
 - Verified harness truth SQL in `truth.py` uses post-cutoff window semantics `(cutoff, cutoff+window]` plus non-author/non-bot filters.
 

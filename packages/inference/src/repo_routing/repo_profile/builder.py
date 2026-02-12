@@ -6,8 +6,8 @@ from typing import Sequence
 
 from ..time import require_dt_utc
 from .models import (
-    AreaEntry,
-    AreaModel,
+    BoundaryEntry,
+    BoundaryModel,
     OwnershipEdge,
     OwnershipGraph,
     OwnershipNode,
@@ -24,7 +24,7 @@ from .models import (
     RepoVocabulary,
     VocabularyEntry,
 )
-from .parsers.codeowners import area_for_pattern, parse_codeowners_rules
+from .parsers.codeowners import boundary_for_pattern, parse_codeowners_rules
 from .storage import (
     CODEOWNERS_PATH_CANDIDATES,
     DEFAULT_PINNED_ARTIFACT_PATHS,
@@ -208,10 +208,10 @@ def build_repo_profile(
 
     nodes: dict[str, OwnershipNode] = {}
     edges: list[OwnershipEdge] = []
-    area_map: dict[str, set[str]] = {}
+    boundary_map: dict[str, set[str]] = {}
     for rule in rules:
-        area = area_for_pattern(rule.pattern)
-        area_map.setdefault(area, set()).add(rule.pattern)
+        boundary = boundary_for_pattern(rule.pattern)
+        boundary_map.setdefault(boundary, set()).add(rule.pattern)
         for owner_entry in rule.owners:
             node_id = owner_entry.canonical_id
             if node_id not in nodes:
@@ -229,7 +229,7 @@ def build_repo_profile(
                     relation="OWNS",
                     source_node_id=node_id,
                     path_glob=rule.pattern,
-                    area=area,
+                    boundary=boundary,
                     provenance=[
                         ProvenanceEntry(path=codeowners_path or "__unknown__", line=rule.line)
                     ],
@@ -244,30 +244,30 @@ def build_repo_profile(
             key=lambda e: (
                 e.source_node_id.lower(),
                 (e.path_glob or "").lower(),
-                (e.area or "").lower(),
+                (e.boundary or "").lower(),
             ),
         ),
     )
 
-    areas: list[AreaEntry] = []
-    for area, globs in area_map.items():
-        areas.append(
-            AreaEntry(
-                area=area,
+    boundaries: list[BoundaryEntry] = []
+    for boundary, globs in boundary_map.items():
+        boundaries.append(
+            BoundaryEntry(
+                boundary=boundary,
                 path_globs=sorted(globs, key=str.lower),
                 provenance=[ProvenanceEntry(path=codeowners_path or "__unknown__")],
             )
         )
-    if not areas:
-        areas.append(
-            AreaEntry(
-                area="__unknown__",
+    if not boundaries:
+        boundaries.append(
+            BoundaryEntry(
+                boundary="__unknown__",
                 path_globs=[],
                 provenance=[ProvenanceEntry(path="__unknown__", note="no codeowners")],
             )
         )
-    areas.sort(key=lambda a: a.area.lower())
-    area_model = AreaModel(areas=areas)
+    boundaries.sort(key=lambda b: b.boundary.lower())
+    boundary_model = BoundaryModel(boundaries=boundaries)
 
     policy_signals = _build_policy_signals(
         contributing_path=contributing_path,
@@ -321,7 +321,7 @@ def build_repo_profile(
         identity=identity,
         artifact_manifest=artifact_manifest,
         ownership_graph=graph,
-        area_model=area_model,
+        boundary_model=boundary_model,
         policy_signals=policy_signals,
         vocabulary=vocabulary,
     )

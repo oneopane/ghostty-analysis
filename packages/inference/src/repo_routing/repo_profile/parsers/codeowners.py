@@ -50,7 +50,7 @@ def parse_codeowners_rules(text: str) -> list[ParsedCodeownersRule]:
     return out
 
 
-def area_for_pattern(pattern: str) -> str:
+def boundary_for_pattern(pattern: str) -> str:
     p = pattern.strip().lstrip("/")
     if not p:
         return "__unknown__"

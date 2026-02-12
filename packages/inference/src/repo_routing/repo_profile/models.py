@@ -47,7 +47,7 @@ class OwnershipEdge(BaseModel):
     relation: Literal["OWNS", "MAINTAINS", "MEMBER_OF"] = "OWNS"
     source_node_id: str
     path_glob: str | None = None
-    area: str | None = None
+    boundary: str | None = None
     target_node_id: str | None = None
     provenance: list[ProvenanceEntry] = Field(default_factory=list)
     confidence: float = 1.0
@@ -58,16 +58,16 @@ class OwnershipGraph(BaseModel):
     edges: list[OwnershipEdge] = Field(default_factory=list)
 
 
-class AreaEntry(BaseModel):
-    area: str
+class BoundaryEntry(BaseModel):
+    boundary: str
     path_globs: list[str] = Field(default_factory=list)
     labels: list[str] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
     provenance: list[ProvenanceEntry] = Field(default_factory=list)
 
 
-class AreaModel(BaseModel):
-    areas: list[AreaEntry] = Field(default_factory=list)
+class BoundaryModel(BaseModel):
+    boundaries: list[BoundaryEntry] = Field(default_factory=list)
 
 
 class PolicySignal(BaseModel):
@@ -116,7 +116,7 @@ class RepoProfile(BaseModel):
     identity: RepoProfileIdentity
     artifact_manifest: RepoArtifactManifest
     ownership_graph: OwnershipGraph
-    area_model: AreaModel
+    boundary_model: BoundaryModel
     policy_signals: PolicySignals
     vocabulary: RepoVocabulary
 

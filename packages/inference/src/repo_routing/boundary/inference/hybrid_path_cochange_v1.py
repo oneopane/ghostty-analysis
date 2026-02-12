@@ -67,19 +67,26 @@ class HybridPathCochangeV1:
         parser_votes: dict[str, dict[str, float]] = {}
         parser_diagnostics: list[str] = []
         if parser_enabled:
+            parser_strict = bool(context.config.get("parser_strict", False))
             snapshot_root = resolve_snapshot_root(
                 configured_root=context.config.get("parser_snapshot_root")
             )
             if snapshot_root is None:
                 parser_diagnostics.append("parser_snapshot_missing")
-                if bool(context.config.get("parser_strict", False)):
+                if parser_strict:
                     raise RuntimeError("parser snapshot root missing in strict parser mode")
             else:
-                backend = get_parser_backend(parser_backend_id)
-                parsed = backend.parse_snapshot(root=snapshot_root, paths=files)
-                parser_backend_version = parsed.backend_version
-                parser_votes = parser_boundary_votes(parsed)
-                parser_diagnostics.extend(parsed.diagnostics)
+                try:
+                    backend = get_parser_backend(parser_backend_id)
+                    parsed = backend.parse_snapshot(root=snapshot_root, paths=files)
+                except Exception as exc:
+                    parser_diagnostics.append(f"parser_backend_error:{type(exc).__name__}")
+                    if parser_strict:
+                        raise
+                else:
+                    parser_backend_version = parsed.backend_version
+                    parser_votes = parser_boundary_votes(parsed)
+                    parser_diagnostics.extend(parsed.diagnostics)
 
         parser_boundary_ids = sorted(
             {

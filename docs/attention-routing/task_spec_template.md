@@ -20,7 +20,7 @@
 - Example source names:
   - Interval tables (`issue_content_intervals`, `pull_request_head_intervals`, `pull_request_review_request_intervals`, ...)
   - History tables (`pull_requests`, `reviews`, `comments`, `events`, `users`)
-  - Pinned artifacts (`codeowners/<base_sha>/CODEOWNERS`, `routing/area_overrides.json`, `snapshot.json`, `inputs.json`)
+  - Pinned artifacts (`codeowners/<base_sha>/CODEOWNERS`, `artifacts/routing/boundary_model/...`, `snapshot.json`, `inputs.json`)
 
 ### Leakage checklist (must pass)
 - [ ] Every input computable with data `<= cutoff`.
@@ -48,7 +48,7 @@
 - Metric(s) used for go/no-go and why.
 
 ## 9. Secondary Metrics / Slices
-- Required slices (repo, area, PR size, ownership coverage, requested vs unrequested, etc.).
+- Required slices (repo, boundary, PR size, ownership coverage, requested vs unrequested, etc.).
 
 ## 10. Offline Evaluation Protocol
 - Dataset inclusion/exclusion rules.

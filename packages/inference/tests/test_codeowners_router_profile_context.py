@@ -40,14 +40,14 @@ def test_codeowners_router_can_use_repo_profile_context(tmp_path) -> None:  # ty
                             "relation": "OWNS",
                             "source_node_id": "person:bob",
                             "path_glob": "src/*",
-                            "area": "src",
+                            "boundary": "src",
                             "target_node_id": None,
                             "provenance": [{"path": ".github/CODEOWNERS", "line": 1}],
                             "confidence": 1.0,
                         }
                     ],
                 },
-                "area_model": {"areas": []},
+                "boundary_model": {"boundaries": []},
                 "policy_signals": {"signals": []},
                 "vocabulary": {
                     "labels": [],

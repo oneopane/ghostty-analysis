@@ -15,7 +15,7 @@ Core rule:
 | PR×PR | Which historical PRs look like this one? | `sim.nearest_prs.*`, `repo.priors.*` |
 | PR×User | How strong is this PR↔candidate fit? | `candidate.*`, `pair.*` |
 | PR×Team | Which team is most responsible/likely to respond? | owner/request/team slices + optional `routing/team_roster.json` expansion |
-| PR×File/Area | What code surface does this PR interact with? | `pr.surface.*`, `pr.areas.*`, `pr.ownership.*` |
+| PR×File/Boundary | What code surface does this PR interact with? | `pr.surface.*`, `pr.boundary.*`, `pr.ownership.*` |
 | PR×Automation | What machine/system feedback exists? | `automation.*` |
 | PR×RepoContext | How does this PR compare to repo constraints/priors? | `repo.priors.*`, `pr.surface.*_zscore_vs_repo`, ownership coverage |
 | PR×Time | What phase/trajectory is this PR in? | `pr.trajectory.*`, `pr.attention.*`, `pr.request_overlap.*` |

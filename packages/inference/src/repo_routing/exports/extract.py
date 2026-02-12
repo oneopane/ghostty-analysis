@@ -10,7 +10,7 @@ from ..history.models import PullRequestSnapshot
 from ..history.reader import HistoryReader
 from ..parsing.gates import parse_gate_fields
 from ..paths import repo_db_path
-from .area import AreaOverride, area_for_path
+from .boundary import BoundaryOverride, boundary_for_path
 
 
 def _parse_dt(value: object) -> datetime | None:
@@ -139,7 +139,7 @@ def export_pr_files_rows(
     snapshots: Iterable[PRSnapshotWithCutoff],
     *,
     export_version: str = "v0",
-    area_overrides: list[AreaOverride] | None = None,
+    boundary_overrides: list[BoundaryOverride] | None = None,
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for item in snapshots:
@@ -156,7 +156,7 @@ def export_pr_files_rows(
                     "additions": f.additions,
                     "deletions": f.deletions,
                     "changes": f.changes,
-                    "default_area": area_for_path(f.path, area_overrides),
+                    "default_boundary": boundary_for_path(f.path, boundary_overrides),
                 }
             )
     rows.sort(key=lambda r: (int(r["pr_number"]), str(r["path"])))

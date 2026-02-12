@@ -18,7 +18,7 @@
 - PR snapshot as-of cutoff (`snapshot.json` / `inputs.json`)
 - Interval tables: `issue_content_intervals`, `pull_request_head_intervals`, `pull_request_review_request_intervals`, `pull_request_draft_intervals`
 - File/churn surface: `pull_request_files`
-- Ownership artifacts: `codeowners/<base_sha>/CODEOWNERS`, `routing/area_overrides.json`
+- Ownership artifacts: `codeowners/<base_sha>/CODEOWNERS`, boundary model artifacts for the same cutoff
 - Historical candidate activity up to cutoff:
   - `reviews`, `comments`, `events`, `users`
 - Candidate generation sources (versioned): requested users/teams, CODEOWNERS owners, historically active participants, mention-derived users
@@ -27,7 +27,7 @@
 - [x] Candidate features built with events/tables `<= cutoff`
 - [x] No post-cutoff responder/outcome fields in features
 - [x] Candidate set frozen by `candidate_gen_version`
-- [x] Pinned CODEOWNERS/area artifacts used
+- [x] Pinned CODEOWNERS/boundary artifacts used
 - [x] Human-knowable at cutoff
 
 ## 5. Output Contract
@@ -57,14 +57,14 @@
 
 ## 7. Baselines
 - **Baseline A (trivial non-ML):** preserve explicit review request order at cutoff, else lexicographic fallback.
-- **Baseline B (strong heuristic non-ML):** CODEOWNERS-first, then recency-weighted historical responder frequency in matching areas.
+- **Baseline B (strong heuristic non-ML):** CODEOWNERS-first, then recency-weighted historical responder frequency in matching boundaries.
 
 ## 8. Primary Metrics
 - **MRR** + **Hit@1/3/5** on eligible PRs.
 - Justification: directly measures ranking quality for first-response objective.
 
 ## 9. Secondary Metrics / Slices
-- Repo, area, PR size, owner coverage bucket, requested vs unrequested responder, author tenure.
+- Repo, boundary, PR size, owner coverage bucket, requested vs unrequested responder, author tenure.
 - Candidate-gen coverage: `% truth in pool`.
 
 ## 10. Offline Evaluation Protocol

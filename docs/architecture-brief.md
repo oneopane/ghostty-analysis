@@ -478,7 +478,7 @@ Below is a practical, rigorous loop using current tooling.
 - DB path: `data/github/<owner>/<repo>/history.sqlite`
 - Eval run dir: `data/github/<owner>/<repo>/eval/<run_id>/`
 - CODEOWNERS pinned path: `data/github/<owner>/<repo>/codeowners/<base_sha>/CODEOWNERS`
-- Area overrides path: `data/github/<owner>/<repo>/routing/area_overrides.json`
+- Boundary artifact root: `data/github/<owner>/<repo>/artifacts/routing/boundary_model/`
 
 ## Key symbols (quick lookup)
 

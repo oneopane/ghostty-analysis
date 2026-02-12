@@ -1,9 +1,9 @@
-# Task 05: Area/module multi-label classification
+# Task 05: Boundary/module multi-label classification
 
 ## 1. Task Summary
 - **Task ID:** 05
-- **Task name:** Area/module multi-label classification
-- **One-sentence definition:** Predict the set of impacted areas/modules for a PR at cutoff.
+- **Task name:** Boundary/module multi-label classification
+- **One-sentence definition:** Predict the set of impacted boundaries/modules for a PR at cutoff.
 - **Label availability status:** Known
 
 ## 2. Decision Point
@@ -17,62 +17,60 @@
 ## 4. Cutoff-Safe Inputs
 - `pull_request_files` at head SHA as-of cutoff
 - `pull_request_head_intervals`
-- Pinned area artifact `routing/area_overrides.json`
-- Default path-derived area (`default_area_for_path`)
+- Pinned boundary artifacts (`boundary_model.json` + `memberships.parquet`)
 - Optional `issue_content_intervals` title/body tokens
 
 ### Leakage checklist (must pass)
 - [x] Labels/features from cutoff file list only
 - [x] No post-cutoff reviewer activity features
-- [x] Area mapping from pinned artifacts only
+- [x] Boundary mapping from pinned artifacts only
 - [x] No merged outcome inputs
 - [x] Human-knowable at cutoff
 
 ## 5. Output Contract
 ```json
 {
-  "task": "area_multilabel",
+  "task": "boundary_multilabel",
   "repo": "owner/name",
   "pr_number": 123,
   "cutoff": "ISO-8601",
-  "areas": ["api", "infra"],
-  "area_scores": {"api": 0.91, "infra": 0.63}
+  "boundaries": ["api", "infra"],
+  "boundary_scores": {"api": 0.91, "infra": 0.63}
 }
 ```
 
 ## 6. Label Construction
-- Deterministic labels from touched file paths at cutoff:
-  - Apply `routing/area_overrides.json` (first match wins), else `default_area_for_path(path)`.
-  - PR label set = union of mapped areas across files.
+- Deterministic labels from touched file paths at cutoff via boundary model membership projection.
+- PR label set = union of mapped boundaries across files.
 - Exclude files under ignored globs (if configured).
 
 ## 7. Baselines
-- **Baseline A (trivial non-ML):** majority area only (single label = most common area in repo history).
-- **Baseline B (strong heuristic non-ML):** deterministic path mapping (overrides + default area), no learning.
+- **Baseline A (trivial non-ML):** majority boundary only (single label = most common boundary in repo history).
+- **Baseline B (strong heuristic non-ML):** deterministic path-based boundary mapping, no learning.
 
 ## 8. Primary Metrics
 - **Micro-F1** and **Jaccard** for multi-label quality.
 
 ## 9. Secondary Metrics / Slices
-- Single-label vs multi-label PRs, area frequency buckets, repo slices.
+- Single-label vs multi-label PRs, boundary frequency buckets, repo slices.
 
 ## 10. Offline Evaluation Protocol
 - Deterministic labels from same mapping; evaluate learned compression/generalization if using text.
-- Time split for robustness to area drift.
+- Time split for robustness to boundary drift.
 
 ## 11. Online Feasibility
-- **MVP:** immediate area tags in routing evidence.
+- **MVP:** immediate boundary tags in routing evidence.
 
 ## 12. Failure Modes
-- Area overrides drift/outdated rules.
+- Low-signal repositories produce unstable boundary partitions.
 - Directory restructures can break mapping continuity.
 
 ## 13. Dependencies / Open Questions
-- Need governance process for `routing/area_overrides.json` updates.
+- Need governance process for boundary strategy version upgrades.
 
 ## 14. Logging / Evidence Requirements
-- Log per-file matched rule and resulting area.
-- Emit final area set with confidence/source tags.
+- Log per-file projected boundary memberships.
+- Emit final boundary set with confidence/source tags.
 
 ## 15. Versioning Notes (candidate generation, schema, label version)
 - `task_version`: t05.v1

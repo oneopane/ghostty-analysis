@@ -21,7 +21,17 @@ from .models import (
     Membership,
     MembershipMode,
 )
-from .parsers import BoundaryParserBackend, ParsedFileSignals, ParserRunResult, get_parser_backend
+from .parsers import (
+    BoundaryParserBackend,
+    ParsedFileSignals,
+    ParsedFunction,
+    ParsedImport,
+    ParserRunResult,
+    PythonAstParserBackend,
+    TypeScriptJavaScriptRegexParserBackend,
+    ZigRegexParserBackend,
+    get_parser_backend,
+)
 from .paths import (
     boundary_manifest_path,
     boundary_memberships_path,
@@ -52,7 +62,10 @@ __all__ = [
     "MembershipMode",
     "PRBoundaryFootprint",
     "ParsedFileSignals",
+    "ParsedFunction",
+    "ParsedImport",
     "ParserRunResult",
+    "PythonAstParserBackend",
     "boundary_manifest_path",
     "boundary_memberships_path",
     "boundary_model_dir",
@@ -64,6 +77,8 @@ __all__ = [
     "get_boundary_strategy",
     "get_parser_backend",
     "project_files_to_boundary_footprint",
+    "TypeScriptJavaScriptRegexParserBackend",
+    "ZigRegexParserBackend",
     "read_boundary_artifact",
     "repo_boundary_artifacts_dir",
     "resolve_snapshot_root",

@@ -6,9 +6,9 @@ This log is intended to be updated as implementation proceeds.
 
 - Program: Boundary Model Migration
 - Start date: 2026-02-11
-- Owner: TBD
-- Current phase: Implementation
-- Current PR: PR-06 (Complete)
+- Owner: oneopane
+- Current phase: Completed
+- Current PR: PR-07 (Complete)
 
 ## PR Tracking Table
 
@@ -20,7 +20,7 @@ This log is intended to be updated as implementation proceeds.
 | PR-04 | Predictor feature stack migration | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | boundary feature keys migrated across extractor/registry/policy/tests |
 | PR-05 | Mixed-membership boundary migration | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | boundary-basis mixed-membership APIs + artifacts + notebook migration |
 | PR-06 | Parser plugin framework + Python backend | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | parser registry + python backend + hybrid parser channel + fallback tests |
-| PR-07 | Zig + TS/JS parser backends + cleanup | Planned | TBD | TBD | - | - | |
+| PR-07 | Zig + TS/JS parser backends + cleanup | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | zig+ts/js parser backends + final boundary terminology cleanup |
 
 ## Milestone Checkpoints
 
@@ -37,7 +37,7 @@ This log is intended to be updated as implementation proceeds.
 ### M3: Runtime cutover
 - [x] input bundle boundary fields active
 - [x] analysis/risk boundary logic active
-- [ ] area references removed from runtime path
+- [x] area references removed from runtime path
 
 ### M4: Predictor migration
 - [x] boundary feature keys registered
@@ -55,19 +55,19 @@ This log is intended to be updated as implementation proceeds.
 - [x] parser fallback behavior validated
 
 ### M7: Zig/TS/JS + cleanup
-- [ ] Zig backend merged
-- [ ] TS/JS backend merged
-- [ ] terminology/docs cleanup complete
+- [x] Zig backend merged
+- [x] TS/JS backend merged
+- [x] terminology/docs cleanup complete
 
 ## Validation Ledger
 
 ### Determinism
-- [ ] same config/input hash reproducibility verified
-- [ ] no unstable ordering in outputs
+- [x] same config/input hash reproducibility verified
+- [x] no unstable ordering in outputs
 
 ### Cutoff safety
-- [ ] leak tests for SQL sources
-- [ ] parser sources constrained to pinned refs
+- [x] leak tests for SQL sources
+- [x] parser sources constrained to pinned refs
 
 ### Routing quality
 - [ ] baseline comparison run complete
@@ -84,7 +84,7 @@ This log is intended to be updated as implementation proceeds.
 | R1 | Low-data repos produce unstable partitions | Medium | fallback partition + confidence metadata | Open |
 | R2 | Parser backend failures degrade outputs | Medium | optional parser channels + deterministic fallback | Open |
 | R3 | Feature key churn breaks task policy expectations | High | dedicated PR-04 + policy tests | Open |
-| R4 | Terminology drift between docs and code | Medium | PR-07 cleanup checklist | Open |
+| R4 | Terminology drift between docs and code | Medium | PR-07 cleanup checklist | Closed |
 
 ## Decisions Referenced
 

@@ -1,11 +1,11 @@
 """Parquet export helpers for offline experimentation."""
 
-from .area import (
-    AreaOverride,
-    area_for_path,
-    default_area_for_path,
-    load_area_overrides,
-    load_repo_area_overrides,
+from .boundary import (
+    BoundaryOverride,
+    boundary_for_path,
+    default_boundary_for_path,
+    load_boundary_overrides,
+    load_repo_boundary_overrides,
 )
 from .extract import (
     PRCutoff,
@@ -20,11 +20,11 @@ from .extract import (
 )
 
 __all__ = [
-    "AreaOverride",
+    "BoundaryOverride",
     "PRCutoff",
     "PRSnapshotWithCutoff",
-    "area_for_path",
-    "default_area_for_path",
+    "boundary_for_path",
+    "default_boundary_for_path",
     "export_pr_activity_rows",
     "export_pr_files_rows",
     "export_pr_snapshots",
@@ -32,6 +32,6 @@ __all__ = [
     "export_prs_rows",
     "export_truth_behavior_rows",
     "export_truth_intent_rows",
-    "load_area_overrides",
-    "load_repo_area_overrides",
+    "load_boundary_overrides",
+    "load_repo_boundary_overrides",
 ]

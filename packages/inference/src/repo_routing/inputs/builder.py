@@ -172,13 +172,6 @@ def build_pr_input_bundle(
         boundary_strategy = footprint.strategy_id
         boundary_strategy_version = footprint.strategy_version
 
-    # Legacy compatibility for pre-boundary predictor stack; removed in PR-04.
-    file_areas = {
-        path: (vals[0].removeprefix("dir:") if vals else "__unknown__")
-        for path, vals in file_boundaries.items()
-    }
-    areas = sorted(set(file_areas.values()), key=lambda s: s.lower())
-
     recent_activity: list[RecentActivityEvent] = []
     if opts.include_recent_activity:
         recent_activity = _recent_activity_window(
@@ -205,7 +198,5 @@ def build_pr_input_bundle(
         boundary_coverage=boundary_coverage,
         boundary_strategy=boundary_strategy,
         boundary_strategy_version=boundary_strategy_version,
-        file_areas=file_areas,
-        areas=areas,
         recent_activity=recent_activity,
     )

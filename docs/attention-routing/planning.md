@@ -12,7 +12,7 @@
 ## 2. System Scope & Non-goals
 - **In scope (attention-routing)**
   - Decide if a PR is routable now.
-  - Infer likely ownership/areas.
+  - Infer likely ownership/boundaries.
   - Rank reviewer/team candidates.
   - Trigger control actions (nudge/escalate/how many to ping).
 - **Out of scope (near-term)**
@@ -27,8 +27,8 @@
 ## 3. Decision Pipeline (D0–D4)
 - **D0: Triage viability**
   - Is this PR in-scope, ready, and sized for normal routing?
-- **D1: Ownership/area inference**
-  - Which areas/modules and how confident is ownership coverage?
+- **D1: Ownership/boundary inference**
+  - Which boundaries/modules and how confident is ownership coverage?
 - **D2: Candidate ranking (team/user)**
   - Who should be pinged first under candidate constraints?
 - **D3: Control policy (nudge/escalate/ping size)**
@@ -40,7 +40,7 @@
 ## 4. Prediction Task Portfolio (Core Section)
 - Portfolio covers 10 tasks mapped to D0–D3:
   - **D0**: T01 out-of-scope, T02 readiness, T03 oversized PR.
-  - **D1**: T04 ownership coverage confidence, T05 area/module multi-label.
+  - **D1**: T04 ownership coverage confidence, T05 boundary/module multi-label.
   - **D2**: T06 first-responder routing, T07 owner-constrained routing.
   - **D2/D3**: T08 candidate availability/non-response.
   - **D3**: T09 stall-risk escalation, T10 reviewer set sizing.
@@ -55,7 +55,7 @@
   - Use interval tables for state at cutoff (`issue_content_intervals`, `pull_request_draft_intervals`, `pull_request_head_intervals`, `pull_request_review_request_intervals`, etc.).
   - Use pinned repo artifacts at cutoff SHAs:
     - `codeowners/<base_sha>/CODEOWNERS`
-    - `routing/area_overrides.json`
+    - `artifacts/routing/boundary_model/<strategy_id>/<cutoff_key>/...`
     - snapshot artifacts (`snapshot.json`, `inputs.json`) tied to run manifest.
 - **Candidate generation versioning + evaluation coupling**
   - Candidate set is a versioned contract (e.g., `candidate_gen_version=v1`).
@@ -74,7 +74,7 @@
   - Use time-based splits (train/valid/test) plus held-out repo splits where feasible.
   - Keep deterministic manifests and schema versions.
 - **Slice analysis (required)**
-  - By repo, area/module, PR size, ownership coverage bucket, and requested vs unrequested candidates.
+  - By repo, boundary/module, PR size, ownership coverage bucket, and requested vs unrequested candidates.
 - **Calibration requirements**
   - Required for probability-trigger tasks: **T04, T08, T09, T10**.
   - Why: thresholds drive control actions (escalate/ping counts), so probability reliability matters.
@@ -130,6 +130,6 @@
 - **High-value open questions (max 5)**
   1. TODO: What is the default response SLA window per repo tier (e.g., 24h vs 48h)?
   2. TODO: How should team requests be expanded to users when multiple rosters exist?
-  3. TODO: Which owner-correctness definition is canonical (strict CODEOWNERS vs area policy)?
+  3. TODO: Which owner-correctness definition is canonical (strict CODEOWNERS vs boundary policy)?
   4. TODO: What minimum calibration quality gates are required before assistive launch?
   5. TODO: How should reroute actions be attributed when multiple nudges occur?

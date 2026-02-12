@@ -15,7 +15,7 @@ Attention-routing needed explicit decisions on truth semantics, signal boundary,
    - Global filters: exclude bots and PR author.
 2. Candidate generation remains versioned (`candidate_gen_version`), and version metadata must be persisted in features and run artifacts when available.
 3. Core signal boundary is repository-native only; external/social persona signals are disallowed.
-4. Conceptual feature framing is PR×X relations with fixed buckets (PR, user, team, file/area, automation, repo context, time, silence).
+4. Conceptual feature framing is PR×X relations with fixed buckets (PR, user, team, file/boundary, automation, repo context, time, silence).
 5. LLM usage remains import-path experimental; core extraction remains deterministic.
 
 ## Consequences

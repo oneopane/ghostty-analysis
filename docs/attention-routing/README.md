@@ -8,6 +8,11 @@ Feature implementation and status:
 
 - [feature-implementation-checklist.md](./feature-implementation-checklist.md)
 
+Boundary model contracts:
+
+- [boundary-model.md](./boundary-model.md)
+- [boundary-language-support.md](./boundary-language-support.md)
+
 Feature taxonomy + policy registries:
 
 - [feature-registry.md](./feature-registry.md)

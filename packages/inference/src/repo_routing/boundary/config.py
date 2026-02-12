@@ -21,7 +21,9 @@ class BoundaryParserConfig(BaseModel):
     backend_id: str = "python.ast.v1"
     parser_weight: float = 0.2
     strict: bool = False
-    language_allowlist: list[str] = Field(default_factory=lambda: ["python"])
+    language_allowlist: list[str] = Field(
+        default_factory=lambda: ["python", "zig", "typescript", "javascript"]
+    )
     snapshot_root: str | None = None
 
 

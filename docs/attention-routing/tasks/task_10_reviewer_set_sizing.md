@@ -58,7 +58,7 @@
 - Justification: task is a control policy balancing responsiveness vs attention cost.
 
 ## 9. Secondary Metrics / Slices
-- Repo, area, owner coverage, PR size, requested vs unrequested responder presence.
+- Repo, boundary, owner coverage, PR size, requested vs unrequested responder presence.
 
 ## 10. Offline Evaluation Protocol
 - Time split by cutoff.

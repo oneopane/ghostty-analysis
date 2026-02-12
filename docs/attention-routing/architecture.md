@@ -40,7 +40,7 @@ flowchart TD
 
 - **Data substrate** (offline):
   - `data/github/<owner>/<repo>/history.sqlite`
-  - pinned files like `codeowners/<base_sha>/CODEOWNERS`, `routing/area_overrides.json`
+  - pinned files like `codeowners/<base_sha>/CODEOWNERS`, boundary snapshots/artifacts under `artifacts/routing/boundary_model/...`
 - **Core routing package:** `packages/inference/src/repo_routing`
   - as-of reads: `history/reader.py`
   - canonical inputs: `inputs/models.py`, `inputs/builder.py`
@@ -86,7 +86,7 @@ Contains:
 - as-of snapshot: `snapshot` (`PullRequestSnapshot`)
 - convenience fields: `changed_files`, `review_requests`, `author_login`, `title`, `body`
 - parsed gate fields (`parse_gate_fields` output)
-- computed areas (`area_for_path` + overrides)
+- computed boundary footprint (`file_boundaries`, `boundaries`, coverage metadata)
 - optional bounded `recent_activity`
 
 ## 2.3 Prediction contract
@@ -237,20 +237,20 @@ Use only:
 ### Candidate-level
 
 - historical review/comment volume (windowed, recency-weighted)
-- area/path affinity from prior participation
+- boundary/path affinity from prior participation
 - author-candidate interaction history
 - active load proxies
 
 ### PR-level
 
 - changed file count/churn
-- area breadth (`areas` count)
+- boundary breadth (`boundaries` count)
 - parsed gate completeness
 - explicit mentions/review requests
 
 ### Interaction features
 
-- author affinity × area affinity
+- author affinity × boundary affinity
 - confidence/risk adjustments
 - request/mention agreement features
 
@@ -266,7 +266,7 @@ Before shipping a feature:
 
 ## 6.4 Determinism checklist
 
-- [ ] Stable sorting for sets/maps (logins, paths, areas)
+- [ ] Stable sorting for sets/maps (logins, paths, boundaries)
 - [ ] Stable JSON (`sort_keys=True`, fixed formatting)
 - [ ] Stable router IDs (`router_id_for_spec`)
 - [ ] Feature cache keys derived from deterministic serialized inputs
@@ -309,7 +309,7 @@ Attention-routing features are organized conceptually as relations of the form:
 
 `(PR_at_cutoff, X) -> signal`
 
-with `X` in a small fixed set (PR, user, team, file/area, automation, repo context, time, silence).
+with `X` in a small fixed set (PR, user, team, file/boundary, automation, repo context, time, silence).
 
 Reference taxonomy:
 - `docs/attention-routing/relation-taxonomy.md`
@@ -322,7 +322,7 @@ Hard signal boundary policy:
 A function-first mixed-membership API is available for notebook-driven exploration:
 
 - module: `repo_routing.mixed_membership`
-- basis v1: areas (`areas.v1`)
+- basis v1: boundaries (`hybrid_path_cochange.v1`)
 - notebook starter: `experiments/marimo/mixed_membership_boundaries_v1.py`
 
 This lane is optional and intended for offline analysis/ablation.

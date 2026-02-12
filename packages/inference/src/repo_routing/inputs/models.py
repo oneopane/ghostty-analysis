@@ -47,10 +47,6 @@ class PRInputBundle(BaseModel):
     boundary_strategy: str | None = None
     boundary_strategy_version: str | None = None
 
-    # TODO(boundary-migration-pr04): remove legacy aliases once predictor stack is migrated.
-    file_areas: dict[str, str] = Field(default_factory=dict)
-    areas: list[str] = Field(default_factory=list)
-
     recent_activity: list[RecentActivityEvent] = Field(default_factory=list)
     repo_profile_path: str | None = None
     repo_profile_qa: dict[str, object] = Field(default_factory=dict)

@@ -34,9 +34,9 @@ Notes:
 - Includes lightweight trajectory geometry keys (`pr.geometry.trajectory.*`).
 - `pr.timeline.*` compatibility keys are still emitted.
 
-## C) Ownership / areas
+## C) Ownership / boundaries
 
-- [x] `pr.areas.*`
+- [x] `pr.boundary.*`
 - [x] `pr.ownership.*`
 
 Notes:
@@ -57,7 +57,7 @@ Notes:
 - [x] `candidate.footprint.*`
 
 Notes:
-- Includes `account_age_days`, `open_reviews_est`, sparse top-N maps for area/dir/path.
+- Includes `account_age_days`, `open_reviews_est`, sparse top-N maps for boundary/dir/path.
 - Legacy `cand.activity.*` aliases still emitted.
 
 ## F) Pairwise PR×Candidate
@@ -75,7 +75,7 @@ Notes:
 - [x] `sim.nearest_prs.*`
 
 Notes:
-- Includes top-k ids, mean TTFR, owner overlap rate, common reviewers/areas.
+- Includes top-k ids, mean TTFR, owner overlap rate, common reviewers/boundaries.
 
 ## H) Automation
 

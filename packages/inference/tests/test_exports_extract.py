@@ -226,6 +226,7 @@ def test_export_deterministic_order(tmp_path: Path) -> None:
 
     file_rows = export_pr_files_rows(snaps)
     assert [r["path"] for r in file_rows] == ["src/app.py", "README.md"]
+    assert [r["default_boundary"] for r in file_rows] == ["src", "__root__"]
 
 
 def test_export_activity_and_truth(tmp_path: Path) -> None:

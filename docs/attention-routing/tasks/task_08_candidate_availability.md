@@ -18,7 +18,7 @@
 - Candidate/PR features available at cutoff:
   - Historical candidate activity and latency stats from `reviews`, `comments`, `events`, `users`
   - Current PR context from `snapshot.json`, `inputs.json`, `pull_request_files`, interval tables
-  - Owner/area overlap from `codeowners/<base_sha>/CODEOWNERS` and `routing/area_overrides.json`
+  - Owner/boundary overlap from `codeowners/<base_sha>/CODEOWNERS` and boundary model artifacts
   - Active request state at cutoff from `pull_request_review_request_intervals`
 - Candidate pool from versioned generator (`candidate_gen_version`)
 
@@ -63,7 +63,7 @@
 - Justification: this score directly controls intervention policy.
 
 ## 9. Secondary Metrics / Slices
-- Requested vs unrequested, owner vs non-owner, repo, area, weekday/hour buckets, candidate activity quantiles.
+- Requested vs unrequested, owner vs non-owner, repo, boundary, weekday/hour buckets, candidate activity quantiles.
 
 ## 10. Offline Evaluation Protocol
 - Build candidate rows from fixed `candidate_gen_version`.

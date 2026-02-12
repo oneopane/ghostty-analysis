@@ -155,7 +155,10 @@ def boundary_build(
     path_weight: float = typer.Option(1.0, help="Path prior weight"),
     cochange_weight: float = typer.Option(0.35, help="Co-change signal weight"),
     parser_enabled: bool = typer.Option(False, help="Enable parser signal channel"),
-    parser_backend_id: str = typer.Option("python.ast.v1", help="Parser backend id"),
+    parser_backend_id: str = typer.Option(
+        "python.ast.v1",
+        help="Parser backend id (python.ast.v1 | zig.regex.v1 | typescript_javascript.regex.v1)",
+    ),
     parser_snapshot_root: str | None = typer.Option(None, help="Pinned source snapshot root"),
     parser_weight: float = typer.Option(0.2, help="Parser signal channel weight"),
     parser_strict: bool = typer.Option(False, help="Fail if parser snapshot is unavailable"),

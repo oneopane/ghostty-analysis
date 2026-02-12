@@ -3,7 +3,7 @@
 ## 1. Task Summary
 - **Task ID:** 07
 - **Task name:** Owner-compliant constrained routing
-- **One-sentence definition:** Rank candidates under an explicit ownership constraint so recommendations stay compliant with CODEOWNERS/area policy.
+- **One-sentence definition:** Rank candidates under an explicit ownership constraint so recommendations stay compliant with CODEOWNERS/boundary policy.
 - **Label availability status:** Known
 
 ## 2. Decision Point
@@ -17,7 +17,7 @@
 ## 4. Cutoff-Safe Inputs
 - All Task 06 inputs, plus explicit owner constraint set from:
   - `codeowners/<base_sha>/CODEOWNERS`
-  - `routing/area_overrides.json`
+  - boundary model artifacts for the same cutoff
 - Active requests at cutoff from `pull_request_review_request_intervals`
 - Historical owner activity from `reviews`/`comments` up to cutoff
 
@@ -52,7 +52,7 @@
 
 ## 7. Baselines
 - **Baseline A (trivial non-ML):** owner list order from CODEOWNERS parsing (deterministic).
-- **Baseline B (strong heuristic non-ML):** within owner set, rank by recency-weighted owner activity overlap with PR areas.
+- **Baseline B (strong heuristic non-ML):** within owner set, rank by recency-weighted owner activity overlap with PR boundaries.
 
 ## 8. Primary Metrics
 - **MRR (owner-constrained)**

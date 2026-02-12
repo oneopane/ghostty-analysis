@@ -3,7 +3,7 @@
 ## 1. Task Summary
 - **Task ID:** 04
 - **Task name:** Ownership coverage confidence
-- **One-sentence definition:** Estimate confidence that current ownership signals (CODEOWNERS/areas/requests) are sufficient to get an eligible owner response within SLA.
+- **One-sentence definition:** Estimate confidence that current ownership signals (CODEOWNERS/boundaries/requests) are sufficient to get an eligible owner response within SLA.
 - **Label availability status:** Risky
 
 ## 2. Decision Point
@@ -17,7 +17,7 @@
 ## 4. Cutoff-Safe Inputs
 - Pinned ownership artifacts:
   - `codeowners/<base_sha>/CODEOWNERS`
-  - `routing/area_overrides.json`
+  - boundary model artifacts for the same cutoff (`boundary_model.json` + `memberships.parquet`)
 - Snapshot state:
   - `pull_request_head_intervals` + `pull_request_files` at head SHA
   - `pull_request_review_request_intervals` active at cutoff
@@ -48,7 +48,7 @@
 
 ## 6. Label Construction
 - **Primary label (observational):**
-  - Define owner candidate set `O` from CODEOWNERS/area mapping at cutoff (team expansion policy versioned).
+  - Define owner candidate set `O` from CODEOWNERS/boundary mapping at cutoff (team expansion policy versioned).
   - `y=1` if any eligible non-author/non-bot owner in `O` performs first qualifying review action in `(cutoff, cutoff+24h]`.
   - `y=0` if first qualifying review action in window is by non-owner or no owner action by `cutoff+24h`.
 - **Eligibility filters:** exclude PRs with empty owner set (tracked separately as structural low coverage).
@@ -64,7 +64,7 @@
 - Justification: this task gates downstream escalation decisions, so calibration + discrimination are both required.
 
 ## 9. Secondary Metrics / Slices
-- Repo, owner-set size, team-owned vs user-owned paths, single-area vs multi-area PRs, external author slice.
+- Repo, owner-set size, team-owned vs user-owned paths, single-boundary vs multi-boundary PRs, external author slice.
 
 ## 10. Offline Evaluation Protocol
 - Time-based splits; enforce no leakage across cutoff.

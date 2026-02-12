@@ -379,7 +379,7 @@ Profile includes:
 - identity/provenance
 - pinned artifact manifest (with hashes)
 - ownership graph
-- area model
+- boundary model
 - policy signals
 - vocabulary
 - QA coverage report
