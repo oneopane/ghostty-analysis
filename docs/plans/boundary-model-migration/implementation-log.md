@@ -7,14 +7,14 @@ This log is intended to be updated as implementation proceeds.
 - Program: Boundary Model Migration
 - Start date: 2026-02-11
 - Owner: TBD
-- Current phase: Planning
-- Current PR: Not started
+- Current phase: Implementation
+- Current PR: PR-01 (In progress)
 
 ## PR Tracking Table
 
 | PR | Title | Status | Owner | Branch/Change | Start | End | Notes |
 |---|---|---|---|---|---|---|---|
-| PR-01 | Boundary core and artifacts | Planned | TBD | TBD | - | - | |
+| PR-01 | Boundary core and artifacts | In progress | oneopane | TBD | 2026-02-11 | - | boundary package + tests scaffolded |
 | PR-02 | Hybrid inference v1 | Planned | TBD | TBD | - | - | |
 | PR-03 | Inputs/analysis/risk cutover | Planned | TBD | TBD | - | - | |
 | PR-04 | Predictor feature stack migration | Planned | TBD | TBD | - | - | |
