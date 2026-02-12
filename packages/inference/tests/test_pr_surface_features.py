@@ -46,12 +46,17 @@ def _bundle() -> PRInputBundle:
             missing_ai_disclosure=False,
             missing_provenance=False,
         ),
-        file_areas={
-            "src/app.py": "src",
-            "tests/test_app.py": "tests",
-            "docs/readme.md": "docs",
+        file_boundaries={
+            "src/app.py": ["dir:src"],
+            "tests/test_app.py": ["dir:tests"],
+            "docs/readme.md": ["dir:docs"],
         },
-        areas=["docs", "src", "tests"],
+        file_boundary_weights={
+            "src/app.py": {"dir:src": 1.0},
+            "tests/test_app.py": {"dir:tests": 1.0},
+            "docs/readme.md": {"dir:docs": 1.0},
+        },
+        boundaries=["dir:docs", "dir:src", "dir:tests"],
     )
 
 
@@ -73,8 +78,8 @@ def test_build_pr_surface_features() -> None:
     assert features["pr.churn.total"] == 17
     assert features["pr.paths.touches_tests"] is True
     assert features["pr.paths.touches_docs"] is True
-    assert features["pr.areas.count"] == 3
-    assert features["pr.areas.is_multi"] is True
+    assert features["pr.boundary.count"] == 3
+    assert features["pr.boundary.is_multi"] is True
     assert features["pr.text.mention_count"] == 1
     assert features["pr.text.url_count"] == 1
     assert features["pr.gates.completeness_score"] == 1.0

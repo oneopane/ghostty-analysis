@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,13 +25,6 @@ def _setup_files(tmp_path: Path, repo: str, base_sha: str) -> Path:
     co.parent.mkdir(parents=True, exist_ok=True)
     co.write_text("src/* @alice\n*.md @docs-team\n", encoding="utf-8")
 
-    area_overrides = data_dir / "github" / owner / name / "routing" / "area_overrides.json"
-    area_overrides.parent.mkdir(parents=True, exist_ok=True)
-    area_overrides.write_text(
-        json.dumps({"src/*": "core"}, sort_keys=True),
-        encoding="utf-8",
-    )
-
     return data_dir
 
 
@@ -54,7 +46,12 @@ def _bundle(repo: str, base_sha: str) -> PRInputBundle:
         cutoff=datetime(2024, 1, 2, tzinfo=timezone.utc),
         snapshot=snap,
         changed_files=list(snap.changed_files),
-        file_areas={"src/app.py": "core", "README.md": "__root__"},
+        file_boundaries={"src/app.py": ["dir:src"], "README.md": ["dir:__root__"]},
+        file_boundary_weights={
+            "src/app.py": {"dir:src": 1.0},
+            "README.md": {"dir:__root__": 1.0},
+        },
+        boundaries=["dir:__root__", "dir:src"],
     )
 
 

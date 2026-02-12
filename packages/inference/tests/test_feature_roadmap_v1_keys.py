@@ -48,12 +48,17 @@ def _bundle() -> PRInputBundle:
             missing_ai_disclosure=False,
             missing_provenance=False,
         ),
-        file_areas={
-            "src/app.py": "src",
-            "tests/test_app.py": "tests",
-            "docs/readme.md": "docs",
+        file_boundaries={
+            "src/app.py": ["dir:src"],
+            "tests/test_app.py": ["dir:tests"],
+            "docs/readme.md": ["dir:docs"],
         },
-        areas=["docs", "src", "tests"],
+        file_boundary_weights={
+            "src/app.py": {"dir:src": 1.0},
+            "tests/test_app.py": {"dir:tests": 1.0},
+            "docs/readme.md": {"dir:docs": 1.0},
+        },
+        boundaries=["dir:docs", "dir:src", "dir:tests"],
     )
 
 
@@ -65,9 +70,9 @@ def test_v1_namespace_keys_exist(tmp_path) -> None:  # type: ignore[no-untyped-d
     assert "pr.meta.title_has_hotfix_signal" in pr
     assert "pr.surface.directory_entropy.depth3" in pr
     assert "pr.surface.status_ratio.renamed" in pr
-    assert "pr.geometry.shape.area_entropy" in pr
+    assert "pr.geometry.shape.boundary_entropy" in pr
     assert "pr.gates.has_risk_section" in pr
-    assert "pr.areas.set" in pr
+    assert "pr.boundary.set" in pr
 
     ownership = build_ownership_features(bundle, data_dir=tmp_path, active_candidates={"bob"})
     assert "pr.ownership.owner_set" in ownership
@@ -78,7 +83,7 @@ def test_v1_namespace_keys_exist(tmp_path) -> None:  # type: ignore[no-untyped-d
         pr_features={**pr, **ownership},
         candidate_features={
             "bob": {
-                "candidate.footprint.area_scores.topN": {"src": 0.7, "docs": 0.3},
+                "candidate.footprint.boundary_scores.topN": {"dir:src": 0.7, "dir:docs": 0.3},
                 "candidate.footprint.dir_depth3_scores.topN": {"src": 0.7, "docs": 0.3},
                 "candidate.activity.last_seen_seconds": 100.0,
                 "candidate.activity.review_count_180d": 10,
@@ -87,5 +92,5 @@ def test_v1_namespace_keys_exist(tmp_path) -> None:  # type: ignore[no-untyped-d
             }
         },
     )
-    assert "pair.affinity.area_overlap_count" in interactions["bob"]
-    assert "pair.affinity.pr_touch_dot_candidate_area_atlas" in interactions["bob"]
+    assert "pair.affinity.boundary_overlap_count" in interactions["bob"]
+    assert "pair.affinity.pr_touch_dot_candidate_boundary_atlas" in interactions["bob"]

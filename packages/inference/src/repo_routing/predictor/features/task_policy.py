@@ -102,7 +102,7 @@ def default_task_policy_registry() -> TaskPolicyRegistry:
             name="owner_coverage_confidence",
             allowed_roles={"context", "calibration", "gate"},
             allowed_granularities={"pr", "set"},
-            allowed_prefixes=("pr.ownership.", "pr.areas.", "pr.surface.", "repo.priors."),
+            allowed_prefixes=("pr.ownership.", "pr.boundary.", "pr.surface.", "repo.priors."),
             recommended_model="logistic_regression",
             notes="Center around coverage and dispersion metrics.",
         )
@@ -118,7 +118,7 @@ def default_task_policy_registry() -> TaskPolicyRegistry:
             allowed_prefixes=(
                 "pair.",
                 "candidate.",
-                "pr.areas.",
+                "pr.boundary.",
                 "pr.surface.",
                 "pr.request_overlap.",
                 "pr.attention.",

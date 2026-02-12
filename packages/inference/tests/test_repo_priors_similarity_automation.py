@@ -154,7 +154,12 @@ def _bundle(repo: str) -> PRInputBundle:
         author_login="alice",
         title=snap.title,
         body=snap.body,
-        file_areas={"src/c.py": "src", "tests/test_c.py": "tests"},
+        file_boundaries={"src/c.py": ["dir:src"], "tests/test_c.py": ["dir:tests"]},
+        file_boundary_weights={
+            "src/c.py": {"dir:src": 1.0},
+            "tests/test_c.py": {"dir:tests": 1.0},
+        },
+        boundaries=["dir:src", "dir:tests"],
     )
 
 
@@ -176,10 +181,10 @@ def test_repo_priors_similarity_automation_and_pair_social(tmp_path: Path) -> No
 
     interactions = build_interaction_features(
         input=bundle,
-        pr_features={"pr.areas.set": ["src", "tests"], "pr.surface.total_churn": 12, "pr.ownership.owner_set": []},
+        pr_features={"pr.boundary.set": ["dir:src", "dir:tests"], "pr.surface.total_churn": 12, "pr.ownership.owner_set": []},
         candidate_features={
             "bob": {
-                "candidate.footprint.area_scores.topN": {"src": 1.0},
+                "candidate.footprint.boundary_scores.topN": {"dir:src": 1.0},
                 "candidate.footprint.dir_depth3_scores.topN": {"src": 1.0},
                 "candidate.activity.last_seen_seconds": 10.0,
                 "candidate.activity.event_counts_30d": 4,

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from ...exports.area import area_for_path, load_repo_area_overrides
+from ...boundary.signals.path import path_boundary
 from ...inputs.models import PRInputBundle
 from ...time import parse_dt_utc
 from .sql import candidate_last_activity_and_counts, connect_repo_db, cutoff_sql
@@ -492,11 +492,10 @@ def build_candidate_activity_features(
         data_dir=data_dir,
     )
 
-    overrides = load_repo_area_overrides(repo_full_name=input.repo, data_dir=data_dir)
-    areas = [area_for_path(p, overrides=overrides) for p in touched_paths]
+    boundaries = [path_boundary(p)[0] for p in touched_paths]
     dirs3 = [_dir_depth3(p) for p in touched_paths]
 
-    area_counts = Counter(areas)
+    boundary_counts = Counter(boundaries)
     dir_counts = Counter(dirs3)
     path_counts = Counter(touched_paths)
 
@@ -536,11 +535,11 @@ def build_candidate_activity_features(
         "candidate.activity.review_count_180d": review_count_180d,
         "candidate.activity.comment_count_180d": comment_count_180d,
         "candidate.activity.authored_pr_count_180d": authored_pr_180d,
-        "candidate.activity.unique_areas_touched_180d": len(set(areas)),
-        "candidate.activity.entropy_over_areas_180d": normalized_entropy(area_counts.values()),
+        "candidate.activity.unique_boundaries_touched_180d": len(set(boundaries)),
+        "candidate.activity.entropy_over_boundaries_180d": normalized_entropy(boundary_counts.values()),
         "candidate.activity.load_proxy.open_reviews_est": open_reviews_est,
         # E3 footprint (top-N sparse maps)
-        "candidate.footprint.area_scores.topN": _top_n_scores(area_counts, top_n=footprint_top_n),
+        "candidate.footprint.boundary_scores.topN": _top_n_scores(boundary_counts, top_n=footprint_top_n),
         "candidate.footprint.dir_depth3_scores.topN": _top_n_scores(dir_counts, top_n=footprint_top_n),
         "candidate.footprint.path_scores.topN": _top_n_scores(path_counts, top_n=footprint_top_n),
     }

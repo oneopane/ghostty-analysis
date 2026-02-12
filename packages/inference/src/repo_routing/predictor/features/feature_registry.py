@@ -113,12 +113,12 @@ def default_feature_registry() -> FeatureRegistry:
     r.register(FeatureSpec("pr.surface.extension_entropy", "real", "static_at_cutoff", "pr", "context"))
     r.register(FeatureSpec("pr.surface.touches_*", "binary", "static_at_cutoff", "pr", "context"), pattern=True)
 
-    # Gates / ownership / areas
+    # Gates / ownership / boundaries
     r.register(FeatureSpec("pr.gates.*", "binary", "static_at_cutoff", "pr", "gate"), pattern=True)
     r.register(FeatureSpec("pr.gates.completeness_score", "real", "static_at_cutoff", "pr", "calibration"))
-    r.register(FeatureSpec("pr.areas.set", "set", "static_at_cutoff", "set", "context"))
-    r.register(FeatureSpec("pr.areas.count", "count", "static_at_cutoff", "pr", "context"))
-    r.register(FeatureSpec("pr.areas.area_entropy", "real", "static_at_cutoff", "pr", "context"))
+    r.register(FeatureSpec("pr.boundary.set", "set", "static_at_cutoff", "set", "context"))
+    r.register(FeatureSpec("pr.boundary.count", "count", "static_at_cutoff", "pr", "context"))
+    r.register(FeatureSpec("pr.boundary.boundary_entropy", "real", "static_at_cutoff", "pr", "context"))
     r.register(FeatureSpec("pr.ownership.owner_set", "set", "derived_snapshot", "set", "context"))
     r.register(FeatureSpec("pr.ownership.owner_set_size", "count", "derived_snapshot", "pr", "context"))
     r.register(FeatureSpec("pr.ownership.owner_coverage_ratio", "real", "derived_snapshot", "pr", "calibration"))
@@ -138,7 +138,7 @@ def default_feature_registry() -> FeatureRegistry:
     r.register(FeatureSpec("sim.nearest_prs.mean_ttfr_topk", "real", "derived_snapshot", "pr", "calibration"))
     r.register(FeatureSpec("sim.nearest_prs.owner_overlap_rate_topk", "real", "derived_snapshot", "pr", "calibration"))
     r.register(FeatureSpec("sim.nearest_prs.common_reviewers_topk", "set", "derived_snapshot", "set", "context"))
-    r.register(FeatureSpec("sim.nearest_prs.common_areas_topk", "set", "derived_snapshot", "set", "context"))
+    r.register(FeatureSpec("sim.nearest_prs.common_boundaries_topk", "set", "derived_snapshot", "set", "context"))
 
     # Candidate
     r.register(FeatureSpec("candidate.profile.type", "categorical", "static_at_cutoff", "candidate", "context"))

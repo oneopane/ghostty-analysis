@@ -16,6 +16,7 @@ from .patterns import (
     WIP_TITLE_HINTS,
     path_extension,
 )
+from .boundary_utils import boundary_counts_from_file_boundaries
 from .stats import median_int, normalized_entropy, safe_ratio
 
 # Heuristic knobs (deterministic defaults; can be lifted into config later)
@@ -115,8 +116,8 @@ def build_pr_surface_features(input: PRInputBundle) -> dict[str, Any]:
     mention_users = sorted({m for m in mention_ids if "/" not in m}, key=str.lower)
     mention_teams = sorted({m for m in mention_ids if "/" in m}, key=str.lower)
 
-    areas_sorted = sorted({a for a in input.file_areas.values() if a}, key=str.lower)
-    area_counts = Counter(a for a in input.file_areas.values() if a)
+    boundaries_sorted = sorted({b for b in input.boundaries if b}, key=str.lower)
+    boundary_counts = boundary_counts_from_file_boundaries(input.file_boundaries)
 
     missing_fields = [
         bool(input.gate_fields.missing_issue),
@@ -195,16 +196,16 @@ def build_pr_surface_features(input: PRInputBundle) -> dict[str, Any]:
         "pr.surface.large_file_touch_count": sum(
             1 for c in changes if int(c) >= _LARGE_FILE_CHURN_THRESHOLD
         ),
-        # C1: areas
-        "pr.areas.set": areas_sorted,
-        "pr.areas.count": len(areas_sorted),
-        "pr.areas.max_files_in_one_area": max(area_counts.values()) if area_counts else 0,
-        "pr.areas.area_entropy": normalized_entropy(area_counts.values()),
-        "pr.areas.is_multi_area": len(areas_sorted) > 1,
+        # C1: boundaries
+        "pr.boundary.set": boundaries_sorted,
+        "pr.boundary.count": len(boundaries_sorted),
+        "pr.boundary.max_files_in_one_boundary": max(boundary_counts.values()) if boundary_counts else 0,
+        "pr.boundary.boundary_entropy": normalized_entropy(boundary_counts.values()),
+        "pr.boundary.is_multi_boundary": len(boundaries_sorted) > 1,
         # Geometry-lite (shape at cutoff)
-        "pr.geometry.shape.area_entropy": normalized_entropy(area_counts.values()),
-        "pr.geometry.shape.area_top_share": safe_ratio(
-            float(max(area_counts.values()) if area_counts else 0),
+        "pr.geometry.shape.boundary_entropy": normalized_entropy(boundary_counts.values()),
+        "pr.geometry.shape.boundary_top_share": safe_ratio(
+            float(max(boundary_counts.values()) if boundary_counts else 0),
             float(files_n),
         ),
         "pr.geometry.shape.directory_entropy.depth3": depth3_entropy,
@@ -238,9 +239,9 @@ def build_pr_surface_features(input: PRInputBundle) -> dict[str, Any]:
             "pr.paths.distinct_extensions": out["pr.surface.distinct_extensions_count"],
             "pr.paths.top_extension_share": out["pr.surface.top_extension_share"],
             "pr.paths.includes_lock_vendor_generated": out["pr.surface.includes_lock_vendor_generated"],
-            "pr.areas.max_files_one_area": out["pr.areas.max_files_in_one_area"],
-            "pr.areas.entropy": out["pr.areas.area_entropy"],
-            "pr.areas.is_multi": out["pr.areas.is_multi_area"],
+            "pr.boundary.max_files_one_boundary": out["pr.boundary.max_files_in_one_boundary"],
+            "pr.boundary.entropy": out["pr.boundary.boundary_entropy"],
+            "pr.boundary.is_multi": out["pr.boundary.is_multi_boundary"],
             "pr.text.title_length_chars": out["pr.meta.title_len_chars"],
             "pr.text.body_length_chars": out["pr.meta.body_len_chars"],
             "pr.text.body_empty_or_near_empty": out["pr.meta.body_is_emptyish"],

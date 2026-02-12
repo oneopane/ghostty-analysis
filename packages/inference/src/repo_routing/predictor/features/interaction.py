@@ -180,7 +180,7 @@ def build_interaction_features(
         if rr.reviewer_type.lower() == "user"
     }
     owner_set = {str(x).lower() for x in (pr_features.get("pr.ownership.owner_set") or [])}
-    pr_areas = {str(x) for x in (pr_features.get("pr.areas.set") or [])}
+    pr_boundaries = {str(x) for x in (pr_features.get("pr.boundary.set") or [])}
 
     pr_dir_counts: dict[str, int] = {}
     for f in input.changed_files:
@@ -189,13 +189,15 @@ def build_interaction_features(
     total_dirs = float(sum(pr_dir_counts.values()))
     pr_dir_scores = {k: (v / total_dirs if total_dirs > 0 else 0.0) for k, v in pr_dir_counts.items()}
 
-    pr_area_counts: dict[str, int] = {}
-    for f in input.changed_files:
-        a = input.file_areas.get(f.path)
-        if a:
-            pr_area_counts[str(a)] = pr_area_counts.get(str(a), 0) + 1
-    area_total = float(sum(pr_area_counts.values()))
-    pr_area_scores = {k: (v / area_total if area_total > 0 else 0.0) for k, v in pr_area_counts.items()}
+    pr_boundary_scores: dict[str, float] = {}
+    for _path, weights in sorted(input.file_boundary_weights.items()):
+        for boundary_id, weight in sorted(weights.items()):
+            pr_boundary_scores[str(boundary_id)] = pr_boundary_scores.get(str(boundary_id), 0.0) + float(weight)
+    boundary_total = float(sum(pr_boundary_scores.values()))
+    if boundary_total > 0:
+        pr_boundary_scores = {
+            k: (v / boundary_total) for k, v in sorted(pr_boundary_scores.items(), key=lambda kv: kv[0].lower())
+        }
 
     out: dict[str, dict[str, Any]] = {}
 
@@ -203,18 +205,18 @@ def build_interaction_features(
         cand = candidate_features[login]
         login_l = login.lower()
 
-        cand_area = {
+        cand_boundary = {
             str(k): float(v)
-            for k, v in (cand.get("candidate.footprint.area_scores.topN") or {}).items()
+            for k, v in (cand.get("candidate.footprint.boundary_scores.topN") or {}).items()
         }
         cand_dir = {
             str(k): float(v)
             for k, v in (cand.get("candidate.footprint.dir_depth3_scores.topN") or {}).items()
         }
-        cand_areas = set(cand_area.keys())
+        cand_boundaries = set(cand_boundary.keys())
         cand_dirs = set(cand_dir.keys())
 
-        area_overlap = pr_areas & cand_areas
+        boundary_overlap = pr_boundaries & cand_boundaries
         dir_overlap = set(pr_dir_scores.keys()) & cand_dirs
 
         reviews_180 = float(cand.get("candidate.activity.review_count_180d", 0) or 0)
@@ -236,9 +238,9 @@ def build_interaction_features(
             )
 
         out[login] = {
-            "pair.affinity.area_overlap_count": len(area_overlap),
-            "pair.affinity.area_overlap_share": (
-                float(len(area_overlap)) / float(len(pr_areas)) if pr_areas else 0.0
+            "pair.affinity.boundary_overlap_count": len(boundary_overlap),
+            "pair.affinity.boundary_overlap_share": (
+                float(len(boundary_overlap)) / float(len(pr_boundaries)) if pr_boundaries else 0.0
             ),
             "pair.affinity.dir_overlap_count": len(dir_overlap),
             "pair.affinity.dir_overlap_share": (
@@ -247,7 +249,7 @@ def build_interaction_features(
             "pair.affinity.owner_match": login_l in owner_set,
             "pair.affinity.requested_match": login_l in requested_users,
             "pair.affinity.mentioned_match": f"@{login_l}" in mention_text,
-            "pair.affinity.pr_touch_dot_candidate_area_atlas": _dot_sparse(pr_area_scores, cand_area),
+            "pair.affinity.pr_touch_dot_candidate_boundary_atlas": _dot_sparse(pr_boundary_scores, cand_boundary),
             "pair.affinity.pr_touch_dot_candidate_dir_atlas": _dot_sparse(pr_dir_scores, cand_dir),
             "pair.social.prior_interactions_author_candidate_180d": social_total,
             "pair.social.prior_reviews_on_author_prs_180d": social_reviews,
@@ -258,8 +260,8 @@ def build_interaction_features(
             "pair.availability.is_already_participating": participating,
             # Legacy
             "x.mentioned_in_pr": f"@{login_l}" in mention_text,
-            "x.multi_area_and_recent_activity": bool(
-                bool(pr_features.get("pr.areas.is_multi_area", False)) and events_30d > 0.0
+            "x.multi_boundary_and_recent_activity": bool(
+                bool(pr_features.get("pr.boundary.is_multi_boundary", False)) and events_30d > 0.0
             ),
             "x.churn_times_recent_activity": float(pr_features.get("pr.surface.total_churn", 0.0) or 0.0)
             * events_30d,

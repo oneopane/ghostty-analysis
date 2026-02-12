@@ -7,7 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from ...exports.area import area_for_path, load_repo_area_overrides
+from ...boundary.signals.path import path_boundary
 from ...inputs.models import PRInputBundle
 from .ownership import load_codeowners_text, parse_codeowners_rules
 from .sql import connect_repo_db, cutoff_sql
@@ -77,7 +77,7 @@ def build_similarity_features(
                 "sim.nearest_prs.mean_ttfr_topk": None,
                 "sim.nearest_prs.owner_overlap_rate_topk": 0.0,
                 "sim.nearest_prs.common_reviewers_topk": [],
-                "sim.nearest_prs.common_areas_topk": [],
+                "sim.nearest_prs.common_boundaries_topk": [],
             }
         repo_id = int(repo_row["id"])
         ids = conn.execute(
@@ -120,7 +120,7 @@ def build_similarity_features(
                 "sim.nearest_prs.mean_ttfr_topk": None,
                 "sim.nearest_prs.owner_overlap_rate_topk": 0.0,
                 "sim.nearest_prs.common_reviewers_topk": [],
-                "sim.nearest_prs.common_areas_topk": [],
+                "sim.nearest_prs.common_boundaries_topk": [],
             }
 
         placeholders = ",".join("?" for _ in cand_ids)
@@ -128,10 +128,9 @@ def build_similarity_features(
         # Load changed paths + churn for candidate PRs using latest head at cutoff.
         by_pr_paths: dict[int, set[str]] = {pid: set() for pid in cand_ids}
         by_pr_dirs: dict[int, set[str]] = {pid: set() for pid in cand_ids}
-        by_pr_areas: dict[int, set[str]] = {pid: set() for pid in cand_ids}
+        by_pr_boundaries: dict[int, set[str]] = {pid: set() for pid in cand_ids}
         by_pr_churn: dict[int, int] = {pid: 0 for pid in cand_ids}
 
-        overrides = load_repo_area_overrides(repo_full_name=input.repo, data_dir=data_dir)
         try:
             rows = conn.execute(
                 f"""
@@ -163,7 +162,7 @@ def build_similarity_features(
                 path = str(r["path"])
                 by_pr_paths[pid].add(path)
                 by_pr_dirs[pid].add(_dir_depth3(path))
-                by_pr_areas[pid].add(area_for_path(path, overrides=overrides))
+                by_pr_boundaries[pid].add(path_boundary(path)[0])
                 by_pr_churn[pid] = by_pr_churn.get(pid, 0) + int(r["changes"] or 0)
         except sqlite3.OperationalError:
             pass
@@ -171,7 +170,9 @@ def build_similarity_features(
         # Current PR vectors.
         cur_paths = {f.path for f in input.changed_files}
         cur_dirs = {_dir_depth3(f.path) for f in input.changed_files}
-        cur_areas = {a for a in input.file_areas.values() if a}
+        cur_boundaries = {
+            b for vals in input.file_boundaries.values() for b in vals if b
+        }
         cur_churn = sum(int(f.changes or 0) for f in input.changed_files)
 
         scored: list[tuple[float, int]] = []
@@ -179,7 +180,7 @@ def build_similarity_features(
             score = (
                 0.45 * _jaccard(cur_paths, by_pr_paths.get(pid, set()))
                 + 0.30 * _jaccard(cur_dirs, by_pr_dirs.get(pid, set()))
-                + 0.15 * _jaccard(cur_areas, by_pr_areas.get(pid, set()))
+                + 0.15 * _jaccard(cur_boundaries, by_pr_boundaries.get(pid, set()))
                 + 0.10 * _churn_similarity(cur_churn, by_pr_churn.get(pid, 0))
             )
             scored.append((score, pid))
@@ -192,7 +193,7 @@ def build_similarity_features(
                 "sim.nearest_prs.mean_ttfr_topk": None,
                 "sim.nearest_prs.owner_overlap_rate_topk": 0.0,
                 "sim.nearest_prs.common_reviewers_topk": [],
-                "sim.nearest_prs.common_areas_topk": [],
+                "sim.nearest_prs.common_boundaries_topk": [],
             }
 
         # TTFR for top-k.
@@ -227,7 +228,7 @@ def build_similarity_features(
         except sqlite3.OperationalError:
             ttfr_vals = []
 
-        # Common reviewers and areas.
+        # Common reviewers and boundaries.
         reviewer_counter: Counter[str] = Counter()
         try:
             rows = conn.execute(
@@ -248,13 +249,13 @@ def build_similarity_features(
         except sqlite3.OperationalError:
             pass
 
-        area_counter: Counter[str] = Counter()
+        boundary_counter: Counter[str] = Counter()
         for pid in top:
-            for a in sorted(by_pr_areas.get(pid, set()), key=str.lower):
-                area_counter[a] += 1
+            for a in sorted(by_pr_boundaries.get(pid, set()), key=str.lower):
+                boundary_counter[a] += 1
 
         top_reviewers = [k for k, _v in sorted(reviewer_counter.items(), key=lambda kv: (-kv[1], kv[0]))[:10]]
-        top_areas = [k for k, _v in sorted(area_counter.items(), key=lambda kv: (-kv[1], kv[0].lower()))[:10]]
+        top_boundaries = [k for k, _v in sorted(boundary_counter.items(), key=lambda kv: (-kv[1], kv[0].lower()))[:10]]
 
         current_owner_set = _owner_set_for_paths(
             repo=input.repo,
@@ -285,6 +286,6 @@ def build_similarity_features(
         "sim.nearest_prs.mean_ttfr_topk": mean_ttfr,
         "sim.nearest_prs.owner_overlap_rate_topk": owner_overlap_rate_topk,
         "sim.nearest_prs.common_reviewers_topk": top_reviewers,
-        "sim.nearest_prs.common_areas_topk": top_areas,
+        "sim.nearest_prs.common_boundaries_topk": top_boundaries,
     }
     return {k: out[k] for k in sorted(out)}

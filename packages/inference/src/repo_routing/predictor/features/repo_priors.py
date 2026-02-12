@@ -8,7 +8,7 @@ from typing import Any
 
 import fnmatch
 
-from ...exports.area import area_for_path, load_repo_area_overrides
+from ...boundary.signals.path import path_boundary
 from ...inputs.models import PRInputBundle
 from .ownership import load_codeowners_text, parse_codeowners_rules
 from .sql import connect_repo_db, cutoff_sql
@@ -46,7 +46,7 @@ def build_repo_priors_features(
     input: PRInputBundle,
     data_dir: str | Path,
     window_days: int = 180,
-    area_top_n: int = 12,
+    boundary_top_n: int = 12,
 ) -> dict[str, Any]:
     conn = connect_repo_db(repo=input.repo, data_dir=data_dir)
     try:
@@ -92,7 +92,7 @@ def build_repo_priors_features(
                 "repo.priors.owner_coverage_rate_180d": 0.0,
                 "repo.priors.request_rate_180d": 0.0,
                 "repo.priors.bot_activity_rate_180d": 0.0,
-                "repo.priors.area_frequency.topN": {},
+                "repo.priors.boundary_frequency.topN": {},
                 "repo.priors.directory_hotspots.depth3.topN": {},
                 "pr.surface.files_zscore_vs_repo": 0.0,
                 "pr.surface.churn_zscore_vs_repo": 0.0,
@@ -104,7 +104,7 @@ def build_repo_priors_features(
         # Latest head per PR as-of cutoff, then file aggregates.
         file_counts: list[float] = []
         churn_counts: list[float] = []
-        area_counter: Counter[str] = Counter()
+        boundary_counter: Counter[str] = Counter()
         dir_counter: Counter[str] = Counter()
         by_pr_paths: dict[int, list[str]] = {pid: [] for pid in pr_ids}
         try:
@@ -135,14 +135,13 @@ def build_repo_priors_features(
             ).fetchall()
             by_pr_files: dict[int, int] = {}
             by_pr_churn: dict[int, int] = {}
-            overrides = load_repo_area_overrides(repo_full_name=input.repo, data_dir=data_dir)
             for r in rows:
                 pr_id = int(r["pr_id"])
                 by_pr_files[pr_id] = by_pr_files.get(pr_id, 0) + 1
                 by_pr_churn[pr_id] = by_pr_churn.get(pr_id, 0) + int(r["changes"] or 0)
                 path = str(r["path"])
                 by_pr_paths.setdefault(pr_id, []).append(path)
-                area_counter[area_for_path(path, overrides=overrides)] += 1
+                boundary_counter[path_boundary(path)[0]] += 1
                 parts = [p for p in path.split("/") if p]
                 key = "__root__" if len(parts) <= 1 else "/".join(parts[: min(3, len(parts) - 1)])
                 dir_counter[key] += 1
@@ -266,12 +265,15 @@ def build_repo_priors_features(
     finally:
         conn.close()
 
-    area_total = float(sum(area_counter.values()))
-    area_top = sorted(area_counter.items(), key=lambda kv: (-kv[1], kv[0].lower()))[:area_top_n]
-    area_map = {k: (float(v) / area_total if area_total > 0 else 0.0) for k, v in area_top}
+    boundary_total = float(sum(boundary_counter.values()))
+    boundary_top = sorted(boundary_counter.items(), key=lambda kv: (-kv[1], kv[0].lower()))[:boundary_top_n]
+    boundary_map = {
+        k: (float(v) / boundary_total if boundary_total > 0 else 0.0)
+        for k, v in boundary_top
+    }
 
     dir_total = float(sum(dir_counter.values()))
-    dir_top = sorted(dir_counter.items(), key=lambda kv: (-kv[1], kv[0].lower()))[:area_top_n]
+    dir_top = sorted(dir_counter.items(), key=lambda kv: (-kv[1], kv[0].lower()))[:boundary_top_n]
     dir_map = {k: (float(v) / dir_total if dir_total > 0 else 0.0) for k, v in dir_top}
 
     current_files = float(len(input.changed_files))
@@ -286,7 +288,9 @@ def build_repo_priors_features(
         ),
         "repo.priors.request_rate_180d": float(request_prs) / float(len(pr_ids)) if pr_ids else 0.0,
         "repo.priors.bot_activity_rate_180d": float(bot_total) / float(total_events) if total_events > 0 else 0.0,
-        "repo.priors.area_frequency.topN": {k: area_map[k] for k in sorted(area_map)},
+        "repo.priors.boundary_frequency.topN": {
+            k: boundary_map[k] for k in sorted(boundary_map)
+        },
         "repo.priors.directory_hotspots.depth3.topN": {k: dir_map[k] for k in sorted(dir_map)},
         "pr.surface.files_zscore_vs_repo": _zscore(current_files, file_counts),
         "pr.surface.churn_zscore_vs_repo": _zscore(current_churn, churn_counts),

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import re
-from pathlib import Path
 from typing import Any
 
+from ..boundary.io import read_boundary_artifact
 from ..inputs.models import PRInputBundle
+from ..time import cutoff_key_utc
 from .base import FeatureExtractor
 from .features.candidate_activity import build_candidate_activity_table
 from .features.feature_registry import DEFAULT_FEATURE_REGISTRY, flatten_extracted_feature_keys
@@ -53,11 +54,16 @@ class AttentionRoutingFeatureExtractorV1(FeatureExtractor):
                 codeowner_logins = set(summary.owner_set)
                 source_hashes["codeowners"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
 
-            overrides_path = self._repo_overrides_path(input.repo)
-            if overrides_path.exists():
-                source_hashes["area_overrides"] = hashlib.sha256(
-                    overrides_path.read_bytes()
-                ).hexdigest()
+        try:
+            boundary_artifact = read_boundary_artifact(
+                repo_full_name=input.repo,
+                data_dir=self.config.data_dir,
+                strategy_id=input.boundary_strategy or "hybrid_path_cochange.v1",
+                cutoff_key=cutoff_key_utc(input.cutoff),
+            )
+            source_hashes["boundary_model"] = boundary_artifact.manifest.model_hash
+        except Exception:
+            pass
 
         if self.config.include_pr_timeline_features:
             pr_features.update(
@@ -167,10 +173,6 @@ class AttentionRoutingFeatureExtractorV1(FeatureExtractor):
             )
 
         return out
-
-    def _repo_overrides_path(self, repo: str) -> Path:
-        owner, name = repo.split("/", 1)
-        return Path(self.config.data_dir) / "github" / owner / name / "routing" / "area_overrides.json"
 
     def _candidate_pool(
         self,

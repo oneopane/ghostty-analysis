@@ -40,7 +40,7 @@ def test_feature_registry_resolve_exact_and_pattern() -> None:
 
 
 def test_default_registry_has_key_dimensions() -> None:
-    spec = DEFAULT_FEATURE_REGISTRY.resolve("pair.affinity.area_overlap_count")
+    spec = DEFAULT_FEATURE_REGISTRY.resolve("pair.affinity.boundary_overlap_count")
     assert spec is not None
     assert spec.granularity == "pair"
     assert spec.role == "ranking"

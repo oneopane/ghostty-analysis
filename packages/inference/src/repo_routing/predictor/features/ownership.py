@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ...exports.area import default_area_for_path, load_repo_area_overrides
 from ...inputs.models import PRInputBundle
 from ...paths import repo_artifact_path, repo_codeowners_path
 from ...repo_profile.storage import CODEOWNERS_PATH_CANDIDATES
@@ -152,21 +151,12 @@ def owner_overlap_with_active_candidates(
     return len(owners & candidates)
 
 
-def area_override_hit_rate(input: PRInputBundle, *, data_dir: str | Path) -> float:
-    if not input.changed_files:
+def boundary_coverage_ratio(input: PRInputBundle) -> float:
+    changed = len(input.changed_files)
+    if changed <= 0:
         return 0.0
-    overrides = load_repo_area_overrides(repo_full_name=input.repo, data_dir=data_dir)
-    if not overrides:
-        return 0.0
-
-    hits = 0
-    for f in input.changed_files:
-        default_area = default_area_for_path(f.path)
-        resolved_area = input.file_areas.get(f.path, default_area)
-        override_matched = any(fnmatch.fnmatchcase(f.path, rule.pattern) for rule in overrides)
-        if override_matched and resolved_area != default_area:
-            hits += 1
-    return float(hits) / float(len(input.changed_files))
+    covered = sum(1 for f in input.changed_files if input.file_boundaries.get(f.path))
+    return float(covered) / float(changed)
 
 
 def conflicting_ownership_signals(
@@ -174,7 +164,7 @@ def conflicting_ownership_signals(
     input: PRInputBundle,
     summary: OwnershipMatchSummary,
 ) -> bool:
-    if len(set(input.file_areas.values())) <= 1:
+    if len({b for vals in input.file_boundaries.values() for b in vals}) <= 1:
         return False
     broad_owner_set = owner_set_size(summary) >= 5
     low_coverage = owner_coverage_ratio(summary) < 0.5
@@ -205,10 +195,7 @@ def build_ownership_features(
             input=input,
             summary=summary,
         ),
-        "pr.ownership.area_override_hit_rate": area_override_hit_rate(
-            input,
-            data_dir=data_dir,
-        ),
+        "pr.ownership.boundary_coverage_ratio": boundary_coverage_ratio(input),
         "pr.ownership.overlap_active_candidates_count": owner_overlap_with_active_candidates(
             owner_set=summary.owner_set,
             active_candidates=(active_candidates or set()),
@@ -224,7 +211,7 @@ def build_ownership_features(
             "pr.owners.top_owner_share": out["pr.ownership.top_owner_share"],
             "pr.owners.zero_owner_found": out["pr.ownership.zero_owner_found"],
             "pr.owners.overlap_active_candidates": out["pr.ownership.overlap_active_candidates_count"],
-            "pr.owners.area_override_hit_rate": out["pr.ownership.area_override_hit_rate"],
+            "pr.owners.boundary_coverage_ratio": out["pr.ownership.boundary_coverage_ratio"],
             "pr.owners.conflicting_signals": out["pr.ownership.conflicting_ownership_signals"],
         }
     )

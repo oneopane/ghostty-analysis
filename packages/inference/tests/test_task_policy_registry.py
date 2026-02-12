@@ -15,10 +15,10 @@ def test_t06_allows_pair_affinity_and_candidate_activity() -> None:
     report = DEFAULT_TASK_POLICY_REGISTRY.evaluate(
         task_id="T06",
         feature_keys=[
-            "pair.affinity.area_overlap_count",
+            "pair.affinity.boundary_overlap_count",
             "pair.availability.recency_seconds",
             "candidate.activity.event_counts_30d",
-            "pr.areas.count",
+            "pr.boundary.count",
         ],
         feature_registry=DEFAULT_FEATURE_REGISTRY,
     )
@@ -32,9 +32,9 @@ def test_t02_rejects_pair_ranking_features() -> None:
         feature_keys=[
             "pr.meta.is_draft",
             "pr.gates.completeness_score",
-            "pair.affinity.area_overlap_count",  # should be disallowed for readiness
+            "pair.affinity.boundary_overlap_count",  # should be disallowed for readiness
         ],
         feature_registry=DEFAULT_FEATURE_REGISTRY,
     )
     assert report["violation_count"] >= 1
-    assert "pair.affinity.area_overlap_count" in report["violations"]
+    assert "pair.affinity.boundary_overlap_count" in report["violations"]
