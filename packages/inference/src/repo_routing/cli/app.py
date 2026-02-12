@@ -154,6 +154,11 @@ def boundary_build(
     ),
     path_weight: float = typer.Option(1.0, help="Path prior weight"),
     cochange_weight: float = typer.Option(0.35, help="Co-change signal weight"),
+    parser_enabled: bool = typer.Option(False, help="Enable parser signal channel"),
+    parser_backend_id: str = typer.Option("python.ast.v1", help="Parser backend id"),
+    parser_snapshot_root: str | None = typer.Option(None, help="Pinned source snapshot root"),
+    parser_weight: float = typer.Option(0.2, help="Parser signal channel weight"),
+    parser_strict: bool = typer.Option(False, help="Fail if parser snapshot is unavailable"),
 ):
     """Build deterministic boundary model artifacts for a repo/cutoff."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
@@ -176,6 +181,11 @@ def boundary_build(
         strategy_config={
             "path_weight": path_weight,
             "cochange_weight": cochange_weight,
+            "parser_enabled": parser_enabled,
+            "parser_backend_id": parser_backend_id,
+            "parser_snapshot_root": parser_snapshot_root,
+            "parser_weight": parser_weight,
+            "parser_strict": parser_strict,
         },
     )
 

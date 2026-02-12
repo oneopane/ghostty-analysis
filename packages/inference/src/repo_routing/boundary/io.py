@@ -156,6 +156,7 @@ def write_boundary_artifact(
 
     metadata = dict(manifest_metadata or {})
     metadata["cutoff_key"] = cutoff_key
+    diagnostics = dict((model.metadata or {}).get("diagnostics") or {})
     manifest = BoundaryManifest(
         schema_version=model.schema_version,
         strategy_id=model.strategy_id,
@@ -167,6 +168,18 @@ def write_boundary_artifact(
         boundary_count=len(model.boundaries),
         membership_count=len(model.memberships),
         metadata=metadata,
+        parser_coverage={
+            "enabled": bool((model.metadata or {}).get("parser_enabled", False)),
+            "backend_id": (model.metadata or {}).get("parser_backend_id"),
+            "backend_version": (model.metadata or {}).get("parser_backend_version"),
+            "signal_files": int((model.metadata or {}).get("parser_signal_files", 0) or 0),
+            "diagnostics": list((model.metadata or {}).get("parser_diagnostics", [])),
+            "file_count": int(diagnostics.get("file_count", 0) or 0),
+            "coverage_ratio": (
+                float((model.metadata or {}).get("parser_signal_files", 0) or 0)
+                / float(max(int(diagnostics.get("file_count", 0) or 0), 1))
+            ),
+        },
     )
     _write_json_deterministic(manifest_path, manifest.model_dump(mode="json"))
 

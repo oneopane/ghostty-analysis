@@ -8,18 +8,18 @@ This log is intended to be updated as implementation proceeds.
 - Start date: 2026-02-11
 - Owner: TBD
 - Current phase: Implementation
-- Current PR: PR-05 (In progress)
+- Current PR: PR-06 (Complete)
 
 ## PR Tracking Table
 
 | PR | Title | Status | Owner | Branch/Change | Start | End | Notes |
 |---|---|---|---|---|---|---|---|
-| PR-01 | Boundary core and artifacts | In progress | oneopane | TBD | 2026-02-11 | - | boundary package + tests scaffolded |
+| PR-01 | Boundary core and artifacts | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | boundary package + tests scaffolded |
 | PR-02 | Hybrid inference v1 | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | strategy registry + hybrid v1 + boundary CLI build scaffolded |
 | PR-03 | Inputs/analysis/risk cutover | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | boundary projection + input/analysis/risk/labels/receipt cutover |
 | PR-04 | Predictor feature stack migration | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | boundary feature keys migrated across extractor/registry/policy/tests |
-| PR-05 | Mixed-membership boundary migration | In progress | oneopane | TBD | 2026-02-11 | - | boundary-basis mixed-membership APIs + artifacts + notebook migration |
-| PR-06 | Parser plugin framework + Python backend | Planned | TBD | TBD | - | - | |
+| PR-05 | Mixed-membership boundary migration | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | boundary-basis mixed-membership APIs + artifacts + notebook migration |
+| PR-06 | Parser plugin framework + Python backend | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | parser registry + python backend + hybrid parser channel + fallback tests |
 | PR-07 | Zig + TS/JS parser backends + cleanup | Planned | TBD | TBD | - | - | |
 
 ## Milestone Checkpoints
@@ -50,9 +50,9 @@ This log is intended to be updated as implementation proceeds.
 - [x] mixed-membership tests green
 
 ### M6: Parser framework + Python
-- [ ] parser registry and contract merged
-- [ ] Python backend integrated
-- [ ] parser fallback behavior validated
+- [x] parser registry and contract merged
+- [x] Python backend integrated
+- [x] parser fallback behavior validated
 
 ### M7: Zig/TS/JS + cleanup
 - [ ] Zig backend merged

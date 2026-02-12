@@ -26,6 +26,7 @@ class BoundaryManifest(BaseModel):
     membership_count: int
 
     metadata: dict[str, Any] = Field(default_factory=dict)
+    parser_coverage: dict[str, Any] = Field(default_factory=dict)
 
 
 class BoundaryModelArtifact(BaseModel):

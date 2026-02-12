@@ -108,3 +108,62 @@ def test_boundary_build_cli_writes_artifacts(tmp_path: Path) -> None:
 
     assert model_payload["strategy_id"] == "hybrid_path_cochange.v1"
     assert manifest_payload["strategy_version"] == "v1"
+
+
+def test_boundary_build_cli_parser_fallback_and_strict_mode(tmp_path: Path) -> None:
+    repo = _seed_boundary_db(tmp_path / "data")
+    runner = CliRunner()
+
+    as_of = "2024-01-15T00:00:00Z"
+    ok = runner.invoke(
+        app,
+        [
+            "boundary",
+            "build",
+            "--repo",
+            repo,
+            "--as-of",
+            as_of,
+            "--data-dir",
+            str(tmp_path / "data"),
+            "--parser-enabled",
+            "--parser-snapshot-root",
+            str(tmp_path / "missing"),
+        ],
+    )
+    assert ok.exit_code == 0, ok.output
+
+    cutoff = parse_dt_utc(as_of)
+    assert cutoff is not None
+    ck = cutoff_key_utc(cutoff)
+    manifest_path = boundary_manifest_path(
+        repo_full_name=repo,
+        data_dir=tmp_path / "data",
+        strategy_id="hybrid_path_cochange.v1",
+        cutoff_key=ck,
+    )
+    manifest_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    parser_cov = manifest_payload["parser_coverage"]
+    assert parser_cov["enabled"] is True
+    assert "parser_snapshot_missing" in parser_cov["diagnostics"]
+
+    strict = runner.invoke(
+        app,
+        [
+            "boundary",
+            "build",
+            "--repo",
+            repo,
+            "--as-of",
+            as_of,
+            "--data-dir",
+            str(tmp_path / "data"),
+            "--parser-enabled",
+            "--parser-strict",
+            "--parser-snapshot-root",
+            str(tmp_path / "missing"),
+        ],
+    )
+    assert strict.exit_code != 0
+    assert strict.exception is not None
+    assert "snapshot root missing" in str(strict.exception)

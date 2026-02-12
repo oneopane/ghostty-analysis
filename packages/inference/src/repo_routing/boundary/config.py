@@ -16,9 +16,19 @@ class BoundaryDeterminismConfig(BaseModel):
     sort_memberships: bool = True
 
 
+class BoundaryParserConfig(BaseModel):
+    enabled: bool = False
+    backend_id: str = "python.ast.v1"
+    parser_weight: float = 0.2
+    strict: bool = False
+    language_allowlist: list[str] = Field(default_factory=lambda: ["python"])
+    snapshot_root: str | None = None
+
+
 class BoundaryConfig(BaseModel):
     schema_version: str = "boundary_model.v1"
     default_membership_mode: MembershipMode = MembershipMode.HARD
 
     hash: BoundaryHashConfig = Field(default_factory=BoundaryHashConfig)
     determinism: BoundaryDeterminismConfig = Field(default_factory=BoundaryDeterminismConfig)
+    parser: BoundaryParserConfig = Field(default_factory=BoundaryParserConfig)

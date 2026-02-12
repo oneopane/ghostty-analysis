@@ -155,3 +155,30 @@ def test_boundary_signal_parquet_removed_when_empty(tmp_path) -> None:
         signal_rows=[],
     )
     assert not sig_path.exists()
+
+
+def test_boundary_manifest_includes_parser_coverage_metadata(tmp_path) -> None:
+    repo = "octo-org/octo-repo"
+    cutoff_key = "2026-02-11T00-00-00Z"
+    model = _model()
+    model.metadata = {
+        "parser_enabled": True,
+        "parser_backend_id": "python.ast.v1",
+        "parser_backend_version": "v1",
+        "parser_signal_files": 1,
+        "parser_diagnostics": [],
+        "diagnostics": {"file_count": 2},
+    }
+
+    artifact = write_boundary_artifact(
+        model=model,
+        repo_full_name=repo,
+        data_dir=tmp_path,
+        cutoff_key=cutoff_key,
+    )
+
+    coverage = artifact.manifest.parser_coverage
+    assert coverage["enabled"] is True
+    assert coverage["backend_id"] == "python.ast.v1"
+    assert coverage["signal_files"] == 1
+    assert coverage["coverage_ratio"] == 0.5

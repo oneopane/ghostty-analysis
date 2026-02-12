@@ -30,6 +30,14 @@ Files:
 - `signals.parquet` (optional)
 - `manifest.json`
 
+## Parser plugin contract
+
+- Parser channel is optional and controlled by strategy config.
+- Snapshot root must be explicitly pinned via `parser_snapshot_root`.
+- Missing snapshot root in fallback mode records diagnostics and continues.
+- Missing snapshot root in strict mode raises deterministic failure.
+- Python backend id: `python.ast.v1`.
+
 ## Determinism contract
 
 - JSON output is canonicalized with sorted keys.

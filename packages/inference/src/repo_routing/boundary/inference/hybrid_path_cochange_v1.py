@@ -15,8 +15,11 @@ from ..models import (
     Membership,
     MembershipMode,
 )
+from ..parsers.registry import get_parser_backend
 from ..signals.cochange import cochange_scores
+from ..signals.parser import parser_boundary_votes
 from ..signals.path import normalize_path, path_boundary
+from ..source_snapshot import resolve_snapshot_root
 from .base import BoundaryInferenceContext
 
 
@@ -48,7 +51,7 @@ class HybridPathCochangeV1:
             return model, []
 
         path_map: dict[str, tuple[str, str]] = {f: path_boundary(f) for f in files}
-        boundary_ids = sorted({bid for bid, _ in path_map.values()})
+        base_boundary_ids = sorted({bid for bid, _ in path_map.values()})
         boundary_name_by_id = {bid: name for bid, name in path_map.values()}
 
         cochange = cochange_scores(file_sets)
@@ -56,6 +59,38 @@ class HybridPathCochangeV1:
         path_weight = float(context.config.get("path_weight", 1.0))
         cochange_weight = float(context.config.get("cochange_weight", 0.35))
         min_mixed_weight = float(context.config.get("min_mixed_weight", 1e-8))
+
+        parser_enabled = bool(context.config.get("parser_enabled", False))
+        parser_weight = float(context.config.get("parser_weight", 0.2))
+        parser_backend_id = str(context.config.get("parser_backend_id", "python.ast.v1"))
+        parser_backend_version: str | None = None
+        parser_votes: dict[str, dict[str, float]] = {}
+        parser_diagnostics: list[str] = []
+        if parser_enabled:
+            snapshot_root = resolve_snapshot_root(
+                configured_root=context.config.get("parser_snapshot_root")
+            )
+            if snapshot_root is None:
+                parser_diagnostics.append("parser_snapshot_missing")
+                if bool(context.config.get("parser_strict", False)):
+                    raise RuntimeError("parser snapshot root missing in strict parser mode")
+            else:
+                backend = get_parser_backend(parser_backend_id)
+                parsed = backend.parse_snapshot(root=snapshot_root, paths=files)
+                parser_backend_version = parsed.backend_version
+                parser_votes = parser_boundary_votes(parsed)
+                parser_diagnostics.extend(parsed.diagnostics)
+
+        parser_boundary_ids = sorted(
+            {
+                boundary_id
+                for votes in parser_votes.values()
+                for boundary_id in votes.keys()
+            }
+        )
+        for boundary_id in parser_boundary_ids:
+            boundary_name_by_id.setdefault(boundary_id, boundary_id.removeprefix("dir:"))
+        boundary_ids = sorted(set(base_boundary_ids) | set(parser_boundary_ids))
 
         score_rows: list[dict[str, Any]] = []
         mixed_memberships: list[Membership] = []
@@ -72,6 +107,9 @@ class HybridPathCochangeV1:
             for neighbor_path, score in neighbors.items():
                 neighbor_boundary_id, _ = path_map.get(neighbor_path, path_boundary(neighbor_path))
                 by_boundary[neighbor_boundary_id] += cochange_weight * float(score)
+
+            for boundary_id, vote in parser_votes.get(file_path, {}).items():
+                by_boundary[boundary_id] += parser_weight * float(vote)
 
             ranked = sorted(
                 by_boundary.items(),
@@ -148,10 +186,14 @@ class HybridPathCochangeV1:
                 "weights": {
                     "path_weight": path_weight,
                     "cochange_weight": cochange_weight,
+                    "parser_weight": parser_weight,
                 },
-                "cochange_edges": int(
-                    sum(len(v) for v in cochange.values())
-                ),
+                "cochange_edges": int(sum(len(v) for v in cochange.values())),
+                "parser_enabled": parser_enabled,
+                "parser_backend_id": parser_backend_id if parser_enabled else None,
+                "parser_backend_version": parser_backend_version,
+                "parser_signal_files": len(parser_votes),
+                "parser_diagnostics": sorted(set(parser_diagnostics)),
                 "hard_membership_preview": {
                     m.unit_id: m.boundary_id
                     for m in sorted(hard_memberships, key=lambda m: m.unit_id)
