@@ -28,7 +28,7 @@ class LLMRerankRouter:
         *,
         mode: str = "replay",
         model_name: str = "dummy-llm-v1",
-        cache_dir: str | Path = ".cache/repo-routing/llm-replay",
+        cache_dir: str | Path = ".cache/inference/llm-replay",
         union_router: UnionRouter | None = None,
         cache: LLMReplayCache | None = None,
     ) -> None:

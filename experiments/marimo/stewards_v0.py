@@ -55,7 +55,7 @@ def _(mo, prs, pr_activity, pq):
     note = None
     if pq is None:
         note = mo.md(
-            "`pyarrow` is missing. Run via `uv run --project packages/repo-routing marimo run ...`."
+            "`pyarrow` is missing. Run via `uv run --project packages/inference marimo run ...`."
         )
     else:
         if prs is None:

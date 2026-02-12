@@ -1,5 +1,5 @@
 [project]
-name = "repo-routing"
+name = "inference"
 version = "0.1.0"
 description = "Post-ingest routing artifacts and heuristics"
 readme = "README.md"
@@ -20,7 +20,7 @@ mixed-membership = [
 ]
 
 [project.scripts]
-repo-routing = "repo_routing.cli.app:app"
+inference = "repo_routing.cli.app:app"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

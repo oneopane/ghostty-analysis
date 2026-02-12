@@ -147,7 +147,7 @@ def _builtin_router(name: str, *, config_path: str | None) -> Router:
             if isinstance(payload, dict):
                 mode = str(payload.get("mode") or "replay")
                 model = str(payload.get("model_name") or "dummy-llm-v1")
-                cache_dir = str(payload.get("cache_dir") or ".cache/repo-routing/llm-replay")
+                cache_dir = str(payload.get("cache_dir") or ".cache/inference/llm-replay")
                 return LLMRerankRouter(mode=mode, model_name=model, cache_dir=cache_dir)
         if config_path in {"off", "live", "replay"}:
             return LLMRerankRouter(mode=str(config_path))
