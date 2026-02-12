@@ -6,12 +6,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
-from ..exports.area import AreaOverride, area_for_path, load_repo_area_overrides
+from ..boundary.consumption import project_files_to_boundary_footprint
+from ..boundary.io import read_boundary_artifact
 from ..history.reader import HistoryReader
 from ..parsing.gates import GateFields, parse_gate_fields
 from ..paths import repo_db_path
 from ..router.base import Evidence
-from ..time import dt_sql_utc, parse_dt_utc, require_dt_utc
+from ..time import cutoff_key_utc, dt_sql_utc, parse_dt_utc, require_dt_utc
 from ..scoring import (
     confidence_from_scores,
     decay_weight,
@@ -189,14 +190,14 @@ def _pr_head_sha_as_of(
     return None if row is None else row["head_sha"]
 
 
-def _pr_areas_for_event(
+def _pr_boundaries_for_event(
     *,
     conn: sqlite3.Connection,
     repo_id: int,
     pr_id: int,
     occurred_at: datetime,
-    overrides: list[AreaOverride],
     cache: dict[tuple[int, str | None], list[str]],
+    boundary_index: dict[str, list[str]],
 ) -> list[str]:
     head_sha = _pr_head_sha_as_of(conn=conn, pr_id=pr_id, as_of=occurred_at)
     cache_key = (pr_id, head_sha)
@@ -214,19 +215,22 @@ def _pr_areas_for_event(
         """,
         (repo_id, pr_id, head_sha),
     ).fetchall()
-    areas: list[str] = []
+    boundaries: set[str] = set()
     for r in rows:
-        areas.append(area_for_path(str(r["path"]), overrides))
-    unique = sorted(set(areas), key=lambda s: s.lower())
+        path = str(r["path"])
+        for boundary_id in boundary_index.get(path, []):
+            boundaries.add(boundary_id)
+    unique = sorted(boundaries, key=lambda s: s.lower())
     cache[cache_key] = unique
     return unique
 
 
-def _current_pr_areas(
-    snapshot_paths: Iterable[str], overrides: list[AreaOverride]
-) -> list[str]:
-    areas = [area_for_path(path, overrides) for path in snapshot_paths]
-    return sorted(set(areas), key=lambda s: s.lower())
+def _current_pr_boundaries(snapshot_paths: Iterable[str], boundary_index: dict[str, list[str]]) -> list[str]:
+    boundaries: set[str] = set()
+    for path in snapshot_paths:
+        for boundary_id in boundary_index.get(path, []):
+            boundaries.add(boundary_id)
+    return sorted(boundaries, key=lambda s: s.lower())
 
 
 def _build_evidence(
@@ -243,9 +247,9 @@ def _build_evidence(
             },
         ),
         Evidence(
-            kind="area_overlap",
+            kind="boundary_overlap",
             data={
-                "area_overlap_activity": features.area_overlap_activity,
+                "boundary_overlap_activity": features.boundary_overlap_activity,
                 "overlap": overlap,
             },
         ),
@@ -276,14 +280,25 @@ def analyze_pr(
 ) -> AnalysisResult:
     cutoff_utc = require_dt_utc(cutoff, name="cutoff")
     config = load_scoring_config(config_path)
-    overrides = load_repo_area_overrides(repo_full_name=repo, data_dir=data_dir)
 
     with HistoryReader(repo_full_name=repo, data_dir=data_dir) as reader:
         snapshot = reader.pull_request_snapshot(number=pr_number, as_of=cutoff_utc)
 
+    boundary_artifact = read_boundary_artifact(
+        repo_full_name=repo,
+        data_dir=data_dir,
+        strategy_id="hybrid_path_cochange.v1",
+        cutoff_key=cutoff_key_utc(cutoff_utc),
+    )
+    footprint = project_files_to_boundary_footprint(
+        paths=[f.path for f in snapshot.changed_files],
+        artifact=boundary_artifact,
+    )
+    boundary_index = {k: list(v) for k, v in footprint.file_boundaries.items()}
+
     gates = parse_gate_fields(snapshot.body)
     current_paths = [f.path for f in snapshot.changed_files]
-    areas = _current_pr_areas(current_paths, overrides)
+    boundaries = _current_pr_boundaries(current_paths, boundary_index)
 
     db = repo_db_path(repo_full_name=repo, data_dir=data_dir)
     conn = sqlite3.connect(str(db))
@@ -332,17 +347,17 @@ def analyze_pr(
             feats = by_login.setdefault(event.login, CandidateFeatures())
             feats.activity_total += decayed
 
-            if areas:
-                event_areas = _pr_areas_for_event(
+            if boundaries:
+                event_boundaries = _pr_boundaries_for_event(
                     conn=conn,
                     repo_id=repo_id,
                     pr_id=event.pr_id,
                     occurred_at=event.occurred_at,
-                    overrides=overrides,
                     cache=overlap_cache,
+                    boundary_index=boundary_index,
                 )
-                if set(event_areas).intersection(areas):
-                    feats.area_overlap_activity += decayed
+                if set(event_boundaries).intersection(boundaries):
+                    feats.boundary_overlap_activity += decayed
     finally:
         conn.close()
 
@@ -352,7 +367,10 @@ def analyze_pr(
         if feats.activity_total < config.filters.min_activity_total:
             continue
         score = linear_score(
-            {"activity_total": feats.activity_total, "area_overlap_activity": feats.area_overlap_activity},
+            {
+                "activity_total": feats.activity_total,
+                "boundary_overlap_activity": feats.boundary_overlap_activity,
+            },
             config.weights.model_dump(),
         )
         analyses.append(
@@ -363,7 +381,7 @@ def analyze_pr(
                 evidence=_build_evidence(
                     features=feats,
                     config=config,
-                    overlap=feats.area_overlap_activity > 0,
+                    overlap=feats.boundary_overlap_activity > 0,
                 ),
             )
         )
@@ -371,14 +389,18 @@ def analyze_pr(
     analyses.sort(key=lambda c: (-c.score, c.login.lower()))
     scores = [c.score for c in analyses]
     confidence = confidence_from_scores(scores, config.thresholds)
-    risk = risk_from_inputs(gates=gates, areas=areas, has_candidates=bool(analyses))
+    risk = risk_from_inputs(
+        gates=gates,
+        boundaries=boundaries,
+        has_candidates=bool(analyses),
+    )
 
     return AnalysisResult(
         repo=repo,
         pr_number=pr_number,
         cutoff=cutoff_utc,
         author_login=snapshot.author_login,
-        areas=areas,
+        boundaries=boundaries,
         gates=gates,
         candidates=analyses,
         confidence=confidence,

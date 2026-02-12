@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from pydantic import BaseModel, Field
 
+from ..boundary.consumption.models import PRBoundaryFootprint
 from ..history.models import PullRequestFile, PullRequestSnapshot, ReviewRequest
 
 
@@ -39,6 +40,14 @@ class PRInputBundle(BaseModel):
 
     gate_fields: PRGateFields = Field(default_factory=PRGateFields)
 
+    file_boundaries: dict[str, list[str]] = Field(default_factory=dict)
+    file_boundary_weights: dict[str, dict[str, float]] = Field(default_factory=dict)
+    boundaries: list[str] = Field(default_factory=list)
+    boundary_coverage: dict[str, object] = Field(default_factory=dict)
+    boundary_strategy: str | None = None
+    boundary_strategy_version: str | None = None
+
+    # TODO(boundary-migration-pr04): remove legacy aliases once predictor stack is migrated.
     file_areas: dict[str, str] = Field(default_factory=dict)
     areas: list[str] = Field(default_factory=list)
 
@@ -51,3 +60,6 @@ class PRInputBuilderOptions(BaseModel):
     include_recent_activity: bool = False
     recent_activity_window: timedelta = timedelta(days=30)
     recent_activity_limit: int = 200
+
+    boundary_strategy_id: str = "hybrid_path_cochange.v1"
+    boundary_required: bool = False

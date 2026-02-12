@@ -10,7 +10,7 @@ from ..router.base import Evidence
 
 class CandidateFeatures(BaseModel):
     activity_total: float = 0.0
-    area_overlap_activity: float = 0.0
+    boundary_overlap_activity: float = 0.0
 
 
 class CandidateAnalysis(BaseModel):
@@ -26,7 +26,7 @@ class AnalysisResult(BaseModel):
     cutoff: datetime
 
     author_login: str | None = None
-    areas: list[str] = Field(default_factory=list)
+    boundaries: list[str] = Field(default_factory=list)
     gates: GateFields
 
     candidates: list[CandidateAnalysis] = Field(default_factory=list)

@@ -8,15 +8,15 @@ This log is intended to be updated as implementation proceeds.
 - Start date: 2026-02-11
 - Owner: TBD
 - Current phase: Implementation
-- Current PR: PR-02 (In progress)
+- Current PR: PR-03 (In progress)
 
 ## PR Tracking Table
 
 | PR | Title | Status | Owner | Branch/Change | Start | End | Notes |
 |---|---|---|---|---|---|---|---|
 | PR-01 | Boundary core and artifacts | In progress | oneopane | TBD | 2026-02-11 | - | boundary package + tests scaffolded |
-| PR-02 | Hybrid inference v1 | In progress | oneopane | TBD | 2026-02-11 | - | strategy registry + hybrid v1 + boundary CLI build scaffolded |
-| PR-03 | Inputs/analysis/risk cutover | Planned | TBD | TBD | - | - | |
+| PR-02 | Hybrid inference v1 | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | strategy registry + hybrid v1 + boundary CLI build scaffolded |
+| PR-03 | Inputs/analysis/risk cutover | In progress | oneopane | TBD | 2026-02-11 | - | boundary projection + input/analysis/risk/labels/receipt cutover started |
 | PR-04 | Predictor feature stack migration | Planned | TBD | TBD | - | - | |
 | PR-05 | Mixed-membership boundary migration | Planned | TBD | TBD | - | - | |
 | PR-06 | Parser plugin framework + Python backend | Planned | TBD | TBD | - | - | |
@@ -35,8 +35,8 @@ This log is intended to be updated as implementation proceeds.
 - [x] CLI build command available
 
 ### M3: Runtime cutover
-- [ ] input bundle boundary fields active
-- [ ] analysis/risk boundary logic active
+- [x] input bundle boundary fields active
+- [x] analysis/risk boundary logic active
 - [ ] area references removed from runtime path
 
 ### M4: Predictor migration

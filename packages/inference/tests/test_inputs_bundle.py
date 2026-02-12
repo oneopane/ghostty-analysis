@@ -70,3 +70,5 @@ def test_pr_input_bundle_deterministic_json(tmp_path: Path) -> None:
     j1 = json.dumps(b1.model_dump(mode="json"), sort_keys=True, ensure_ascii=True)
     j2 = json.dumps(b2.model_dump(mode="json"), sort_keys=True, ensure_ascii=True)
     assert j1 == j2
+    assert b1.boundaries == []
+    assert b1.file_boundaries == {}

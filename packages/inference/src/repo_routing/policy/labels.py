@@ -22,11 +22,11 @@ def suggest_labels(
     if result.candidates:
         labels.append("suggested-steward-review")
 
-    include_area_labels = (
-        config.labels.include_area_labels if config is not None else False
+    include_boundary_labels = (
+        config.labels.include_boundary_labels if config is not None else False
     )
-    if include_area_labels:
-        for area in sorted(set(result.areas), key=lambda s: s.lower()):
-            labels.append(f"routed-area:{area}")
+    if include_boundary_labels:
+        for boundary in sorted(set(result.boundaries), key=lambda s: s.lower()):
+            labels.append(f"routed-boundary:{boundary}")
 
     return labels

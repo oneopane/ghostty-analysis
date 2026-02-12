@@ -18,7 +18,7 @@ class ExampleLLMRouterConfig(BaseModel):
     model_name: str = "dummy-llm-v0"
     mention_boost: float = 2.0
     review_request_boost: float = 1.5
-    area_overlap_boost: float = 0.5
+    boundary_overlap_boost: float = 0.5
 
 
 class PromptLikeFeatureExtractor(FeatureExtractor):
@@ -33,7 +33,7 @@ class PromptLikeFeatureExtractor(FeatureExtractor):
             "cutoff": input.cutoff.isoformat(),
             "title": input.title,
             "body": input.body,
-            "areas": input.areas,
+            "boundaries": input.boundaries,
             "review_requests": [
                 {"type": rr.reviewer_type, "reviewer": rr.reviewer}
                 for rr in input.review_requests
@@ -71,7 +71,7 @@ class PromptLikeFeatureExtractor(FeatureExtractor):
             "mentioned_users": mention_logins,
             "requested_users": requested,
             "pseudo_llm_ranked_users": pseudo_llm_ranked,
-            "areas": list(input.areas),
+            "boundaries": list(input.boundaries),
             "repo_profile_path": input.repo_profile_path,
             "repo_profile_codeowners_present": bool(
                 ((input.repo_profile_qa or {}).get("coverage") or {}).get(

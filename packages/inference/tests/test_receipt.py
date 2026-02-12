@@ -13,12 +13,12 @@ def test_render_receipt_snapshot() -> None:
         pr_number=1,
         cutoff=datetime(2024, 1, 1, tzinfo=timezone.utc),
         gates=GateFields(issue="#1", ai_disclosure="AI: no", provenance="human"),
-        areas=["src", "docs"],
+        boundaries=["dir:src", "dir:docs"],
         candidates=[
             CandidateAnalysis(
                 login="bob",
                 score=1.0,
-                features=CandidateFeatures(activity_total=0.8, area_overlap_activity=0.5),
+                features=CandidateFeatures(activity_total=0.8, boundary_overlap_activity=0.5),
             )
         ],
         risk="medium",
@@ -39,11 +39,11 @@ def test_render_receipt_snapshot() -> None:
         "- AI disclosure: yes\n"
         "- Provenance: yes\n"
         "\n"
-        "## Areas\n"
-        "- src, docs\n"
+        "## Boundaries\n"
+        "- dir:src, dir:docs\n"
         "\n"
         "## Suggested Stewards\n"
-        "- bob (score=1.000, activity_total=0.800, area_overlap=0.500)\n"
+        "- bob (score=1.000, activity_total=0.800, boundary_overlap=0.500)\n"
     )
 
     assert render_receipt(result) == expected

@@ -28,11 +28,11 @@ def render_receipt(result: AnalysisResult, *, max_candidates: int = 5) -> str:
     )
     lines.append("")
 
-    lines.append("## Areas")
-    if result.areas:
-        lines.append("- " + ", ".join(result.areas))
+    lines.append("## Boundaries")
+    if result.boundaries:
+        lines.append("- " + ", ".join(result.boundaries))
     else:
-        lines.append("- No areas detected")
+        lines.append("- No boundaries detected")
     lines.append("")
 
     lines.append("## Suggested Stewards")
@@ -41,7 +41,7 @@ def render_receipt(result: AnalysisResult, *, max_candidates: int = 5) -> str:
             lines.append(
                 f"- {c.login} (score={c.score:.3f}, "
                 f"activity_total={c.features.activity_total:.3f}, "
-                f"area_overlap={c.features.area_overlap_activity:.3f})"
+                f"boundary_overlap={c.features.boundary_overlap_activity:.3f})"
             )
     else:
         lines.append("- No candidates found")

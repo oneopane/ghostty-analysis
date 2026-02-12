@@ -38,7 +38,7 @@ class EventWeights(BaseModel):
 
 
 class FeatureWeights(BaseModel):
-    area_overlap_activity: float = 1.0
+    boundary_overlap_activity: float = 1.0
     activity_total: float = 0.2
 
 
@@ -52,7 +52,7 @@ class ThresholdsConfig(BaseModel):
 
 
 class LabelsConfig(BaseModel):
-    include_area_labels: bool = False
+    include_boundary_labels: bool = False
 
 
 class ScoringConfig(BaseModel):

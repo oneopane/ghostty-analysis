@@ -8,7 +8,7 @@ from repo_routing.policy.labels import suggest_labels
 from repo_routing.scoring.config import LabelsConfig, ScoringConfig
 
 
-def test_suggest_labels_with_areas() -> None:
+def test_suggest_labels_with_boundaries() -> None:
     result = AnalysisResult(
         repo="acme/widgets",
         pr_number=1,
@@ -18,10 +18,10 @@ def test_suggest_labels_with_areas() -> None:
             CandidateAnalysis(
                 login="bob",
                 score=1.0,
-                features=CandidateFeatures(activity_total=1.0, area_overlap_activity=1.0),
+                features=CandidateFeatures(activity_total=1.0, boundary_overlap_activity=1.0),
             )
         ],
-        areas=["src", "docs"],
+        boundaries=["dir:src", "dir:docs"],
         risk="high",
         confidence="low",
     )
@@ -29,9 +29,9 @@ def test_suggest_labels_with_areas() -> None:
     config = ScoringConfig(
         version="v0",
         feature_version="v0",
-        weights={"area_overlap_activity": 1.0, "activity_total": 0.2},
+        weights={"boundary_overlap_activity": 1.0, "activity_total": 0.2},
         thresholds={"confidence_high_margin": 0.2, "confidence_med_margin": 0.1},
-        labels=LabelsConfig(include_area_labels=True),
+        labels=LabelsConfig(include_boundary_labels=True),
     )
 
     labels = suggest_labels(result, config=config)
@@ -40,5 +40,5 @@ def test_suggest_labels_with_areas() -> None:
     assert "needs-provenance" in labels
     assert "routed-high-risk" in labels
     assert "suggested-steward-review" in labels
-    assert "routed-area:docs" in labels
-    assert "routed-area:src" in labels
+    assert "routed-boundary:dir:docs" in labels
+    assert "routed-boundary:dir:src" in labels

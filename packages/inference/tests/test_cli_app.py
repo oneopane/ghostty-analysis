@@ -4,7 +4,11 @@ import json
 import sqlite3
 from pathlib import Path
 
+from repo_routing.time import cutoff_key_utc, parse_dt_utc
+
 import repo_routing.cli.app as cli_app_module
+from repo_routing.boundary.models import MembershipMode
+from repo_routing.boundary.pipeline import write_boundary_model_artifacts
 from repo_routing.cli.app import app
 from typer.testing import CliRunner
 
@@ -189,13 +193,13 @@ def _write_stewards_config(tmp_path: Path) -> Path:
                     "review_comment_created": 0.4,
                     "comment_created": 0.2,
                 },
-                "weights": {"area_overlap_activity": 1.0, "activity_total": 0.2},
+                "weights": {"boundary_overlap_activity": 1.0, "activity_total": 0.2},
                 "filters": {"min_activity_total": 0.0},
                 "thresholds": {
                     "confidence_high_margin": 0.1,
                     "confidence_med_margin": 0.05,
                 },
-                "labels": {"include_area_labels": False},
+                "labels": {"include_boundary_labels": False},
             }
         ),
         encoding="utf-8",
@@ -203,9 +207,22 @@ def _write_stewards_config(tmp_path: Path) -> Path:
     return config_path
 
 
+def _write_boundary_for_cutoff(repo: str, data_dir: Path, cutoff: str) -> None:
+    cutoff_dt = parse_dt_utc(cutoff)
+    assert cutoff_dt is not None
+    write_boundary_model_artifacts(
+        repo_full_name=repo,
+        cutoff_utc=cutoff_dt,
+        cutoff_key=cutoff_key_utc(cutoff_dt),
+        data_dir=data_dir,
+        membership_mode=MembershipMode.MIXED,
+    )
+
+
 def test_build_artifacts_stewards_implicit_cutoff_uses_utc(tmp_path: Path) -> None:
     repo, data_dir = _seed_db(tmp_path / "data")
     config_path = _write_stewards_config(tmp_path)
+    _write_boundary_for_cutoff(repo, data_dir, "2024-01-10T00:00:00Z")
     runner = CliRunner()
 
     run_id = "run-stewards-implicit"
@@ -242,6 +259,7 @@ def test_build_artifacts_stewards_implicit_cutoff_uses_utc(tmp_path: Path) -> No
 def test_route_accepts_naive_as_of_and_treats_it_as_utc(tmp_path: Path) -> None:
     repo, data_dir = _seed_db(tmp_path / "data")
     config_path = _write_stewards_config(tmp_path)
+    _write_boundary_for_cutoff(repo, data_dir, "2024-01-10T00:00:00Z")
     runner = CliRunner()
 
     run_id = "run-route-naive"

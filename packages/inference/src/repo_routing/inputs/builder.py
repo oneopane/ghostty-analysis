@@ -4,11 +4,12 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from ..exports.area import area_for_path, load_repo_area_overrides
+from ..boundary.consumption import project_files_to_boundary_footprint
+from ..boundary.io import read_boundary_artifact
 from ..history.reader import HistoryReader
 from ..paths import repo_db_path
 from ..parsing.gates import parse_gate_fields
-from ..time import dt_sql_utc, require_dt_utc
+from ..time import cutoff_key_utc, dt_sql_utc, require_dt_utc
 from .models import (
     PRGateFields,
     PRInputBuilderOptions,
@@ -130,10 +131,51 @@ def build_pr_input_bundle(
         missing_provenance=parsed.missing_provenance,
     )
 
-    overrides = load_repo_area_overrides(repo_full_name=repo, data_dir=data_dir)
+    boundary_artifact = None
+    try:
+        boundary_artifact = read_boundary_artifact(
+            repo_full_name=repo,
+            data_dir=data_dir,
+            strategy_id=opts.boundary_strategy_id,
+            cutoff_key=cutoff_key_utc(cutoff_utc),
+        )
+    except FileNotFoundError:
+        if opts.boundary_required:
+            raise
+
+    if boundary_artifact is None:
+        boundaries: list[str] = []
+        file_boundaries: dict[str, list[str]] = {}
+        file_boundary_weights: dict[str, dict[str, float]] = {}
+        boundary_coverage: dict[str, object] = {
+            "changed_file_count": len(changed_files),
+            "covered_file_count": 0,
+            "uncovered_files": [f.path for f in changed_files],
+            "coverage_ratio": 0.0,
+        }
+        boundary_strategy = opts.boundary_strategy_id
+        boundary_strategy_version = None
+    else:
+        footprint = project_files_to_boundary_footprint(
+            paths=[f.path for f in changed_files],
+            artifact=boundary_artifact,
+        )
+        boundaries = footprint.boundaries
+        file_boundaries = footprint.file_boundaries
+        file_boundary_weights = footprint.file_boundary_weights
+        boundary_coverage = {
+            "changed_file_count": footprint.coverage.changed_file_count,
+            "covered_file_count": footprint.coverage.covered_file_count,
+            "uncovered_files": footprint.coverage.uncovered_files,
+            "coverage_ratio": footprint.coverage.coverage_ratio,
+        }
+        boundary_strategy = footprint.strategy_id
+        boundary_strategy_version = footprint.strategy_version
+
+    # Legacy compatibility for pre-boundary predictor stack; removed in PR-04.
     file_areas = {
-        f.path: area_for_path(f.path, overrides=overrides)
-        for f in sorted(changed_files, key=lambda f: f.path)
+        path: (vals[0].removeprefix("dir:") if vals else "__unknown__")
+        for path, vals in file_boundaries.items()
     }
     areas = sorted(set(file_areas.values()), key=lambda s: s.lower())
 
@@ -157,6 +199,12 @@ def build_pr_input_bundle(
         title=snapshot.title,
         body=snapshot.body,
         gate_fields=gate_fields,
+        file_boundaries=file_boundaries,
+        file_boundary_weights=file_boundary_weights,
+        boundaries=boundaries,
+        boundary_coverage=boundary_coverage,
+        boundary_strategy=boundary_strategy,
+        boundary_strategy_version=boundary_strategy_version,
         file_areas=file_areas,
         areas=areas,
         recent_activity=recent_activity,

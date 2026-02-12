@@ -21,5 +21,5 @@ def test_confidence_from_scores() -> None:
 
 def test_risk_from_inputs() -> None:
     gates = GateFields(issue="#1", ai_disclosure="AI: no", provenance="human")
-    assert risk_from_inputs(gates=gates, areas=["src"], has_candidates=True) == "medium"
-    assert risk_from_inputs(gates=gates, areas=[], has_candidates=True) == "high"
+    assert risk_from_inputs(gates=gates, boundaries=["dir:src"], has_candidates=True) == "medium"
+    assert risk_from_inputs(gates=gates, boundaries=[], has_candidates=True) == "high"

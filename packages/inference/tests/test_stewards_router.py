@@ -5,6 +5,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from repo_routing.boundary.models import MembershipMode
+from repo_routing.boundary.pipeline import write_boundary_model_artifacts
 from repo_routing.paths import repo_db_path
 from repo_routing.router.stewards import StewardsRouter
 
@@ -207,13 +209,21 @@ def test_stewards_router_ranks_candidates(tmp_path: Path) -> None:
                     "review_comment_created": 0.4,
                     "comment_created": 0.2,
                 },
-                "weights": {"area_overlap_activity": 1.0, "activity_total": 0.2},
+                "weights": {"boundary_overlap_activity": 1.0, "activity_total": 0.2},
                 "filters": {"min_activity_total": 0.0},
                 "thresholds": {"confidence_high_margin": 0.1, "confidence_med_margin": 0.05},
-                "labels": {"include_area_labels": False},
+                "labels": {"include_boundary_labels": False},
             }
         ),
         encoding="utf-8",
+    )
+
+    write_boundary_model_artifacts(
+        repo_full_name="acme/widgets",
+        cutoff_utc=datetime(2024, 1, 10, tzinfo=timezone.utc),
+        cutoff_key="2024-01-10T00-00-00Z",
+        data_dir=data_dir,
+        membership_mode=MembershipMode.MIXED,
     )
 
     router = StewardsRouter(config_path=config_path)
