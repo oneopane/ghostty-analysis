@@ -3,7 +3,7 @@ from __future__ import annotations
 import typer
 from evaluation_harness.paths import repo_eval_run_dir
 
-from .workflow_helpers import (
+from .workflow_reports import (
     _delta,
     _load_per_pr_rows,
     _load_report,

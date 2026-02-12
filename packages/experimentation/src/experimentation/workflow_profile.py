@@ -8,9 +8,9 @@ from repo_routing.artifacts.writer import ArtifactWriter
 from repo_routing.history.reader import HistoryReader
 from repo_routing.repo_profile.builder import build_repo_profile
 
+from .workflow_artifacts import _missing_artifact_paths
 from .workflow_helpers import (
     DEFAULT_PINNED_ARTIFACT_PATHS,
-    _missing_artifact_paths,
     _parse_dt_option,
     _resolve_pr_cutoffs,
     _sample_prs,

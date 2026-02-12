@@ -61,6 +61,38 @@ Validation run during this pass:
 - `.venv/bin/pytest -q packages/evaluation/tests/test_runner_router_specs.py packages/evaluation/tests/test_runner_import_router.py packages/evaluation/tests/test_end_to_end_run.py packages/evaluation/tests/test_runner_repo_profile.py packages/evaluation/tests/test_leakage_guards.py`
 - `.venv/bin/pytest -q packages/ingestion/tests/test_backfill.py packages/ingestion/tests/test_incremental.py`
 
+## Continuation Update (2026-02-12, post-compaction)
+
+Status: continuation hardening pass complete; no cross-package regressions detected.
+
+Additional modularity updates completed:
+
+- Experimentation helper decomposition continued:
+  - Added `packages/experimentation/src/experimentation/workflow_artifacts.py` for:
+    - artifact presence checks
+    - artifact prefetch orchestration
+    - prefetch summary construction
+    - repo-profile settings construction
+  - Added `packages/experimentation/src/experimentation/workflow_reports.py` for:
+    - experiment manifest payload construction
+    - run-context loading
+    - report/per-PR loading
+    - numeric delta rendering
+- Updated command modules to import focused helper modules directly:
+  - `packages/experimentation/src/experimentation/workflow_run.py`
+  - `packages/experimentation/src/experimentation/workflow_profile.py`
+  - `packages/experimentation/src/experimentation/workflow_diff.py`
+  - `packages/experimentation/src/experimentation/unified_experiment.py`
+- Reduced `packages/experimentation/src/experimentation/workflow_helpers.py` from 585 lines to 383 lines while preserving existing behavior and compatibility exports.
+
+Validation run during this continuation:
+
+- `python3 -m compileall -q packages/experimentation/src packages/cli/src`
+- `.venv/bin/pytest -q packages/experimentation/tests/test_unified_experiment_workflows.py packages/cli/tests/test_unified_experiment_cli.py`
+  - Result: `12 passed`
+- `uv run --all-packages pytest -q`
+  - Result: `157 passed, 1 skipped`
+
 ## Confirmed Strengths To Preserve
 - Clear workspace package boundaries and mostly one-way dependency flow.
 - Deterministic artifact/report serialization patterns.
