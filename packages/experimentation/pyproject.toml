@@ -1,0 +1,20 @@
+[project]
+name = "experimentation"
+version = "0.1.0"
+description = "Experiment orchestration, manifests, quality gates, and notebook helpers"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "typer>=0.21.1",
+  "ingestion>=0.1.0",
+  "inference>=0.1.0",
+  "evaluation>=0.1.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.uv.sources]
+ingestion = { workspace = true }
+inference = { workspace = true }
+evaluation = { workspace = true }

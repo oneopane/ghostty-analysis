@@ -2,7 +2,7 @@
 
 This module is intended to be imported from marimo notebooks, e.g.
 
-    from repo_cli.marimo_components import repo_ingestion_panel
+    from experimentation.marimo_components import repo_ingestion_panel
 
     ui = repo_ingestion_panel(default_repo="ghostty-org/ghostty")
     ui["view"]
@@ -269,13 +269,13 @@ def repo_analysis_panel(
     default_repo: str,
     default_days_back: int = 90,
     default_data_dir: str = "data",
-    default_export_config: str = "packages/repo-routing/experiments/configs/v0.json",
+    default_export_config: str = "experiments/configs/v0.json",
 ) -> AnalysisPanel:
     """Create a reusable UI panel for export (Parquet) + evaluation.
 
     This panel shells out to:
-    - `packages/repo-routing/experiments/extract/export_v0.py`
-    - `repo eval run`
+    - `experiments/extract/export_v0.py`
+    - `repo evaluation run`
     """
 
     mo = importlib.import_module("marimo")  # type: ignore[assignment]
@@ -340,9 +340,9 @@ def repo_analysis_panel(
         "uv",
         "run",
         "--project",
-        "packages/repo-routing",
+        "packages/inference",
         "python",
-        "packages/repo-routing/experiments/extract/export_v0.py",
+        "experiments/extract/export_v0.py",
         "--repo",
         repo_s,
         "--export-run-id",
@@ -363,7 +363,7 @@ def repo_analysis_panel(
         "uv",
         "run",
         "repo",
-        "eval",
+        "evaluation",
         "run",
         "--repo",
         repo_s,
