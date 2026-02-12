@@ -37,6 +37,7 @@ from ..storage.upsert import (
 )
 from ..utils.time import parse_datetime
 from .qa import GapRecorder, write_qa_report
+from .pipeline import IngestStagePipeline
 from .pull_request_files import ingest_pull_request_files
 
 
@@ -65,27 +66,36 @@ async def incremental_update(
 async def _run_incremental(
     session, client: GitHubRestClient, owner: str, name: str
 ) -> None:
+    pipeline = IngestStagePipeline(flow="incremental")
+
     repo = await client.get_json(f"/repos/{owner}/{name}")
     upsert_user(session, repo.get("owner"))
     repo_id = upsert_repo(session, repo)
     session.commit()
+    pipeline.checkpoint("repo_seed", repo_id=repo_id)
 
     updated_issue_ids: list[int] = []
     updated_pr_ids: list[int] = []
 
     await _incremental_commits(session, client, owner, name, repo_id)
+    pipeline.checkpoint("commits")
     await _incremental_refs_and_releases(session, client, owner, name, repo_id)
+    pipeline.checkpoint("refs_and_releases")
     updated_issue_ids = await _incremental_issues(session, client, owner, name, repo_id)
+    pipeline.checkpoint("issues", count=len(updated_issue_ids))
     updated_pr_ids = await _incremental_pull_requests(
         session, client, owner, name, repo_id
     )
+    pipeline.checkpoint("pull_requests", count=len(updated_pr_ids))
 
     await _incremental_issue_activity(
         session, client, owner, name, repo_id, updated_issue_ids
     )
+    pipeline.checkpoint("issue_activity")
     await _incremental_pr_activity(
         session, client, owner, name, repo_id, updated_pr_ids
     )
+    pipeline.checkpoint("pull_request_activity")
 
     rebuild_intervals(
         session,
@@ -93,7 +103,9 @@ async def _run_incremental(
         issue_ids=updated_issue_ids or None,
         pr_ids=updated_pr_ids or None,
     )
+    pipeline.checkpoint("intervals_rebuilt")
     write_qa_report(session, repo_id)
+    pipeline.checkpoint("qa_report_written", checkpoints=len(pipeline.checkpoints))
 
 
 async def _incremental_commits(

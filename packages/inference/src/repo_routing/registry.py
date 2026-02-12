@@ -6,8 +6,9 @@ import inspect
 import json
 import re
 from pathlib import Path
+from typing import Callable
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from .inputs.builder import build_pr_input_bundle
 from .inputs.models import PRInputBuilderOptions, PRInputBundle
@@ -21,6 +22,7 @@ from .router.baselines.union import UnionRouter
 from .router.hybrid_ranker import HybridRankerRouter
 from .router.llm_rerank import LLMRerankRouter
 from .router.stewards import StewardsRouter
+from .scoring.config import load_scoring_config
 
 
 class RouterSpec(BaseModel):
@@ -28,6 +30,43 @@ class RouterSpec(BaseModel):
     name: str
     import_path: str | None = None
     config_path: str | None = None
+
+
+class HybridRankerConfigPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    weights: dict[str, float] = Field(default_factory=dict)
+
+
+class LLMRerankConfigPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mode: str = "replay"
+    model_name: str = "dummy-llm-v1"
+    cache_dir: str = ".cache/inference/llm-replay"
+
+    @field_validator("mode")
+    @classmethod
+    def _normalize_mode(cls, value: str) -> str:
+        mode = str(value).strip().lower()
+        if mode not in {"off", "live", "replay"}:
+            raise ValueError("mode must be one of: off, live, replay")
+        return mode
+
+    @field_validator("model_name")
+    @classmethod
+    def _normalize_model_name(cls, value: str) -> str:
+        return str(value).strip() or "dummy-llm-v1"
+
+    @field_validator("cache_dir")
+    @classmethod
+    def _normalize_cache_dir(cls, value: str) -> str:
+        return str(value).strip() or ".cache/inference/llm-replay"
+
+
+BuiltinRouterFactory = Callable[[str | None], Router]
+
+_BUILTIN_ROUTER_FACTORIES: dict[str, BuiltinRouterFactory] = {}
 
 
 def _config_hash(config_path: str | None) -> str:
@@ -49,6 +88,17 @@ def router_id_for_spec(spec: RouterSpec) -> str:
         f"{source}|{_config_hash(spec.config_path)}".encode("utf-8")
     ).hexdigest()[:8]
     return f"{slug}-{short}"
+
+
+def builtin_router_names() -> tuple[str, ...]:
+    return tuple(sorted(_BUILTIN_ROUTER_FACTORIES))
+
+
+def register_builtin_router(name: str, factory: BuiltinRouterFactory) -> None:
+    key = name.strip().lower()
+    if not key:
+        raise ValueError("builtin router name cannot be empty")
+    _BUILTIN_ROUTER_FACTORIES[key] = factory
 
 
 class PredictorRouterAdapter:
@@ -117,46 +167,105 @@ def _instantiate_target(target, *, config_path: str | None):  # type: ignore[no-
     raise TypeError("router import target must be class or callable")
 
 
-def _builtin_router(name: str, *, config_path: str | None) -> Router:
-    n = name.strip().lower()
-    if n == "mentions":
-        return MentionsRouter()
-    if n == "popularity":
-        return PopularityRouter(lookback_days=180)
-    if n == "codeowners":
-        return CodeownersRouter(enabled=True)
-    if n == "union":
-        return UnionRouter()
-    if n == "hybrid_ranker":
-        if config_path is not None and Path(config_path).exists():
-            payload = json.loads(Path(config_path).read_text(encoding="utf-8"))
-            if isinstance(payload, dict):
-                weights = payload.get("weights")
-                if isinstance(weights, dict):
-                    return HybridRankerRouter(
-                        weights={
-                            str(k): float(v)
-                            for k, v in weights.items()
-                            if isinstance(v, (int, float))
-                        }
-                    )
+def _read_router_config_payload(*, router_name: str, config_path: str) -> dict[str, object]:
+    path = Path(config_path)
+    if not path.exists():
+        raise ValueError(f"{router_name} config path does not exist: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"invalid JSON in {router_name} config: {path}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{router_name} config must be a JSON object: {path}")
+    return payload
+
+
+def _build_mentions_router(_: str | None) -> Router:
+    return MentionsRouter()
+
+
+def _build_popularity_router(_: str | None) -> Router:
+    return PopularityRouter(lookback_days=180)
+
+
+def _build_codeowners_router(_: str | None) -> Router:
+    return CodeownersRouter(enabled=True)
+
+
+def _build_union_router(_: str | None) -> Router:
+    return UnionRouter()
+
+
+def _build_hybrid_ranker_router(config_path: str | None) -> Router:
+    if config_path is None:
         return HybridRankerRouter()
-    if n == "llm_rerank":
-        if config_path is not None and Path(config_path).exists():
-            payload = json.loads(Path(config_path).read_text(encoding="utf-8"))
-            if isinstance(payload, dict):
-                mode = str(payload.get("mode") or "replay")
-                model = str(payload.get("model_name") or "dummy-llm-v1")
-                cache_dir = str(payload.get("cache_dir") or ".cache/inference/llm-replay")
-                return LLMRerankRouter(mode=mode, model_name=model, cache_dir=cache_dir)
-        if config_path in {"off", "live", "replay"}:
-            return LLMRerankRouter(mode=str(config_path))
+
+    payload = _read_router_config_payload(
+        router_name="hybrid_ranker",
+        config_path=config_path,
+    )
+    try:
+        validated = HybridRankerConfigPayload.model_validate(payload)
+    except ValidationError as exc:
+        raise ValueError(f"invalid hybrid_ranker config at {config_path}: {exc}") from exc
+    return HybridRankerRouter(weights=dict(validated.weights))
+
+
+def _build_llm_rerank_router(config_path: str | None) -> Router:
+    if config_path in {"off", "live", "replay"}:
+        return LLMRerankRouter(mode=str(config_path))
+    if config_path is None:
         return LLMRerankRouter(mode="replay")
-    if n == "stewards":
-        if config_path is None:
-            raise ValueError("config_path is required for stewards router")
-        return StewardsRouter(config_path=config_path)
-    raise ValueError(f"unknown builtin router: {name}")
+
+    payload = _read_router_config_payload(
+        router_name="llm_rerank",
+        config_path=config_path,
+    )
+    try:
+        validated = LLMRerankConfigPayload.model_validate(payload)
+    except ValidationError as exc:
+        raise ValueError(f"invalid llm_rerank config at {config_path}: {exc}") from exc
+    return LLMRerankRouter(
+        mode=validated.mode,
+        model_name=validated.model_name,
+        cache_dir=validated.cache_dir,
+    )
+
+
+def _build_stewards_router(config_path: str | None) -> Router:
+    if config_path is None:
+        raise ValueError("config_path is required for stewards router")
+    path = Path(config_path)
+    if not path.exists():
+        raise ValueError(f"stewards config path does not exist: {path}")
+    try:
+        load_scoring_config(path)
+    except Exception as exc:
+        raise ValueError(f"invalid stewards config at {path}: {exc}") from exc
+    return StewardsRouter(config_path=path)
+
+
+def _register_default_builtin_routers() -> None:
+    if _BUILTIN_ROUTER_FACTORIES:
+        return
+    register_builtin_router("mentions", _build_mentions_router)
+    register_builtin_router("popularity", _build_popularity_router)
+    register_builtin_router("codeowners", _build_codeowners_router)
+    register_builtin_router("union", _build_union_router)
+    register_builtin_router("hybrid_ranker", _build_hybrid_ranker_router)
+    register_builtin_router("llm_rerank", _build_llm_rerank_router)
+    register_builtin_router("stewards", _build_stewards_router)
+
+
+_register_default_builtin_routers()
+
+
+def _builtin_router(name: str, *, config_path: str | None) -> Router:
+    key = name.strip().lower()
+    factory = _BUILTIN_ROUTER_FACTORIES.get(key)
+    if factory is None:
+        raise ValueError(f"unknown builtin router: {name}")
+    return factory(config_path)
 
 
 def _coerce_router_or_predictor(obj):  # type: ignore[no-untyped-def]

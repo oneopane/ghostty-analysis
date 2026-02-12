@@ -228,18 +228,66 @@ def _route_router(
     return router.route(**kwargs)  # type: ignore[call-arg, attr-defined]
 
 
-def run_streaming_eval(
+@dataclass
+class PreparedEvalStage:
+    cfg: EvalRunConfig
+    specs: list[RouterSpec]
+    router_ids: list[str]
+    routers_by_id: dict[str, object]
+    package_versions: dict[str, str | None]
+    generated_at: datetime
+    run_dir: Path
+    store: FilesystemStore
+    db_max_event_occurred_at: datetime | None
+    db_max_watermark_updated_at: datetime | None
+    cutoffs: dict[int, datetime]
+    cutoff_source: str
+    ordered_pr_numbers: list[int]
+    stale_cutoff_note: str | None
+    routing_writer: ArtifactWriter
+    truth_window_seconds: int
+    truth_policies: dict[str, ResolvedTruthPolicy]
+    truth_primary_policy: str
+
+
+@dataclass
+class PerPrEvalStage:
+    routing_rows_by_router: dict[str, list[object]]
+    routing_rows_known_by_router: dict[str, list[object]]
+    routing_rows_by_policy_router: dict[
+        str, dict[str, list[tuple[PRMetrics, TruthDiagnostics, bool]]]
+    ]
+    queue_rows_by_router: dict[str, list[object]]
+    gate_rows: list[object]
+    router_feature_meta: dict[str, dict[str, object]]
+    truth_status_counts: dict[str, int]
+    truth_status_counts_by_policy: dict[str, dict[str, int]]
+
+
+@dataclass
+class AggregatedEvalStage:
+    routing_summaries: dict[str, object]
+    routing_summaries_known: dict[str, object]
+    routing_summaries_by_policy: dict[str, dict[str, object]]
+    routing_denominators_by_policy: dict[str, dict[str, dict[str, int]]]
+    routing_slices_by_policy: dict[str, dict[str, dict[str, dict[str, object]]]]
+    gates_summary: object
+    queue_summaries: dict[str, object]
+    llm_telemetry: dict[str, object]
+    notes: list[str]
+    report: EvalReport
+    truth_manifest: dict[str, object]
+
+
+def _prepare_eval_stage(
     *,
     cfg: EvalRunConfig,
     pr_numbers: list[int],
-    baselines: list[str] | None = None,
-    router_specs: list[RouterSpec] | None = None,
-    router_config_path: str | Path | None = None,
-    repo_profile_settings: RepoProfileRunSettings | None = None,
-    pr_cutoffs: dict[int | str, datetime] | None = None,
-) -> RunResult:
-    """Run a leakage-safe streaming evaluation."""
-
+    baselines: list[str] | None,
+    router_specs: list[RouterSpec] | None,
+    router_config_path: str | Path | None,
+    pr_cutoffs: dict[int | str, datetime] | None,
+) -> PreparedEvalStage:
     specs = _normalize_router_specs(
         baselines=baselines,
         router_specs=router_specs,
@@ -247,10 +295,7 @@ def run_streaming_eval(
     )
     router_ids = [router_id_for_spec(s) for s in specs]
 
-    routers_by_id = {
-        router_id_for_spec(spec): load_router(spec)
-        for spec in specs
-    }
+    routers_by_id = {router_id_for_spec(spec): load_router(spec) for spec in specs}
     for router in routers_by_id.values():
         if hasattr(router, "mode") and isinstance(getattr(router, "mode"), str):
             setattr(router, "mode", str(cfg.defaults.llm_mode or "replay").strip().lower())
@@ -285,11 +330,13 @@ def run_streaming_eval(
         pr_numbers=pr_numbers,
         pr_cutoffs=pr_cutoffs,
     )
-    ordered = sorted(pr_numbers, key=lambda n: (cutoffs[n], n))
+    ordered_pr_numbers = sorted(pr_numbers, key=lambda n: (cutoffs[n], n))
 
     stale_cutoff_note: str | None = None
     if db_max_event_occurred_at is not None:
-        stale_cutoff_prs = [n for n in ordered if cutoffs[n] > db_max_event_occurred_at]
+        stale_cutoff_prs = [
+            n for n in ordered_pr_numbers if cutoffs[n] > db_max_event_occurred_at
+        ]
         if stale_cutoff_prs:
             stale_cutoff_note = (
                 f"db_max_event_occurred_at={db_max_event_occurred_at.isoformat()} "
@@ -302,9 +349,7 @@ def run_streaming_eval(
                     "Refresh ingestion data or disable strict_streaming_eval explicitly."
                 )
 
-    routing_writer = ArtifactWriter(
-        repo=cfg.repo, data_dir=cfg.data_dir, run_id=cfg.run_id
-    )
+    routing_writer = ArtifactWriter(repo=cfg.repo, data_dir=cfg.data_dir, run_id=cfg.run_id)
 
     truth_window = cfg.defaults.resolved_truth_window()
     resolved_truth_policies = resolve_truth_policies(
@@ -324,23 +369,55 @@ def run_streaming_eval(
         )
         for pid, resolved in resolved_truth_policies.items()
     }
-    routing_rows_by_router: dict[str, list[object]] = {rid: [] for rid in router_ids}
-    routing_rows_known_by_router: dict[str, list[object]] = {rid: [] for rid in router_ids}
-    routing_rows_by_policy_router: dict[
-        str, dict[str, list[tuple[PRMetrics, TruthDiagnostics, bool]]]
-    ] = {
-        pid: {rid: [] for rid in router_ids}
-        for pid in truth_policies
-    }
-    queue_rows_by_router: dict[str, list[object]] = {rid: [] for rid in router_ids}
-    gate_rows: list[object] = []
-    router_feature_meta: dict[str, dict[str, object]] = {}
     truth_primary_policy = cfg.defaults.resolved_truth_primary_policy()
     if truth_primary_policy not in truth_policies:
         raise ValueError(
             f"truth_primary_policy is not active: {truth_primary_policy}; "
             f"active={list(truth_policies)}"
         )
+
+    return PreparedEvalStage(
+        cfg=cfg,
+        specs=specs,
+        router_ids=router_ids,
+        routers_by_id=routers_by_id,
+        package_versions=package_versions,
+        generated_at=generated_at,
+        run_dir=run_dir,
+        store=store,
+        db_max_event_occurred_at=db_max_event_occurred_at,
+        db_max_watermark_updated_at=db_max_watermark_updated_at,
+        cutoffs=cutoffs,
+        cutoff_source=cutoff_source,
+        ordered_pr_numbers=ordered_pr_numbers,
+        stale_cutoff_note=stale_cutoff_note,
+        routing_writer=routing_writer,
+        truth_window_seconds=truth_window_seconds,
+        truth_policies=truth_policies,
+        truth_primary_policy=truth_primary_policy,
+    )
+
+
+def _per_pr_evaluate_stage(
+    *,
+    prepared: PreparedEvalStage,
+    repo_profile_settings: RepoProfileRunSettings | None,
+) -> PerPrEvalStage:
+    routing_rows_by_router: dict[str, list[object]] = {
+        rid: [] for rid in prepared.router_ids
+    }
+    routing_rows_known_by_router: dict[str, list[object]] = {
+        rid: [] for rid in prepared.router_ids
+    }
+    routing_rows_by_policy_router: dict[
+        str, dict[str, list[tuple[PRMetrics, TruthDiagnostics, bool]]]
+    ] = {
+        pid: {rid: [] for rid in prepared.router_ids}
+        for pid in prepared.truth_policies
+    }
+    queue_rows_by_router: dict[str, list[object]] = {rid: [] for rid in prepared.router_ids}
+    gate_rows: list[object] = []
+    router_feature_meta: dict[str, dict[str, object]] = {}
     truth_status_counts: dict[str, int] = {
         TruthStatus.observed.value: 0,
         TruthStatus.no_post_cutoff_response.value: 0,
@@ -354,33 +431,36 @@ def run_streaming_eval(
             TruthStatus.unknown_due_to_ingestion_gap.value: 0,
             TruthStatus.policy_unavailable.value: 0,
         }
-        for pid in truth_policies
+        for pid in prepared.truth_policies
     }
 
-    for pr_number in ordered:
-        cutoff = cutoffs[pr_number]
+    for pr_number in prepared.ordered_pr_numbers:
+        cutoff = prepared.cutoffs[pr_number]
 
         snap = build_pr_snapshot_artifact(
-            repo=cfg.repo, pr_number=pr_number, as_of=cutoff, data_dir=cfg.data_dir
+            repo=prepared.cfg.repo,
+            pr_number=pr_number,
+            as_of=cutoff,
+            data_dir=prepared.cfg.data_dir,
         )
-        routing_writer.write_pr_snapshot(snap)
+        prepared.routing_writer.write_pr_snapshot(snap)
 
         repo_profile_row: dict[str, object] | None = None
         if repo_profile_settings is not None:
             repo_profile_row = _build_repo_profile_for_pr(
-                cfg=cfg,
+                cfg=prepared.cfg,
                 pr_number=pr_number,
                 cutoff=cutoff,
                 base_sha=snap.base_sha,
-                routing_writer=routing_writer,
+                routing_writer=prepared.routing_writer,
                 settings=repo_profile_settings,
             )
 
         inputs = build_pr_inputs_artifact(
-            repo=cfg.repo,
+            repo=prepared.cfg.repo,
             pr_number=pr_number,
             as_of=cutoff,
-            data_dir=cfg.data_dir,
+            data_dir=prepared.cfg.data_dir,
         )
         if repo_profile_row is not None:
             inputs = inputs.model_copy(
@@ -389,53 +469,58 @@ def run_streaming_eval(
                     "repo_profile_qa": repo_profile_row.get("qa") or {},
                 }
             )
-        routing_writer.write_pr_inputs(inputs)
+        prepared.routing_writer.write_pr_inputs(inputs)
 
         truth_diags: dict[str, TruthDiagnostics] = {}
-        for policy_id, resolved in truth_policies.items():
+        for policy_id, resolved in prepared.truth_policies.items():
             diag = truth_with_policy(
                 policy=resolved.spec,
-                repo=cfg.repo,
+                repo=prepared.cfg.repo,
                 pr_number=pr_number,
                 cutoff=cutoff,
-                data_dir=cfg.data_dir,
-                exclude_author=cfg.defaults.exclude_author,
-                exclude_bots=cfg.defaults.exclude_bots,
+                data_dir=prepared.cfg.data_dir,
+                exclude_author=prepared.cfg.defaults.exclude_author,
+                exclude_bots=prepared.cfg.defaults.exclude_bots,
             )
             truth_diags[policy_id] = diag
             truth_status_counts_by_policy[policy_id][diag.status.value] = (
                 truth_status_counts_by_policy[policy_id].get(diag.status.value, 0) + 1
             )
 
-        truth_diag = truth_diags[truth_primary_policy]
-        truth_targets = [] if truth_diag.selected_login is None else [truth_diag.selected_login]
-        truth_status_counts[truth_diag.status.value] = truth_status_counts.get(
-            truth_diag.status.value, 0
-        ) + 1
+        truth_diag = truth_diags[prepared.truth_primary_policy]
+        truth_targets = (
+            [] if truth_diag.selected_login is None else [truth_diag.selected_login]
+        )
+        truth_status_counts[truth_diag.status.value] = (
+            truth_status_counts.get(truth_diag.status.value, 0) + 1
+        )
 
         gate_metrics = per_pr_gate_metrics(
-            repo=cfg.repo, pr_number=pr_number, cutoff=cutoff, data_dir=cfg.data_dir
+            repo=prepared.cfg.repo,
+            pr_number=pr_number,
+            cutoff=cutoff,
+            data_dir=prepared.cfg.data_dir,
         )
 
         per_router: dict[str, object] = {}
-        for spec in specs:
+        for spec in prepared.specs:
             router_id = router_id_for_spec(spec)
-            router = routers_by_id[router_id]
+            router = prepared.routers_by_id[router_id]
 
             result = _route_router(
                 router=router,
-                repo=cfg.repo,
+                repo=prepared.cfg.repo,
                 pr_number=pr_number,
                 cutoff=cutoff,
-                data_dir=cfg.data_dir,
-                top_k=cfg.defaults.top_k,
+                data_dir=prepared.cfg.data_dir,
+                top_k=prepared.cfg.defaults.top_k,
                 input_bundle=inputs,
             )
 
             predictor = getattr(router, "predictor", None)
             feature_meta: dict[str, object] = {}
             if isinstance(predictor, PipelinePredictor) and predictor.last_features is not None:
-                routing_writer.write_features(
+                prepared.routing_writer.write_features(
                     pr_number=pr_number,
                     router_id=router_id,
                     features=predictor.last_features,
@@ -446,7 +531,9 @@ def run_streaming_eval(
                         if k in raw_meta:
                             feature_meta[k] = raw_meta[k]
                 if "feature_version" in predictor.last_features:
-                    feature_meta["feature_version"] = predictor.last_features["feature_version"]
+                    feature_meta["feature_version"] = predictor.last_features[
+                        "feature_version"
+                    ]
 
             router_provenance = getattr(router, "provenance", None)
             if isinstance(router_provenance, dict):
@@ -459,7 +546,7 @@ def run_streaming_eval(
                 for step in sorted(llm_steps.keys(), key=str.lower):
                     payload = llm_steps.get(step)
                     if isinstance(payload, dict):
-                        routing_writer.write_llm_step(
+                        prepared.routing_writer.write_llm_step(
                             pr_number=pr_number,
                             router_id=router_id,
                             step=str(step),
@@ -471,14 +558,14 @@ def run_streaming_eval(
             if feature_meta:
                 router_feature_meta[router_id] = dict(feature_meta)
 
-            routing_writer.write_route_result(
+            prepared.routing_writer.write_route_result(
                 RouteArtifact(baseline=router_id, result=result, meta=feature_meta)
             )
 
             pr_metrics_primary = per_pr_metrics(
                 result=result,
                 truth=TruthLabel(
-                    repo=cfg.repo,
+                    repo=prepared.cfg.repo,
                     pr_number=pr_number,
                     cutoff=cutoff,
                     targets=truth_targets,
@@ -486,13 +573,11 @@ def run_streaming_eval(
             )
             pr_metrics_by_policy: dict[str, PRMetrics] = {}
             for policy_id, diag in truth_diags.items():
-                targets = (
-                    [] if diag.selected_login is None else [diag.selected_login]
-                )
+                targets = [] if diag.selected_login is None else [diag.selected_login]
                 pr_metrics_by_policy[policy_id] = per_pr_metrics(
                     result=result,
                     truth=TruthLabel(
-                        repo=cfg.repo,
+                        repo=prepared.cfg.repo,
                         pr_number=pr_number,
                         cutoff=cutoff,
                         targets=targets,
@@ -502,7 +587,7 @@ def run_streaming_eval(
                 result=result,
                 baseline=router_id,
                 cutoff=cutoff,
-                data_dir=cfg.data_dir,
+                data_dir=prepared.cfg.data_dir,
                 include_ttfc=False,
             )
 
@@ -524,14 +609,14 @@ def run_streaming_eval(
                 "routing_agreement": pr_metrics_primary.model_dump(mode="json"),
                 "routing_agreement_by_policy": {
                     pid: pr_metrics_by_policy[pid].model_dump(mode="json")
-                    for pid in truth_policies
+                    for pid in prepared.truth_policies
                 },
                 "queue": queue_metrics.model_dump(mode="json"),
             }
 
         row: dict[str, object] = {
-            "repo": cfg.repo,
-            "run_id": cfg.run_id,
+            "repo": prepared.cfg.repo,
+            "run_id": prepared.cfg.run_id,
             "pr_number": pr_number,
             "cutoff": cutoff.isoformat(),
             "truth_behavior": truth_targets,
@@ -539,7 +624,7 @@ def run_streaming_eval(
             "truth_diagnostics": truth_diag.model_dump(mode="json"),
             "truth": {
                 "version": "v1",
-                "primary_policy": truth_primary_policy,
+                "primary_policy": prepared.truth_primary_policy,
                 "policies": {
                     pid: {
                         "targets": (
@@ -549,11 +634,11 @@ def run_streaming_eval(
                         ),
                         "status": truth_diags[pid].status.value,
                         "diagnostics": truth_diags[pid].model_dump(mode="json"),
-                        "policy_hash": truth_policies[pid].policy_hash,
-                        "policy_source": truth_policies[pid].source,
-                        "policy_source_ref": truth_policies[pid].source_ref,
+                        "policy_hash": prepared.truth_policies[pid].policy_hash,
+                        "policy_source": prepared.truth_policies[pid].source,
+                        "policy_source_ref": prepared.truth_policies[pid].source_ref,
                     }
-                    for pid in truth_policies
+                    for pid in prepared.truth_policies
                 },
             },
             "gates": gate_metrics.model_dump(mode="json"),
@@ -562,29 +647,46 @@ def run_streaming_eval(
         }
         if repo_profile_row is not None:
             row["repo_profile"] = repo_profile_row
-        store.append_jsonl("per_pr.jsonl", row)
+        prepared.store.append_jsonl("per_pr.jsonl", row)
         gate_rows.append(gate_metrics)
 
+    return PerPrEvalStage(
+        routing_rows_by_router=routing_rows_by_router,
+        routing_rows_known_by_router=routing_rows_known_by_router,
+        routing_rows_by_policy_router=routing_rows_by_policy_router,
+        queue_rows_by_router=queue_rows_by_router,
+        gate_rows=gate_rows,
+        router_feature_meta=router_feature_meta,
+        truth_status_counts=truth_status_counts,
+        truth_status_counts_by_policy=truth_status_counts_by_policy,
+    )
+
+
+def _aggregate_eval_stage(
+    *,
+    prepared: PreparedEvalStage,
+    per_pr: PerPrEvalStage,
+) -> AggregatedEvalStage:
     routing_summaries = {
-        rid: RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id).aggregate(rows)  # type: ignore[arg-type]
-        for rid, rows in routing_rows_by_router.items()
+        rid: RoutingAgreement(repo=prepared.cfg.repo, run_id=prepared.cfg.run_id).aggregate(rows)  # type: ignore[arg-type]
+        for rid, rows in per_pr.routing_rows_by_router.items()
     }
     routing_summaries_known = {
-        rid: RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id).aggregate(rows)  # type: ignore[arg-type]
-        for rid, rows in routing_rows_known_by_router.items()
+        rid: RoutingAgreement(repo=prepared.cfg.repo, run_id=prepared.cfg.run_id).aggregate(rows)  # type: ignore[arg-type]
+        for rid, rows in per_pr.routing_rows_known_by_router.items()
     }
     routing_summaries_by_policy = {
         policy_id: {
-            rid: RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id).aggregate(
+            rid: RoutingAgreement(repo=prepared.cfg.repo, run_id=prepared.cfg.run_id).aggregate(
                 [m for m, _, _ in rows]  # type: ignore[arg-type]
             )
             for rid, rows in by_router.items()
         }
-        for policy_id, by_router in routing_rows_by_policy_router.items()
+        for policy_id, by_router in per_pr.routing_rows_by_policy_router.items()
     }
     routing_denominators_by_policy: dict[str, dict[str, dict[str, int]]] = {}
     routing_slices_by_policy: dict[str, dict[str, dict[str, dict[str, object]]]] = {}
-    for policy_id, by_router in routing_rows_by_policy_router.items():
+    for policy_id, by_router in per_pr.routing_rows_by_policy_router.items():
         routing_denominators_by_policy[policy_id] = {}
         routing_slices_by_policy[policy_id] = {}
         for rid, rows in by_router.items():
@@ -597,7 +699,11 @@ def run_streaming_eval(
             known_rows = [
                 m
                 for m, d, _ in rows
-                if d.status not in {TruthStatus.unknown_due_to_ingestion_gap, TruthStatus.policy_unavailable}
+                if d.status
+                not in {
+                    TruthStatus.unknown_due_to_ingestion_gap,
+                    TruthStatus.policy_unavailable,
+                }
             ]
 
             routing_denominators_by_policy[policy_id][rid] = {
@@ -608,38 +714,46 @@ def run_streaming_eval(
                 "known_truth": len(known_rows),
             }
             routing_slices_by_policy[policy_id][rid] = {
-                "all": RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id)
+                "all": RoutingAgreement(repo=prepared.cfg.repo, run_id=prepared.cfg.run_id)
                 .aggregate(all_rows)
                 .model_dump(mode="json"),
-                "known_truth": RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id)
+                "known_truth": RoutingAgreement(
+                    repo=prepared.cfg.repo, run_id=prepared.cfg.run_id
+                )
                 .aggregate(known_rows)
                 .model_dump(mode="json"),
-                "observed": RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id)
+                "observed": RoutingAgreement(
+                    repo=prepared.cfg.repo, run_id=prepared.cfg.run_id
+                )
                 .aggregate(observed_rows)
                 .model_dump(mode="json"),
-                "router_nonempty": RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id)
+                "router_nonempty": RoutingAgreement(
+                    repo=prepared.cfg.repo, run_id=prepared.cfg.run_id
+                )
                 .aggregate(nonempty_rows)
                 .model_dump(mode="json"),
-                "observed_and_router_nonempty": RoutingAgreement(repo=cfg.repo, run_id=cfg.run_id)
+                "observed_and_router_nonempty": RoutingAgreement(
+                    repo=prepared.cfg.repo, run_id=prepared.cfg.run_id
+                )
                 .aggregate(observed_nonempty_rows)
                 .model_dump(mode="json"),
             }
 
-    gates_summary = GateCorrelation(repo=cfg.repo, run_id=cfg.run_id).aggregate(
-        gate_rows  # type: ignore[arg-type]
+    gates_summary = GateCorrelation(repo=prepared.cfg.repo, run_id=prepared.cfg.run_id).aggregate(
+        per_pr.gate_rows  # type: ignore[arg-type]
     )
     queue_summaries = {
         rid: QueueMetricsAggregator(
-            repo=cfg.repo, run_id=cfg.run_id, baseline=rid
+            repo=prepared.cfg.repo, run_id=prepared.cfg.run_id, baseline=rid
         ).aggregate(
             rows  # type: ignore[arg-type]
         )
-        for rid, rows in queue_rows_by_router.items()
+        for rid, rows in per_pr.queue_rows_by_router.items()
     }
 
     llm_telemetry: dict[str, object] = {"routers": {}, "total_cost_usd": 0.0}
     total_cost = 0.0
-    for rid, meta in router_feature_meta.items():
+    for rid, meta in per_pr.router_feature_meta.items():
         prov = meta.get("llm_provenance")
         if not isinstance(prov, dict):
             continue
@@ -656,27 +770,27 @@ def run_streaming_eval(
     llm_telemetry["total_cost_usd"] = total_cost
 
     notes: list[str] = []
-    if stale_cutoff_note is not None:
-        notes.append(stale_cutoff_note)
+    if prepared.stale_cutoff_note is not None:
+        notes.append(prepared.stale_cutoff_note)
 
     report = EvalReport(
-        repo=cfg.repo,
-        run_id=cfg.run_id,
-        generated_at=generated_at,
-        db_max_event_occurred_at=db_max_event_occurred_at,
-        db_max_watermark_updated_at=db_max_watermark_updated_at,
-        package_versions=package_versions,
-        routers=list(router_ids),
-        baselines=list(router_ids),
+        repo=prepared.cfg.repo,
+        run_id=prepared.cfg.run_id,
+        generated_at=prepared.generated_at,
+        db_max_event_occurred_at=prepared.db_max_event_occurred_at,
+        db_max_watermark_updated_at=prepared.db_max_watermark_updated_at,
+        package_versions=prepared.package_versions,
+        routers=list(prepared.router_ids),
+        baselines=list(prepared.router_ids),
         routing_agreement=routing_summaries,  # type: ignore[arg-type]
         gates=gates_summary,
         queue=queue_summaries,  # type: ignore[arg-type]
         notes=notes,
         extra={
-            "truth_primary_policy": truth_primary_policy,
-            "truth_policies": list(truth_policies),
-            "truth_coverage_counts": truth_status_counts,
-            "truth_coverage_counts_by_policy": truth_status_counts_by_policy,
+            "truth_primary_policy": prepared.truth_primary_policy,
+            "truth_policies": list(prepared.truth_policies),
+            "truth_coverage_counts": per_pr.truth_status_counts,
+            "truth_coverage_counts_by_policy": per_pr.truth_status_counts_by_policy,
             "routing_agreement_known_truth": {
                 rid: summary.model_dump(mode="json")
                 for rid, summary in routing_summaries_known.items()
@@ -693,54 +807,107 @@ def run_streaming_eval(
             "llm_telemetry": llm_telemetry,
         },
     )
-    store.write_json("report.json", report.model_dump(mode="json"))
-
-    store.write_text(
-        "report.md",
-        render_report_md(
-            repo=cfg.repo,
-            run_id=cfg.run_id,
-            generated_at=generated_at,
-            db_max_event_occurred_at=db_max_event_occurred_at,
-            db_max_watermark_updated_at=db_max_watermark_updated_at,
-            package_versions=package_versions,
-            routing=routing_summaries,  # type: ignore[arg-type]
-            gates=gates_summary,
-            queue=queue_summaries,  # type: ignore[arg-type]
-            truth_coverage_counts=truth_status_counts,
-            truth_primary_policy=truth_primary_policy,
-            routing_by_policy=routing_summaries_by_policy,  # type: ignore[arg-type]
-            routing_slices_by_policy=routing_slices_by_policy,
-            routing_denominators_by_policy=routing_denominators_by_policy,
-            llm_telemetry=llm_telemetry,
-            notes=notes,
-        ),
-    )
 
     truth_manifest = {
-        "policies": list(truth_policies),
-        "primary": truth_primary_policy,
-        "effective_window_seconds": int(truth_window.total_seconds()),
-        "include_review_comments": bool(cfg.defaults.truth_include_review_comments),
+        "policies": list(prepared.truth_policies),
+        "primary": prepared.truth_primary_policy,
+        "effective_window_seconds": prepared.truth_window_seconds,
+        "include_review_comments": bool(prepared.cfg.defaults.truth_include_review_comments),
         "policy_hashes": {
-            pid: truth_policies[pid].policy_hash for pid in truth_policies
+            pid: prepared.truth_policies[pid].policy_hash
+            for pid in prepared.truth_policies
         },
     }
 
-    manifest = build_manifest(
-        cfg=cfg,
-        pr_numbers=ordered,
-        generated_at=generated_at,
-        db_max_event_occurred_at=db_max_event_occurred_at,
-        db_max_watermark_updated_at=db_max_watermark_updated_at,
-        package_versions=package_versions,
-        baselines=list(router_ids),
-        routers=[router_manifest_entry(s) for s in specs],
-        router_feature_meta={k: router_feature_meta[k] for k in sorted(router_feature_meta)},
-        cutoff_source=cutoff_source,
-        pr_cutoffs={str(n): cutoffs[n].isoformat() for n in ordered},
-        truth=truth_manifest,
+    return AggregatedEvalStage(
+        routing_summaries=routing_summaries,
+        routing_summaries_known=routing_summaries_known,
+        routing_summaries_by_policy=routing_summaries_by_policy,
+        routing_denominators_by_policy=routing_denominators_by_policy,
+        routing_slices_by_policy=routing_slices_by_policy,
+        gates_summary=gates_summary,
+        queue_summaries=queue_summaries,
+        llm_telemetry=llm_telemetry,
+        notes=notes,
+        report=report,
+        truth_manifest=truth_manifest,
     )
-    store.write_json("manifest.json", manifest.model_dump(mode="json"))
 
-    return RunResult(run_dir=run_dir)
+
+def _emit_eval_stage(
+    *,
+    prepared: PreparedEvalStage,
+    per_pr: PerPrEvalStage,
+    aggregated: AggregatedEvalStage,
+) -> RunResult:
+    prepared.store.write_json("report.json", aggregated.report.model_dump(mode="json"))
+    prepared.store.write_text(
+        "report.md",
+        render_report_md(
+            repo=prepared.cfg.repo,
+            run_id=prepared.cfg.run_id,
+            generated_at=prepared.generated_at,
+            db_max_event_occurred_at=prepared.db_max_event_occurred_at,
+            db_max_watermark_updated_at=prepared.db_max_watermark_updated_at,
+            package_versions=prepared.package_versions,
+            routing=aggregated.routing_summaries,  # type: ignore[arg-type]
+            gates=aggregated.gates_summary,
+            queue=aggregated.queue_summaries,  # type: ignore[arg-type]
+            truth_coverage_counts=per_pr.truth_status_counts,
+            truth_primary_policy=prepared.truth_primary_policy,
+            routing_by_policy=aggregated.routing_summaries_by_policy,  # type: ignore[arg-type]
+            routing_slices_by_policy=aggregated.routing_slices_by_policy,
+            routing_denominators_by_policy=aggregated.routing_denominators_by_policy,
+            llm_telemetry=aggregated.llm_telemetry,
+            notes=aggregated.notes,
+        ),
+    )
+
+    manifest = build_manifest(
+        cfg=prepared.cfg,
+        pr_numbers=prepared.ordered_pr_numbers,
+        generated_at=prepared.generated_at,
+        db_max_event_occurred_at=prepared.db_max_event_occurred_at,
+        db_max_watermark_updated_at=prepared.db_max_watermark_updated_at,
+        package_versions=prepared.package_versions,
+        baselines=list(prepared.router_ids),
+        routers=[router_manifest_entry(s) for s in prepared.specs],
+        router_feature_meta={
+            k: per_pr.router_feature_meta[k] for k in sorted(per_pr.router_feature_meta)
+        },
+        cutoff_source=prepared.cutoff_source,
+        pr_cutoffs={
+            str(n): prepared.cutoffs[n].isoformat() for n in prepared.ordered_pr_numbers
+        },
+        truth=aggregated.truth_manifest,
+    )
+    prepared.store.write_json("manifest.json", manifest.model_dump(mode="json"))
+    return RunResult(run_dir=prepared.run_dir)
+
+
+def run_streaming_eval(
+    *,
+    cfg: EvalRunConfig,
+    pr_numbers: list[int],
+    baselines: list[str] | None = None,
+    router_specs: list[RouterSpec] | None = None,
+    router_config_path: str | Path | None = None,
+    repo_profile_settings: RepoProfileRunSettings | None = None,
+    pr_cutoffs: dict[int | str, datetime] | None = None,
+) -> RunResult:
+    """Run a leakage-safe streaming evaluation."""
+
+    prepared = _prepare_eval_stage(
+        cfg=cfg,
+        pr_numbers=pr_numbers,
+        baselines=baselines,
+        router_specs=router_specs,
+        router_config_path=router_config_path,
+        pr_cutoffs=pr_cutoffs,
+    )
+    per_pr = _per_pr_evaluate_stage(
+        prepared=prepared,
+        repo_profile_settings=repo_profile_settings,
+    )
+    aggregated = _aggregate_eval_stage(prepared=prepared, per_pr=per_pr)
+    return _emit_eval_stage(prepared=prepared, per_pr=per_pr, aggregated=aggregated)

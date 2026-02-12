@@ -15,6 +15,17 @@ Core workspace members are defined in `pyproject.toml` and include:
 - `packages/evaluation`
 - `packages/cli`
 
+## 2026-02-12 Maintainability Update Snapshot
+
+Recent architecture hardening changes reflected in code:
+
+- Unified CLI now exposes explicit degraded-mode command groups when optional package wiring fails (`packages/cli/src/repo_cli/cli.py`).
+- Router option parsing/validation is centralized in inference and reused by other CLIs (`packages/inference/src/repo_routing/router_specs.py`).
+- Evaluation now exposes service-level APIs (`run`, `show`, `list`, `explain`) used by experimentation instead of importing evaluation CLI command functions (`packages/evaluation/src/evaluation_harness/service.py`).
+- Experimentation workflow code is split into focused modules (`workflow_cohort.py`, `workflow_spec.py`, `workflow_run.py`, `workflow_quality.py`, `workflow_diff.py`, `workflow_doctor.py`, `workflow_profile.py`).
+- Experiment post-processing writes synchronized `report.json` and `report.md` updates to prevent report drift (`packages/experimentation/src/experimentation/workflow_quality.py`).
+- Boundary strategy/parser registries now support registration maps/hooks rather than hardcoded branching (`packages/inference/src/repo_routing/boundary/*/registry.py`).
+
 **Start here for no-code execution:**
 
 - [`examples/e2e-unified-cli.md`](./examples/e2e-unified-cli.md) (canonical end-to-end workflow)

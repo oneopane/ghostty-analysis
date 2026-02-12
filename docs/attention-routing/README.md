@@ -4,6 +4,14 @@ Primary architecture and onboarding doc:
 
 - [architecture.md](./architecture.md)
 
+Current implementation anchors (kept in sync with code):
+
+- Shared router spec parsing/validation: `packages/inference/src/repo_routing/router_specs.py`
+- Builtin router loading + config schema validation: `packages/inference/src/repo_routing/registry.py`
+- Boundary strategy/parser registries with runtime registration hooks:
+  - `packages/inference/src/repo_routing/boundary/inference/registry.py`
+  - `packages/inference/src/repo_routing/boundary/parsers/registry.py`
+
 Feature implementation and status:
 
 - [feature-implementation-checklist.md](./feature-implementation-checklist.md)

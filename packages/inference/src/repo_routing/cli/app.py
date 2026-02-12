@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 
 import typer
 from rich import print
@@ -17,22 +16,14 @@ from ..boundary.models import MembershipMode
 from ..boundary.pipeline import write_boundary_model_artifacts
 from ..config import RepoRoutingConfig
 from ..paths import repo_codeowners_dir, repo_db_path
+from ..registry import RouterSpec
+from ..router_specs import build_router_specs
 from ..time import cutoff_key_utc, parse_dt_utc
 
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 boundary_app = typer.Typer(help="Boundary model inference commands")
 app.add_typer(boundary_app, name="boundary")
-
-_VALID_BASELINES = {
-    "mentions",
-    "popularity",
-    "codeowners",
-    "union",
-    "hybrid_ranker",
-    "llm_rerank",
-    "stewards",
-}
 
 
 def _parse_iso_utc(value: str, *, param: str) -> datetime:
@@ -45,29 +36,25 @@ def _parse_iso_utc(value: str, *, param: str) -> datetime:
     return dt
 
 
-def _normalize_baselines(values: list[str]) -> list[str]:
-    normalized = [v.strip().lower() for v in values if v.strip()]
-    if not normalized:
-        raise typer.BadParameter("at least one baseline is required")
-
-    unknown = sorted({b for b in normalized if b not in _VALID_BASELINES})
-    if unknown:
-        valid = ", ".join(sorted(_VALID_BASELINES))
-        raise typer.BadParameter(
-            f"unknown baseline(s): {', '.join(unknown)}. valid: {valid}"
+def _build_specs_for_baselines(
+    *,
+    baselines: list[str],
+    config: str | None,
+) -> list[RouterSpec]:
+    router_configs: list[str] = []
+    if config is not None:
+        router_configs = [f"stewards={config}"]
+    try:
+        specs = build_router_specs(
+            routers=[],
+            baselines=baselines,
+            router_imports=[],
+            router_configs=router_configs,
+            stewards_config_required_message="--config is required when baseline includes stewards",
         )
-    return normalized
-
-
-def _validate_stewards_config(*, baselines: list[str], config: str | None) -> str | None:
-    if "stewards" not in baselines:
-        return config
-    if config is None:
-        raise typer.BadParameter("--config is required when baseline includes stewards")
-    config_path = Path(config)
-    if not config_path.exists():
-        raise typer.BadParameter(f"--config path does not exist: {config_path}")
-    return str(config_path)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    return specs
 
 
 @app.command()
@@ -123,18 +110,18 @@ def route(
 ):
     """Run one baseline and emit a RouteResult artifact."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
-    baselines = _normalize_baselines([baseline])
-    config_path = _validate_stewards_config(baselines=baselines, config=config)
+    specs = _build_specs_for_baselines(baselines=[baseline], config=config)
+    spec = specs[0]
     as_of_dt = _parse_iso_utc(as_of, param="--as-of")
 
     artifact = build_route_artifact(
-        baseline=baselines[0],
+        baseline=spec.name,
         repo=cfg.repo,
         pr_number=pr_number,
         as_of=as_of_dt,
         data_dir=cfg.data_dir,
         top_k=top_k,
-        config_path=config_path,
+        config_path=spec.config_path,
     )
     writer = ArtifactWriter(repo=cfg.repo, data_dir=cfg.data_dir, run_id=run_id)
     out = writer.write_route_result(artifact)
@@ -230,8 +217,7 @@ def build_artifacts(
 ):
     """Build snapshot + baseline routing artifacts for a PR list/window."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
-    baselines = _normalize_baselines(list(baseline))
-    config_path = _validate_stewards_config(baselines=baselines, config=config)
+    specs = _build_specs_for_baselines(baselines=list(baseline), config=config)
 
     as_of_dt: datetime | None = (
         _parse_iso_utc(as_of, param="--as-of") if as_of is not None else None
@@ -280,15 +266,15 @@ def build_artifacts(
         )
         route_artifacts = [
             build_route_artifact(
-                baseline=b,
+                baseline=spec.name,
                 repo=cfg.repo,
                 pr_number=pr_number,
                 as_of=cutoff,
                 data_dir=cfg.data_dir,
                 top_k=top_k,
-                config_path=config_path,
+                config_path=spec.config_path,
             )
-            for b in baselines
+            for spec in specs
         ]
 
         snap_path = writer.write_pr_snapshot(snap)

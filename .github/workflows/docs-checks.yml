@@ -1,4 +1,4 @@
-name: docs-checks
+name: workspace-checks
 
 on:
   pull_request:
@@ -11,8 +11,76 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
 
       - name: Validate docs naming
         run: uv run python scripts/validate_docs_naming.py
+
+  package-smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: packages/ingestion
+            command: ingestion --help
+          - project: packages/inference
+            command: inference --help
+          - project: packages/evaluation
+            command: evaluation --help
+          - project: packages/experimentation
+            command: python -c "import experimentation.unified_experiment as u; assert u.experiment_app is not None"
+          - project: packages/cli
+            command: repo --help
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Sync workspace
+        run: uv sync --all-packages --all-extras
+
+      - name: Run smoke command
+        run: uv run --project ${{ matrix.project }} ${{ matrix.command }}
+
+  package-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - ingestion
+          - inference
+          - evaluation
+          - experimentation
+          - cli
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Sync workspace
+        run: uv sync --all-packages --all-extras
+
+      - name: Run package tests
+        run: uv run --project packages/${{ matrix.package }} pytest -q packages/${{ matrix.package }}/tests

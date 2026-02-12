@@ -11,6 +11,9 @@ dependencies = [
   "evaluation>=0.1.0",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8.2.0"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 

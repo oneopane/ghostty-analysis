@@ -13,6 +13,7 @@ from ..providers.github.auth import select_auth_token
 from ..providers.github.client import GitHubRestClient
 from ..intervals.rebuild import rebuild_intervals
 from .qa import GapRecorder, write_qa_report
+from .pipeline import IngestStagePipeline
 from ..storage.db import get_engine, get_session, init_db
 from .pull_request_files import ingest_pull_request_files
 from ..storage.upsert import (
@@ -85,10 +86,13 @@ async def _run_backfill(
     start_at: str | None,
     end_at: str | None,
 ) -> None:
+    pipeline = IngestStagePipeline(flow="backfill")
+
     repo = await client.get_json(f"/repos/{owner}/{name}")
     upsert_user(session, repo.get("owner"))
     repo_id = upsert_repo(session, repo)
     session.commit()
+    pipeline.checkpoint("repo_seed", repo_id=repo_id)
 
     window_start, window_end = resolve_window(start_at, end_at)
 
@@ -114,6 +118,7 @@ async def _run_backfill(
         if committed_at and (max_commit_time is None or committed_at > max_commit_time):
             max_commit_time = committed_at
     session.commit()
+    pipeline.checkpoint("commits", max_commit_time=str(max_commit_time) if max_commit_time else None)
 
     async for branch in client.paginate(
         f"/repos/{owner}/{name}/branches",
@@ -131,6 +136,7 @@ async def _run_backfill(
             is_protected=branch.get("protected"),
         )
     session.commit()
+    pipeline.checkpoint("branches")
 
     async for tag in client.paginate(
         f"/repos/{owner}/{name}/tags",
@@ -148,6 +154,7 @@ async def _run_backfill(
             is_protected=None,
         )
     session.commit()
+    pipeline.checkpoint("tags")
 
     async for release in client.paginate(
         f"/repos/{owner}/{name}/releases",
@@ -162,6 +169,7 @@ async def _run_backfill(
         upsert_user(session, release.get("author"))
         upsert_release(session, repo_id, release)
     session.commit()
+    pipeline.checkpoint("releases")
 
     pr_by_number: dict[int, dict] = {}
     pr_id_by_number: dict[int, int] = {}
@@ -197,6 +205,7 @@ async def _run_backfill(
         if pr_updated and (max_pr_updated is None or pr_updated > max_pr_updated):
             max_pr_updated = pr_updated
     session.commit()
+    pipeline.checkpoint("pull_requests", count=len(pr_by_number))
 
     issues: list[dict] = []
     issue_id_by_number: dict[int, int] = {}
@@ -229,12 +238,14 @@ async def _run_backfill(
         ):
             max_issue_updated = issue_updated
     session.commit()
+    pipeline.checkpoint("issues", count=len(issue_id_by_number))
 
     for number, pr in pr_by_number.items():
         issue_id = issue_id_by_number.get(number)
         if issue_id is not None:
             upsert_pull_request(session, repo_id, pr, issue_id=issue_id)
     session.commit()
+    pipeline.checkpoint("issue_pr_linking")
 
     for issue in issues:
         number = issue.get("number")
@@ -286,6 +297,7 @@ async def _run_backfill(
                 window_end,
             )
     session.commit()
+    pipeline.checkpoint("issue_activity")
 
     for number, pr in pr_by_number.items():
         pr_id = pr_id_by_number.get(number)
@@ -335,6 +347,7 @@ async def _run_backfill(
                 window_end,
             )
     session.commit()
+    pipeline.checkpoint("pull_request_activity")
 
     if max_commit_time:
         upsert_watermark(session, repo_id, "commits", updated_at=max_commit_time)
@@ -343,9 +356,17 @@ async def _run_backfill(
     if max_pr_updated:
         upsert_watermark(session, repo_id, "pulls", updated_at=max_pr_updated)
     session.commit()
+    pipeline.checkpoint(
+        "watermarks",
+        commits=max_commit_time.isoformat() if max_commit_time else None,
+        issues=max_issue_updated.isoformat() if max_issue_updated else None,
+        pulls=max_pr_updated.isoformat() if max_pr_updated else None,
+    )
 
     rebuild_intervals(session, repo_id)
+    pipeline.checkpoint("intervals_rebuilt")
     write_qa_report(session, repo_id)
+    pipeline.checkpoint("qa_report_written", checkpoints=len(pipeline.checkpoints))
 
 
 def _upsert_related_for_issue_event(session, repo_id: int, payload: dict) -> None:
