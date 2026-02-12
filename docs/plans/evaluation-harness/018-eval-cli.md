@@ -1,4 +1,4 @@
-# 018 - Add repo eval commands (run/show/explain/list)
+# 018 - Add repo evaluation commands (run/show/explain/list)
 
 - [x] Done
 
@@ -6,10 +6,10 @@
 Provide minimal CLI UX to run evaluation and inspect results.
 
 ## Work
-- `repo eval run`: perform an evaluation and write outputs.
-- `repo eval show`: pretty-print a report.
-- `repo eval explain`: print route + evidence + truths for one PR.
-- `repo eval list`: list run directories.
+- `repo evaluation run`: perform an evaluation and write outputs.
+- `repo evaluation show`: pretty-print a report.
+- `repo evaluation explain`: print route + evidence + truths for one PR.
+- `repo evaluation list`: list run directories.
 
 Defaults (v0):
 - cutoff: `created_at`
@@ -18,15 +18,15 @@ Defaults (v0):
 
 ## Files
 Touch:
-- `packages/evaluation-harness/src/evaluation_harness/cli/app.py`
+- `packages/evaluation/src/evaluation_harness/cli/app.py`
 
 Create:
-- `packages/evaluation-harness/src/evaluation_harness/cli/__init__.py`
-- `packages/evaluation-harness/src/evaluation_harness/cli/run.py`
-- `packages/evaluation-harness/src/evaluation_harness/cli/show.py`
-- `packages/evaluation-harness/src/evaluation_harness/cli/explain.py`
-- `packages/evaluation-harness/src/evaluation_harness/cli/list_runs.py`
+- `packages/evaluation/src/evaluation_harness/cli/__init__.py`
+- `packages/evaluation/src/evaluation_harness/cli/run.py`
+- `packages/evaluation/src/evaluation_harness/cli/show.py`
+- `packages/evaluation/src/evaluation_harness/cli/explain.py`
+- `packages/evaluation/src/evaluation_harness/cli/list_runs.py`
 
 ## Acceptance Criteria
 - CLI never calls GitHub APIs.
-- `repo eval run` exits non-zero on missing DB.
+- `repo evaluation run` exits non-zero on missing DB.

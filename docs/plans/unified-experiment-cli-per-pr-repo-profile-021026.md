@@ -32,19 +32,19 @@ This task focuses on adding the **Repo Profile builder/IR + plumbing + unified U
 
 ### 0.1 Confirm workspace structure and key entrypoints
 Verify these exist and align:
-- packages/repo-ingestion (CLI: gh_history_ingestion.cli.app:app)
-- packages/repo-routing (CLI: repo_routing.cli.app:app)
-- packages/evaluation-harness (CLI: evaluation_harness.cli.app:app)
-- packages/repo-cli (CLI: repo_cli.cli:app)
+- packages/ingestion (CLI: gh_history_ingestion.cli.app:app)
+- packages/inference (CLI: repo_routing.cli.app:app)
+- packages/evaluation (CLI: evaluation_harness.cli.app:app)
+- packages/cli (CLI: repo_cli.cli:app)
 
-Verify dependency edges (evaluation-harness depends on repo-routing) and how `repo-cli` currently mounts other CLIs.
+Verify dependency edges (evaluation depends on inference) and how `cli` currently mounts other CLIs.
 
 ### 0.2 Confirm current “single CLI” reality
-Check whether `repo-cli` is already the intended unified front door:
-- How it wires/mounts ingestion/routing/eval commands today
+Check whether `cli` is already the intended unified front door:
+- How it wires/mounts ingestion/inference/evaluation commands today
 - Whether it is stable enough to become the *only* supported experiment UX CLI
 
-Goal: decide whether to extend `repo-cli` or replace it with a new “experiments” CLI package. Default preference: extend `repo-cli` unless it is structurally wrong.
+Goal: decide whether to extend `cli` or replace it with a new “experiments” CLI package. Default preference: extend `cli` unless it is structurally wrong.
 
 ### 0.3 Confirm deterministic, offline data substrate
 Verify DB paths, eval artifact paths, and deterministic writers:
@@ -86,20 +86,20 @@ There must be exactly one recommended UX CLI for all experimentation tasks. It s
 - optionally trigger ingestion flows (or at least link to them cleanly)
 
 ### 1.2 Command surface (proposed)
-Implement under `repo` (repo-cli) unless audit suggests otherwise. Propose a structure like:
+Implement under `repo` (cli) unless audit suggests otherwise. Propose a structure like:
 
 - `repo ingest ...` (existing)
 - `repo cohort create ...` (new; outputs cohort.json with hash)
 - `repo experiment init ...` (new; writes an ExperimentSpec template)
-- `repo experiment run ...` (new; runs evaluation-harness using a spec + cohort; builds per-PR repo profile by default)
-- `repo experiment show ...` (wrap evaluation-harness show)
-- `repo experiment explain ...` (wrap evaluation-harness explain)
-- `repo experiment list ...` (wrap evaluation-harness list)
+- `repo experiment run ...` (new; runs evaluation using a spec + cohort; builds per-PR repo profile by default)
+- `repo experiment show ...` (wrap evaluation show)
+- `repo experiment explain ...` (wrap evaluation explain)
+- `repo experiment list ...` (wrap evaluation list)
 - `repo experiment diff ...` (new; compares two run_ids; requires same cohort hash unless `--force`)
 - `repo doctor ...` (new; preflight checks + coverage summary)
 - `repo profile build ...` (optional; build repo profile for PR(s) without running eval)
 
-Keep the underlying packages (ingestion/routing/eval) as libraries; the unified CLI is a thin orchestration + UX layer.
+Keep the underlying packages (ingestion/inference/evaluation) as libraries; the unified CLI is a thin orchestration + UX layer.
 
 ### 1.3 ExperimentSpec + Cohort as first-class artifacts
 Define file formats (v1):
@@ -118,7 +118,7 @@ The unified CLI should accept either:
 - inline args for quick runs (but must still emit a spec into the run dir for reproducibility).
 
 ### 1.4 Compatibility + migration
-- Preserve existing entrypoints for now (repo-ingestion, repo-routing, evaluation-harness) but treat them as “advanced” tools.
+- Preserve existing entrypoints for now (ingestion, inference, evaluation) but treat them as “advanced” tools.
 - The new unified CLI should call them internally or invoke their library functions directly.
 - Do not break existing behavior; add new commands and route users to `repo ...` as the primary workflow.
 
@@ -159,7 +159,7 @@ Inspect current code for any mechanism like:
 - data/.../codeowners/<base_sha>/CODEOWNERS
 and determine if a generalized pinned fetch exists.
 
-If missing, implement a minimal, generalized “pinned repo file fetcher” (allowlist) in repo-ingestion:
+If missing, implement a minimal, generalized “pinned repo file fetcher” (allowlist) in ingestion:
 - fetch file contents by `base_sha` using GitHub API (only during ingestion/build steps, not during eval unless explicitly allowed)
 - store under: data/github/<owner>/<repo>/repo_artifacts/<base_sha>/...
 - write a manifest with content hashes
@@ -183,27 +183,27 @@ Prefer v1 that works without LLM: parse CODEOWNERS deterministically + simple he
 
 ## Phase 3 — Implementation (end-to-end)
 
-### 3.1 Extend unified CLI (repo-cli) as the front door
+### 3.1 Extend unified CLI (cli) as the front door
 Implement new Typer command groups per the Phase 1 spec.
 Where possible, call library functions directly rather than shelling out.
 
 Add:
 - cohort creation (deterministic)
 - experiment init (writes spec template)
-- experiment run (wraps evaluation-harness run, builds repo profiles)
+- experiment run (wraps evaluation run, builds repo profiles)
 - experiment diff (new)
 - doctor/preflight (new)
 - profile build (optional)
 
 ### 3.2 Add Repo Profile module(s)
-Likely in repo-routing (routing consumes it):
+Likely in inference (routing consumes it):
 - `repo_routing/repo_profile/models.py`
 - `repo_routing/repo_profile/builder.py`
 - `repo_routing/repo_profile/parsers/codeowners.py`
 - `repo_routing/repo_profile/storage.py` (stable paths, deterministic writes)
 
 ### 3.3 Wire into evaluation runner via unified CLI
-In `evaluation_harness.runner.run_streaming_eval` (or via wrapper in repo-cli if preferable):
+In `evaluation_harness.runner.run_streaming_eval` (or via wrapper in cli if preferable):
 - before routing each PR:
   - determine base_sha anchor from PR snapshot
   - ensure pinned repo artifacts exist (strict mode fails)
@@ -234,7 +234,7 @@ Follow existing pytest patterns and repository conventions.
 ## Non-goals
 - Do NOT build a full LLM-based router in this change.
 - Do NOT introduce nondeterministic calls during evaluation by default.
-- Do NOT remove existing CLIs; unify UX through repo-cli and keep others available.
+- Do NOT remove existing CLIs; unify UX through cli and keep others available.
 
 ---
 

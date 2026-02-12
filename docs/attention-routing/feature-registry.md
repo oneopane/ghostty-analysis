@@ -6,8 +6,8 @@ For conceptual PR×X relation buckets, see `relation-taxonomy.md`.
 
 Code:
 
-- `packages/repo-routing/src/repo_routing/predictor/features/feature_registry.py`
-- `packages/repo-routing/src/repo_routing/predictor/features/task_policy.py`
+- `packages/inference/src/repo_routing/predictor/features/feature_registry.py`
+- `packages/inference/src/repo_routing/predictor/features/task_policy.py`
 
 ## 1) Feature taxonomy model
 

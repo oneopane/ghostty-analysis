@@ -1,6 +1,6 @@
-# Evaluation Harness Implementation Plan
+# Evaluation Implementation Plan
 
-This plan tracks the work to build a leakage-safe, offline evaluation harness for routing and policy signals.
+This plan tracks the work to build a leakage-safe, offline evaluation for routing and policy signals.
 
 ## Pinned Defaults (v0)
 
@@ -33,15 +33,15 @@ Conventions:
 - [x] [001 - Add PR changed files signal to history DB](001-add-pr-changed-files-signal.md)
 - [x] [002 - Ensure reviewer/commenter truth signals exist for the eval window](002-ensure-truth-signals.md)
 
-## Phase 1 - Routing/Eval Interfaces (repo-routing)
+## Phase 1 - Routing/Eval Interfaces (inference)
 
 - [x] [003 - Define strict as-of HistoryReader contract](003-historyreader-contract.md)
 - [x] [004 - Define Router interface + RouteResult schema](004-router-interface.md)
 - [x] [005 - Implement offline baselines behind Router API](005-baselines.md)
 - [x] [006 - Implement routing artifact builders (optional v0)](006-artifact-builders.md)
-- [x] [007 - Extend repo-routing CLI commands](007-repo-routing-cli.md)
+- [x] [007 - Extend inference CLI commands](007-repo-routing-cli.md)
 
-## Phase 2 - Evaluation Harness Core (evaluation-harness)
+## Phase 2 - Evaluation Core (evaluation)
 
 - [x] [008 - Define eval config + report schemas](008-eval-config-and-models.md)
 - [x] [009 - Implement cutoff policy](009-cutoff-policy.md)
@@ -54,9 +54,9 @@ Conventions:
 - [x] [016 - Implement run output layout + manifests](016-run-output-and-manifest.md)
 - [x] [017 - Implement streaming evaluator (leakage-safe)](017-streaming-evaluator.md)
 
-## Phase 3 - CLI (repo eval)
+## Phase 3 - CLI (repo evaluation)
 
-- [x] [018 - Add repo eval commands (run/show/explain/list)](018-eval-cli.md)
+- [x] [018 - Add repo evaluation commands (run/show/explain/list)](018-eval-cli.md)
 - [x] [019 - Validate unified CLI wiring](019-repo-cli-wiring.md)
 
 ## Phase 4 - Tests, Fixtures, Guardrails

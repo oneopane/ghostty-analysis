@@ -16,7 +16,7 @@ Create a minimal SQLite DB in tests (no large committed DB files) to validate en
 
 ## Files
 Create:
-- `packages/evaluation-harness/tests/fixtures/build_min_db.py`
+- `packages/evaluation/tests/fixtures/build_min_db.py`
 
 ## Acceptance Criteria
 - Tests can run without network.

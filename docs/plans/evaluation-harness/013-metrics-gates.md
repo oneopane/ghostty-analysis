@@ -6,7 +6,7 @@
 Measure directional correlation between missing policy fields and outcomes.
 
 ## Work
-- Parse gate fields from PR body via repo-routing parser.
+- Parse gate fields from PR body via inference parser.
 - Compute merged rate for:
   - missing issue link
   - missing AI disclosure
@@ -15,7 +15,7 @@ Measure directional correlation between missing policy fields and outcomes.
 
 ## Files
 Create:
-- `packages/evaluation-harness/src/evaluation_harness/metrics/gates.py`
+- `packages/evaluation/src/evaluation_harness/metrics/gates.py`
 
 ## Acceptance Criteria
 - Output includes both raw counts and rates.

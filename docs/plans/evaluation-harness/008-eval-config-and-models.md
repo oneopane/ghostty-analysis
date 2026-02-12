@@ -3,7 +3,7 @@
 - [ ] Done
 
 ## Goal
-Make the evaluation harness reproducible by capturing config, sample selection, and results in typed schemas.
+Make the evaluation reproducible by capturing config, sample selection, and results in typed schemas.
 
 ## Work
 - Define Pydantic models for config, run metadata, and metric outputs.
@@ -19,8 +19,8 @@ Make the evaluation harness reproducible by capturing config, sample selection, 
 
 ## Files
 Create:
-- `packages/evaluation-harness/src/evaluation_harness/config.py`
-- `packages/evaluation-harness/src/evaluation_harness/models.py`
+- `packages/evaluation/src/evaluation_harness/config.py`
+- `packages/evaluation/src/evaluation_harness/models.py`
 
 ## Acceptance Criteria
-- Every `repo eval run` writes a `manifest.json` containing config + sample list + watermarks + pinned defaults actually used.
+- Every `repo evaluation run` writes a `manifest.json` containing config + sample list + watermarks + pinned defaults actually used.

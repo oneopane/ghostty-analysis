@@ -16,13 +16,13 @@ Store (v0):
 
 ## Files
 Touch:
-- `packages/repo-ingestion/src/gh_history_ingestion/storage/schema.py`
-- `packages/repo-ingestion/src/gh_history_ingestion/storage/upsert.py`
-- `packages/repo-ingestion/src/gh_history_ingestion/ingest/backfill.py`
-- `packages/repo-ingestion/src/gh_history_ingestion/ingest/incremental.py`
+- `packages/ingestion/src/gh_history_ingestion/storage/schema.py`
+- `packages/ingestion/src/gh_history_ingestion/storage/upsert.py`
+- `packages/ingestion/src/gh_history_ingestion/ingest/backfill.py`
+- `packages/ingestion/src/gh_history_ingestion/ingest/incremental.py`
 
 Create (if needed):
-- `packages/repo-ingestion/src/gh_history_ingestion/ingest/pull_request_files.py`
+- `packages/ingestion/src/gh_history_ingestion/ingest/pull_request_files.py`
 
 ## Acceptance Criteria
 - For a PR with multiple commits, file paths are stored keyed by PR + head SHA.

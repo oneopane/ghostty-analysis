@@ -15,9 +15,9 @@ Define a stable routing API (`Router.route(ctx)`) and a structured result schema
 
 ## Files
 Create:
-- `packages/repo-routing/src/repo_routing/router/__init__.py`
-- `packages/repo-routing/src/repo_routing/router/base.py`
-- `packages/repo-routing/src/repo_routing/router/explain.py`
+- `packages/inference/src/repo_routing/router/__init__.py`
+- `packages/inference/src/repo_routing/router/base.py`
+- `packages/inference/src/repo_routing/router/explain.py`
 
 ## Acceptance Criteria
 - Baselines and learned/heuristic routers can share the same interface.

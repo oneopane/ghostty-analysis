@@ -1,4 +1,4 @@
-# 007 - Extend repo-routing CLI commands
+# 007 - Extend inference CLI commands
 
 - [ ] Done
 
@@ -6,16 +6,16 @@
 Provide offline commands to build artifacts and inspect routing decisions locally.
 
 ## Work
-- Add `repo routing build-artifacts`.
-- Add `repo routing route --pr <num>` for debugging explanations.
+- Add `repo inference build-artifacts`.
+- Add `repo inference route --pr <num>` for debugging explanations.
 
 ## Files
 Touch:
-- `packages/repo-routing/src/repo_routing/cli/app.py`
+- `packages/inference/src/repo_routing/cli/app.py`
 
 Create:
-- `packages/repo-routing/src/repo_routing/cli/build_artifacts.py`
-- `packages/repo-routing/src/repo_routing/cli/route.py`
+- `packages/inference/src/repo_routing/cli/build_artifacts.py`
+- `packages/inference/src/repo_routing/cli/route.py`
 
 ## Acceptance Criteria
 - Commands only read local DB + local checkout (if provided).

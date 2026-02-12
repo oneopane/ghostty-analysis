@@ -24,4 +24,4 @@ Core attention-routing extraction and evaluation must use only:
 ## LLM policy
 
 - LLM-based logic may be used only through import-path experimental routers.
-- Core `repo-routing` feature extraction remains deterministic and dependency-light.
+- Core `inference` feature extraction remains deterministic and dependency-light.

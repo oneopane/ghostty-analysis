@@ -3,7 +3,7 @@
 Use `RouterSpec(type="import_path", import_path="pkg.mod:factory")` to load custom routers without changing core packages.
 
 Guidelines:
-- Keep core `repo-routing` offline and dependency-light.
+- Keep core `inference` offline and dependency-light.
 - Put LLM client dependencies in your external package.
 - Enforce leakage safety by only using `PRInputBundle` content built as-of cutoff.
 - Persist large prompt/response payloads under `prs/<pr>/llm/<router>/<step>.json` and keep only hashes/references in `Evidence.data`.
@@ -32,10 +32,10 @@ Built-in example in this repo:
 }
 ```
 
-Then run with evaluation harness:
+Then run with evaluation:
 
 ```bash
-evaluation-harness run \
+evaluation run \
   --repo owner/name \
   --router-import repo_routing.examples.llm_router_example:create_router \
   --router-config config.json

@@ -11,8 +11,8 @@ Make it easy to run evaluation and interpret results.
 
 ## Files
 Create:
-- `packages/evaluation-harness/docs/runbook.md`
-- `packages/evaluation-harness/docs/metrics.md`
+- `packages/evaluation/docs/runbook.md`
+- `packages/evaluation/docs/metrics.md`
 
 ## Acceptance Criteria
-- Someone can run `repo eval run` and understand the report without reading source.
+- Someone can run `repo evaluation run` and understand the report without reading source.

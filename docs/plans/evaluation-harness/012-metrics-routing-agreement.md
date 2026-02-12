@@ -16,8 +16,8 @@ Compute agreement between router suggestions and truth sets.
 
 ## Files
 Create:
-- `packages/evaluation-harness/src/evaluation_harness/metrics/__init__.py`
-- `packages/evaluation-harness/src/evaluation_harness/metrics/routing_agreement.py`
+- `packages/evaluation/src/evaluation_harness/metrics/__init__.py`
+- `packages/evaluation/src/evaluation_harness/metrics/routing_agreement.py`
 
 ## Acceptance Criteria
 - Metrics computed for both user and team targets (reported separately).

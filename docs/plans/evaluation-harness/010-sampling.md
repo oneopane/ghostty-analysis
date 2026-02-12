@@ -13,8 +13,8 @@ Select PRs for evaluation deterministically (so metrics are reproducible).
 
 ## Files
 Create:
-- `packages/evaluation-harness/src/evaluation_harness/sampling/__init__.py`
-- `packages/evaluation-harness/src/evaluation_harness/sampling/select.py`
+- `packages/evaluation/src/evaluation_harness/sampling/__init__.py`
+- `packages/evaluation/src/evaluation_harness/sampling/select.py`
 
 ## Acceptance Criteria
 - Given the same inputs (db + window + seed), sample list is identical.

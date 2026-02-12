@@ -4,11 +4,11 @@
 
 Confirmed:
 - Workspace members and package boundaries match the expected monorepo split:
-  - `packages/repo-ingestion`
-  - `packages/repo-routing`
-  - `packages/evaluation-harness`
-  - `packages/repo-cli`
-- `repo-cli` is the current unified front door and mounts routing/eval sub-CLIs.
+  - `packages/ingestion`
+  - `packages/inference`
+  - `packages/evaluation`
+  - `packages/cli`
+- `cli` is the current unified front door and mounts inference/evaluation sub-CLIs.
 - Deterministic artifact/data paths are in place:
   - DB: `data/github/<owner>/<repo>/history.sqlite`
   - Eval runs: `data/github/<owner>/<repo>/eval/<run_id>/`
@@ -24,7 +24,7 @@ Divergences found during audit:
 ## Implemented Design Mapping
 
 ### Unified CLI
-- Added to `repo-cli`:
+- Added to `cli`:
   - `repo cohort create`
   - `repo experiment init`
   - `repo experiment run`
@@ -34,7 +34,7 @@ Divergences found during audit:
   - `repo experiment diff`
   - `repo profile build`
   - `repo doctor`
-- Existing `repo-ingestion`, `repo-routing`, and `evaluation-harness` CLI wiring remains intact.
+- Existing `ingestion`, `inference`, and `evaluation` CLI wiring remains intact.
 
 ### Cohort + Experiment Artifacts
 - Deterministic hashed artifacts:

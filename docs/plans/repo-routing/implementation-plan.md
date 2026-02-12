@@ -7,15 +7,15 @@ Non-goals (for this plan): build the GitHub App, deploy a webhook server, or pos
 ### Design Principles
 
 - Strict layering:
-  - `repo-ingestion`: online (GitHub API) -> canonical `history.sqlite`
-  - `repo-routing`: offline intelligence (exports, features, routing, receipts)
-  - `evaluation-harness`: offline scoring (hit@k/MRR + gate correlation + queue metrics)
+  - `ingestion`: online (GitHub API) -> canonical `history.sqlite`
+  - `inference`: offline intelligence (exports, features, routing, receipts)
+  - `evaluation`: offline scoring (hit@k/MRR + gate correlation + queue metrics)
 - Deterministic + reproducible:
   - All offline logic reads only `history.sqlite` and optional derived artifacts.
   - Derived artifacts are safe to delete and rebuild.
 - Experimentation-friendly:
   - Iterate quickly in marimo on derived exports.
-  - Promote stable primitives into `repo-routing`.
+  - Promote stable primitives into `inference`.
   - Connect notebook experimentation and production-ish routing via:
     - versioned exports (Parquet)
     - versioned router config (JSON)
@@ -72,7 +72,7 @@ Update these checkboxes as work lands.
 - [x] Implement decay + activity aggregation utilities
 - [x] Implement `repo_routing.router.stewards.StewardsRouter`
 - [x] Add `confidence` to `RouteResult` schema (and propagate through artifacts/eval)
-- [x] Wire evaluation harness to evaluate `stewards` router (bridge → end-state)
+- [x] Wire evaluation to evaluate `stewards` router (bridge → end-state)
 - [x] Unit tests for router/scoring
 
 ### Phase 4 — Receipts + labels
@@ -153,7 +153,7 @@ Notebook experiments are free to ignore `default_area` and define richer area lo
 - Intent truth (secondary): requested reviewers/teams whose request event occurred in
   `[cutoff, cutoff + intent_window]` where `intent_window` defaults to 60 minutes.
 
-(These truth exports are for analysis; evaluation harness may still evolve independently.)
+(These truth exports are for analysis; evaluation may still evolve independently.)
 
 ---
 
@@ -331,23 +331,23 @@ Pinned schema change:
 
 - Receipt is one-screen markdown, neutral language, no @-mentions by default.
 
-### P3.10 Evaluation harness integration
+### P3.10 Evaluation integration
 
-- Short-term bridge: allow `evaluation-harness` to evaluate `stewards` by treating it like a selectable router/baseline and passing a config path.
-- End-state: `repo eval run --router stewards --config ...` (first-class router selection).
+- Short-term bridge: allow `evaluation` to evaluate `stewards` by treating it like a selectable router/baseline and passing a config path.
+- End-state: `repo evaluation run --router stewards --config ...` (first-class router selection).
 
 ### P3.11 Optional caching/artifacts
 
-- Caching derived artifacts (reviewer stats, area maps) is allowed behind an explicit build step (e.g. `repo routing build-artifacts`).
+- Caching derived artifacts (reviewer stats, area maps) is allowed behind an explicit build step (e.g. `repo inference build-artifacts`).
 - Router must still be able to run without cache (slower but correct).
 
 ---
 
 ## Target Architecture (Repository Layout)
 
-### `repo-routing` package code (promotable primitives)
+### `inference` package code (promotable primitives)
 
-Add these modules under `packages/repo-routing/src/repo_routing/` (phased):
+Add these modules under `packages/inference/src/repo_routing/` (phased):
 
 - `exports/` (new, v0)
   - `models.py`: typed schemas for exported rows (optional but recommended)
@@ -562,7 +562,7 @@ Deliverables:
 
 Acceptance checks:
 
-- [x] `evaluation-harness run ...` can evaluate `stewards` router outputs (integration work required)
+- [x] `evaluation run ...` can evaluate `stewards` router outputs (integration work required)
 
 ### Phase 4: Receipt + Labels (Offline Outputs)
 

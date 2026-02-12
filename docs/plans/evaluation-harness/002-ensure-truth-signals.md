@@ -11,19 +11,19 @@ Choose one path and document the recommended operational flow:
 - Or extend the PR-window ingest (`pull-requests`) to also fetch reviews/comments/issue-events for PRs in the window.
 
 Chosen (v0):
-- Recommended: run full backfill (`repo-ingestion ingest`) and then `repo-ingestion incremental`.
-- Optional: `repo-ingestion pull-requests --with-truth` makes PR-window backfills evaluation-ready.
+- Recommended: run full backfill (`ingestion ingest`) and then `ingestion incremental`.
+- Optional: `ingestion pull-requests --with-truth` makes PR-window backfills evaluation-ready.
 
 ## Files
 Possible touch points:
-- `packages/repo-ingestion/src/gh_history_ingestion/ingest/pull_requests.py`
-- `packages/repo-ingestion/src/gh_history_ingestion/ingest/backfill.py`
-- `packages/repo-ingestion/src/gh_history_ingestion/intervals/rebuild.py`
-- `packages/repo-ingestion/README.md` (document which command to run to populate truth)
+- `packages/ingestion/src/gh_history_ingestion/ingest/pull_requests.py`
+- `packages/ingestion/src/gh_history_ingestion/ingest/backfill.py`
+- `packages/ingestion/src/gh_history_ingestion/intervals/rebuild.py`
+- `packages/ingestion/README.md` (document which command to run to populate truth)
 
 ## Acceptance Criteria
 - For a sampled PR, the DB can compute:
   - requested reviewers/teams shortly after open
   - review submitters
   - non-author commenters (optional)
-- The eval harness can detect and report missing truth due to ingestion gaps.
+- The evaluation can detect and report missing truth due to ingestion gaps.

@@ -12,12 +12,12 @@ Expose a single, supported read interface for the history DB that enforces `as_o
 
 ## Files
 Create:
-- `packages/repo-routing/src/repo_routing/history/__init__.py`
-- `packages/repo-routing/src/repo_routing/history/reader.py`
-- `packages/repo-routing/src/repo_routing/history/index.py`
-- `packages/repo-routing/src/repo_routing/history/models.py`
+- `packages/inference/src/repo_routing/history/__init__.py`
+- `packages/inference/src/repo_routing/history/reader.py`
+- `packages/inference/src/repo_routing/history/index.py`
+- `packages/inference/src/repo_routing/history/models.py`
 
 ## Acceptance Criteria
 - The API can build PR context as-of any cutoff timestamp.
 - PR context uses stable ordering for events: `(occurred_at, event_id)`.
-- Callers (eval harness) do not need ad-hoc SQL.
+- Callers (evaluation) do not need ad-hoc SQL.

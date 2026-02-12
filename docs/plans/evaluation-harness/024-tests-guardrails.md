@@ -11,8 +11,8 @@ Prevent accidental leakage and noisy truths.
 
 ## Files
 Create:
-- `packages/evaluation-harness/tests/test_leakage_guards.py`
-- `packages/evaluation-harness/tests/test_bot_filtering.py`
+- `packages/evaluation/tests/test_leakage_guards.py`
+- `packages/evaluation/tests/test_bot_filtering.py`
 
 ## Acceptance Criteria
 - Guardrails fail loudly if invariants are violated.

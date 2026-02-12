@@ -12,10 +12,10 @@ Provide minimal, credible baselines that do not require GitHub API calls.
 
 ## Files
 Create:
-- `packages/repo-routing/src/repo_routing/router/baselines/__init__.py`
-- `packages/repo-routing/src/repo_routing/router/baselines/mentions.py`
-- `packages/repo-routing/src/repo_routing/router/baselines/popularity.py`
-- `packages/repo-routing/src/repo_routing/router/baselines/codeowners.py`
+- `packages/inference/src/repo_routing/router/baselines/__init__.py`
+- `packages/inference/src/repo_routing/router/baselines/mentions.py`
+- `packages/inference/src/repo_routing/router/baselines/popularity.py`
+- `packages/inference/src/repo_routing/router/baselines/codeowners.py`
 
 ## Acceptance Criteria
 - Baselines return a `RouteResult` with transparent reasons.

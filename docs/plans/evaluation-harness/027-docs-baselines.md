@@ -11,7 +11,7 @@ Prevent misleading conclusions from leaky or mis-specified baselines.
 
 ## Files
 Create:
-- `packages/evaluation-harness/docs/baselines.md`
+- `packages/evaluation/docs/baselines.md`
 
 ## Acceptance Criteria
 - Reports include baseline caveats and required inputs.

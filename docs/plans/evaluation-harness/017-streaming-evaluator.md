@@ -16,7 +16,7 @@ Evaluate PRs in time order, ensuring router state never sees future events.
 
 ## Files
 Create:
-- `packages/evaluation-harness/src/evaluation_harness/runner.py`
+- `packages/evaluation/src/evaluation_harness/runner.py`
 
 ## Acceptance Criteria
 - Evaluation runs are deterministic.

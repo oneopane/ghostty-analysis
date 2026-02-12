@@ -12,7 +12,7 @@ Compute simple queue metrics to compare high-risk vs low-risk routing buckets.
 
 ## Files
 Create:
-- `packages/evaluation-harness/src/evaluation_harness/metrics/queue.py`
+- `packages/evaluation/src/evaluation_harness/metrics/queue.py`
 
 ## Acceptance Criteria
 - If data is missing, metric is skipped with an explicit note.

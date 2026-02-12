@@ -4,7 +4,7 @@ This module is for **offline exploration** (for example in marimo), not mandator
 
 Location:
 
-- `packages/repo-routing/src/repo_routing/mixed_membership/`
+- `packages/inference/src/repo_routing/mixed_membership/`
 
 ## Design
 
@@ -46,7 +46,7 @@ model = fit_area_membership_model(
 
 A starter notebook is available at:
 
-- `packages/repo-routing/experiments/marimo/mixed_membership_areas_v0.py`
+- `experiments/marimo/mixed_membership_areas_v0.py`
 
 ## Notes
 

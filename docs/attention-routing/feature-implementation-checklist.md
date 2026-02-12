@@ -1,11 +1,11 @@
 # Feature Implementation Checklist (current state)
 
-This checklist tracks the implemented feature stack in `repo-routing` and highlights remaining gaps.
+This checklist tracks the implemented feature stack in `inference` and highlights remaining gaps.
 
 Updated for current code in:
 
-- `packages/repo-routing/src/repo_routing/predictor/feature_extractor_v1.py`
-- `packages/repo-routing/src/repo_routing/predictor/features/*.py`
+- `packages/inference/src/repo_routing/predictor/feature_extractor_v1.py`
+- `packages/inference/src/repo_routing/predictor/features/*.py`
 
 ---
 
@@ -124,6 +124,6 @@ Notes:
 ## Validation commands
 
 ```bash
-./.venv/bin/pytest -q packages/repo-routing/tests
-./.venv/bin/pytest -q packages/evaluation-harness/tests
+./.venv/bin/pytest -q packages/inference/tests
+./.venv/bin/pytest -q packages/evaluation/tests
 ```

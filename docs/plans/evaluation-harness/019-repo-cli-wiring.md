@@ -3,15 +3,15 @@
 - [x] Done
 
 ## Goal
-Ensure the unified `repo` CLI correctly mounts routing and evaluation subcommands.
+Ensure the unified `repo` CLI correctly mounts inference and evaluation subcommands.
 
 ## Work
-- Confirm `repo routing ...` and `repo eval ...` work from a fresh environment.
+- Confirm `repo inference ...` and `repo evaluation ...` work from a fresh environment.
 - Ensure naming remains stable as packages evolve.
 
 ## Files
 Touch (only if needed):
-- `packages/repo-cli/src/repo_cli/cli.py`
+- `packages/cli/src/repo_cli/cli.py`
 
 ## Acceptance Criteria
-- `repo --help` shows `routing` and `eval` command groups.
+- `repo --help` shows `inference` and `evaluation` command groups.

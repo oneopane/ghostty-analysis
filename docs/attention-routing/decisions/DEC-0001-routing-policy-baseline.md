@@ -28,4 +28,4 @@ Attention-routing needed explicit decisions on truth semantics, signal boundary,
 
 - `docs/attention-routing/relation-taxonomy.md`
 - `docs/attention-routing/policy-signal-boundary.md`
-- `packages/evaluation-harness/src/evaluation_harness/truth.py`
+- `packages/evaluation/src/evaluation_harness/truth.py`

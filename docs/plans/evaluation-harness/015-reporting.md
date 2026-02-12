@@ -15,10 +15,10 @@ Emit a human one-page report and machine-readable output for reproducibility.
 
 ## Files
 Create:
-- `packages/evaluation-harness/src/evaluation_harness/reporting/__init__.py`
-- `packages/evaluation-harness/src/evaluation_harness/reporting/markdown.py`
-- `packages/evaluation-harness/src/evaluation_harness/reporting/json.py`
-- `packages/evaluation-harness/src/evaluation_harness/reporting/formatters.py`
+- `packages/evaluation/src/evaluation_harness/reporting/__init__.py`
+- `packages/evaluation/src/evaluation_harness/reporting/markdown.py`
+- `packages/evaluation/src/evaluation_harness/reporting/json.py`
+- `packages/evaluation/src/evaluation_harness/reporting/formatters.py`
 
 ## Acceptance Criteria
 - Report is stable (ordering deterministic) and includes watermark/version info.

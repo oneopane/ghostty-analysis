@@ -1,6 +1,6 @@
 # Attention Routing Architecture
 
-**Audience:** internal contributors extending `repo-routing` and `evaluation-harness`.
+**Audience:** internal contributors extending `inference` and `evaluation`.
 
 This document explains the current end-to-end architecture for leakage-safe, deterministic reviewer routing experiments.
 
@@ -23,14 +23,14 @@ flowchart TD
   E --> F[evaluation_harness.metrics]
   F --> G[per_pr.jsonl + report.json/md + manifest.json]
 
-  subgraph repo-routing
+  subgraph inference
     B
     C
     D
     E
   end
 
-  subgraph evaluation-harness
+  subgraph evaluation
     F
     G
   end
@@ -41,14 +41,14 @@ flowchart TD
 - **Data substrate** (offline):
   - `data/github/<owner>/<repo>/history.sqlite`
   - pinned files like `codeowners/<base_sha>/CODEOWNERS`, `routing/area_overrides.json`
-- **Core routing package:** `packages/repo-routing/src/repo_routing`
+- **Core routing package:** `packages/inference/src/repo_routing`
   - as-of reads: `history/reader.py`
   - canonical inputs: `inputs/models.py`, `inputs/builder.py`
   - routing contracts: `router/base.py`
   - predictor contracts/pipeline: `predictor/base.py`, `predictor/pipeline.py`
   - router registry/import loading: `registry.py`
   - deterministic artifact writer: `artifacts/writer.py`, `artifacts/paths.py`
-- **Evaluation harness:** `packages/evaluation-harness/src/evaluation_harness`
+- **Evaluation harness:** `packages/evaluation/src/evaluation_harness`
   - run orchestration: `runner.py`
   - CLI: `cli/app.py`
   - cutoff policy: `cutoff.py`
@@ -191,7 +191,7 @@ Current compatibility behavior:
   - `routers` (preferred)
   - `baselines` (alias for backward compatibility)
 - `report.json` and `manifest.json` include both `routers` and `baselines`
-- `evaluation-harness explain` reads `routers` first, then falls back to `baselines`
+- `evaluation explain` reads `routers` first, then falls back to `baselines`
 
 ---
 
@@ -323,7 +323,7 @@ A function-first mixed-membership API is available for notebook-driven explorati
 
 - module: `repo_routing.mixed_membership`
 - basis v1: areas (`areas.v1`)
-- notebook starter: `packages/repo-routing/experiments/marimo/mixed_membership_areas_v0.py`
+- notebook starter: `experiments/marimo/mixed_membership_areas_v0.py`
 
 This lane is optional and intended for offline analysis/ablation.
 
@@ -357,7 +357,7 @@ Evaluation checklist:
 ## 7.2 Add a new builtin router
 
 1. Implement router class with `route(...) -> RouteResult`
-   - suggested location: `packages/repo-routing/src/repo_routing/router/baselines/<name>.py`
+   - suggested location: `packages/inference/src/repo_routing/router/baselines/<name>.py`
 2. Wire loader in `repo_routing.registry._builtin_router`
 3. Add CLI validation entry in `evaluation_harness.cli.app` (`_VALID_ROUTERS`)
 4. Add tests:
@@ -375,8 +375,8 @@ Evaluation checklist:
 
 Reference example:
 
-- `packages/repo-routing/src/repo_routing/examples/llm_router_example.py`
-- doc: `packages/repo-routing/docs/llm-import-path-router.md`
+- `packages/inference/src/repo_routing/examples/llm_router_example.py`
+- doc: `packages/inference/docs/llm-import-path-router.md`
 
 ---
 
@@ -385,7 +385,7 @@ Reference example:
 ## 8.1 Builtin routers (modern flags)
 
 ```bash
-evaluation-harness run \
+evaluation run \
   --repo acme/widgets \
   --data-dir data \
   --pr 101 --pr 102 \
@@ -396,7 +396,7 @@ evaluation-harness run \
 ## 8.2 Import-path router with config
 
 ```bash
-evaluation-harness run \
+evaluation run \
   --repo acme/widgets \
   --data-dir data \
   --pr 101 \
@@ -407,7 +407,7 @@ evaluation-harness run \
 ## 8.3 Backward-compatible alias flags
 
 ```bash
-evaluation-harness run \
+evaluation run \
   --repo acme/widgets \
   --pr 101 \
   --baseline mentions
@@ -416,17 +416,17 @@ evaluation-harness run \
 ## 8.4 Explain run output for one PR
 
 ```bash
-evaluation-harness explain \
+evaluation explain \
   --repo acme/widgets \
   --run-id <run_id> \
   --pr 101 \
   --router mentions
 ```
 
-## 8.5 repo-routing single-router artifact build (legacy baseline flow)
+## 8.5 inference single-router artifact build (legacy baseline flow)
 
 ```bash
-repo-routing route \
+inference route \
   --repo acme/widgets \
   --pr-number 101 \
   --baseline mentions \
@@ -454,12 +454,12 @@ Validation commands:
 ```bash
 # fast targeted tests
 ./.venv/bin/pytest -q \
-  packages/repo-routing/tests/test_registry_loading.py \
-  packages/repo-routing/tests/test_inputs_bundle.py \
-  packages/evaluation-harness/tests/test_runner_router_specs.py
+  packages/inference/tests/test_registry_loading.py \
+  packages/inference/tests/test_inputs_bundle.py \
+  packages/evaluation/tests/test_runner_router_specs.py
 
 # full package tests
-./.venv/bin/pytest -q packages/repo-routing/tests packages/evaluation-harness/tests
+./.venv/bin/pytest -q packages/inference/tests packages/evaluation/tests
 
 # feature policy/registry checks from eval artifacts (warn mode)
 python scripts/check_feature_quality.py --run-dir data/github/<owner>/<repo>/eval/<run_id>
@@ -496,4 +496,4 @@ Quick run sanity checks:
 - SQL queries without cutoff bounds for temporal features
 - Writing unordered JSON/maps that vary run-to-run
 - Storing massive LLM payloads directly in `Evidence.data`
-- Coupling core `repo-routing` package to external networked LLM SDKs
+- Coupling core `inference` package to external networked LLM SDKs

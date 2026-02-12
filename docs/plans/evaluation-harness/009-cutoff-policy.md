@@ -15,7 +15,7 @@ Define how to choose the evaluation cutoff timestamp per PR (avoid draft leakage
 
 ## Files
 Create:
-- `packages/evaluation-harness/src/evaluation_harness/cutoff.py`
+- `packages/evaluation/src/evaluation_harness/cutoff.py`
 
 ## Acceptance Criteria
 - Cutoff logic is unit-tested and deterministic.
