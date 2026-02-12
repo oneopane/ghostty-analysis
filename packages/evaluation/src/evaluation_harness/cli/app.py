@@ -5,10 +5,11 @@ from pathlib import Path
 
 import typer
 from rich import print
+from repo_routing.runtime_defaults import DEFAULT_DATA_DIR
 from repo_routing.router_specs import build_router_specs
 from repo_routing.time import parse_dt_utc
 
-from ..config import EvalRunConfig
+from ..config import EvalDefaults, EvalRunConfig
 from ..cutoff import cutoff_for_pr
 from ..paths import repo_db_path, repo_eval_run_dir
 from ..run_id import compute_run_id
@@ -35,7 +36,7 @@ def _parse_dt(value: str) -> datetime:
 @app.command()
 def info(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     """Show resolved paths for a repository."""
     print(f"[bold]repo[/bold] {repo}")
@@ -45,7 +46,7 @@ def info(
 @app.command("sample")
 def sample(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
     start_at: str | None = typer.Option(
         None, "--from", "--start-at", help="ISO created_at window start"
     ),
@@ -68,7 +69,7 @@ def sample(
 def cutoff(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     pr_number: int = typer.Option(..., help="Pull request number"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     c = cutoff_for_pr(repo=repo, pr_number=pr_number, data_dir=data_dir)
     print(c.isoformat())
@@ -78,7 +79,7 @@ def cutoff(
 def paths(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     run_id: str = typer.Option(..., help="Evaluation run id"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     print(
         f"[bold]eval_run[/bold] {repo_eval_run_dir(repo_full_name=repo, data_dir=data_dir, run_id=run_id)}"
@@ -88,7 +89,7 @@ def paths(
 @app.command("list")
 def list_runs(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     try:
         runs = list_eval_runs(repo=repo, data_dir=data_dir)
@@ -106,7 +107,7 @@ def list_runs(
 def show(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     run_id: str = typer.Option(..., help="Evaluation run id"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     try:
         payload = show_eval(repo=repo, run_id=run_id, data_dir=data_dir)
@@ -123,7 +124,7 @@ def explain(
     baseline: str | None = typer.Option(None, help="Router id (deprecated name)"),
     router: str | None = typer.Option(None, help="Router id (default: first present)"),
     policy: str | None = typer.Option(None, "--policy", help="Truth policy id"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
     try:
         payload = explain_eval(
@@ -143,7 +144,7 @@ def explain(
 @app.command("run")
 def run(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
-    data_dir: str = typer.Option("data", help="Base directory for per-repo data"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
     run_id: str | None = typer.Option(None, help="Run id (default: computed)"),
     pr_number: list[int] = typer.Option([], "--pr", help="PR number (repeatable)"),
     start_at: str | None = typer.Option(
@@ -169,6 +170,14 @@ def run(
         None,
         "--config",
         help="Deprecated single router config path (maps to stewards router)",
+    ),
+    execution_mode: str = typer.Option(
+        "sequential",
+        help="Execution mode: sequential | parallel",
+    ),
+    max_workers: int | None = typer.Option(
+        None,
+        help="Max workers for --execution-mode=parallel",
     ),
 ):
     configs = list(router_config)
@@ -198,7 +207,16 @@ def run(
     if not prs:
         raise typer.BadParameter("no PRs selected")
 
-    cfg = EvalRunConfig(repo=repo, data_dir=data_dir, run_id=run_id or "run")
+    defaults = EvalDefaults(
+        execution_mode=execution_mode,
+        max_workers=max_workers,
+    )
+    cfg = EvalRunConfig(
+        repo=repo,
+        data_dir=data_dir,
+        run_id=run_id or "run",
+        defaults=defaults,
+    )
     if run_id is None:
         cfg.run_id = compute_run_id(cfg=cfg)
 

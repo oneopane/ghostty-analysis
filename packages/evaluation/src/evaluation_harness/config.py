@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class EvalDefaults(BaseModel):
@@ -33,6 +33,25 @@ class EvalDefaults(BaseModel):
 
     top_k: int = 5
     hit_ks: tuple[int, ...] = (1, 3, 5)
+    execution_mode: str = "sequential"
+    max_workers: int | None = None
+
+    @field_validator("execution_mode")
+    @classmethod
+    def _normalize_execution_mode(cls, value: str) -> str:
+        mode = str(value).strip().lower()
+        if mode not in {"sequential", "parallel"}:
+            raise ValueError("execution_mode must be one of: sequential, parallel")
+        return mode
+
+    @field_validator("max_workers")
+    @classmethod
+    def _validate_max_workers(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        if int(value) < 1:
+            raise ValueError("max_workers must be >= 1")
+        return int(value)
 
     def resolved_truth_window(self) -> timedelta:
         """Single source of truth for behavior-truth window during migration."""
