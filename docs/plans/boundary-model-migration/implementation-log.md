@@ -25,9 +25,9 @@ This log is intended to be updated as implementation proceeds.
 ## Milestone Checkpoints
 
 ### M1: Boundary Core + Artifact IO
-- [ ] schemas committed
-- [ ] deterministic hash tests passing
-- [ ] artifact read/write tests passing
+- [x] schemas committed
+- [x] deterministic hash tests passing
+- [x] artifact read/write tests passing
 
 ### M2: Hybrid inference v1
 - [ ] cutoff-safe inference tests passing
