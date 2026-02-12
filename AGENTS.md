@@ -1,11 +1,10 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-02-10 12:58 PST
-**Commit:** 97445f7
+**Generated:** 2026-02-11 16:15 PST
 **Branch:** HEAD
 
 ## OVERVIEW
-Python uv-workspace monorepo for repository ingestion, routing artifacts, and evaluation, with a unified CLI.
+Python uv-workspace monorepo for repository ingestion, inference/routing artifacts, experimentation workflows, evaluation, and a unified CLI.
 
 ## STRUCTURE
 ```
@@ -13,41 +12,37 @@ Python uv-workspace monorepo for repository ingestion, routing artifacts, and ev
 ├── data/          # local artifacts, sqlite, eval outputs
 ├── docs/          # architecture, plans, and process docs
 ├── notebooks/     # marimo notebooks and demos
+├── experiments/   # reproducible experiment configs/extract scripts/notebooks
 ├── packages/      # workspace packages (src/ layout)
 ├── scripts/       # validation scripts
 ├── pyproject.toml # uv workspace members
 └── uv.lock
 ```
 
+## WORKSPACE PACKAGES
+- `packages/ingestion`        # GitHub -> history.sqlite
+- `packages/inference`        # cutoff-safe snapshots, routers, artifact writing
+- `packages/experimentation`  # cohort/spec flow, quality gates, marimo helpers
+- `packages/evaluation`       # streaming eval, truth policies, metrics, reporting
+- `packages/cli`              # unified `repo` command surface
+
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| Ingest GitHub history | packages/repo-ingestion/src/gh_history_ingestion | CLI and ingest flows |
-| Generate routing artifacts | packages/repo-routing/src/repo_routing | baselines, artifacts, scoring |
-| Run evaluation harness | packages/evaluation-harness/src/evaluation_harness | runner, metrics, reporting |
-| Unified CLI wiring | packages/repo-cli/src/repo_cli/cli.py | adds routing/eval subcommands |
+| Ingest GitHub history | packages/ingestion/src/gh_history_ingestion | CLI and ingest flows |
+| Run inference/routing artifacts | packages/inference/src/repo_routing | baselines, artifacts, scoring |
+| Unified experiment workflows | packages/experimentation/src/experimentation/unified_experiment.py | cohort/spec/run/diff/profile/doctor |
+| Run evaluation harness | packages/evaluation/src/evaluation_harness | runner, metrics, reporting |
+| Unified CLI wiring | packages/cli/src/repo_cli/cli.py | mounts ingestion + experimentation + routing + eval |
 | Attention routing docs | docs/attention-routing | architecture + registry/checklist |
 | Eval harness plan | docs/plans/evaluation-harness | atomic task files + checklist |
 | Feature validation | scripts/validate_feature_stack.sh | targeted pytest suites |
 
-## CODE MAP
-| Symbol | Type | Location | Refs | Role |
-|--------|------|----------|------|------|
-| app | Typer app | packages/repo-ingestion/src/gh_history_ingestion/cli/app.py | 7 | repo-ingestion CLI commands |
-| app | Typer app | packages/repo-routing/src/repo_routing/cli/app.py | 5 | repo-routing CLI commands |
-| app | Typer app | packages/evaluation-harness/src/evaluation_harness/cli/app.py | 9 | evaluation-harness CLI commands |
-| backfill_repo | async fn | packages/repo-ingestion/src/gh_history_ingestion/ingest/backfill.py | 0 | full history backfill |
-| ArtifactWriter | dataclass | packages/repo-routing/src/repo_routing/artifacts/writer.py | 0 | write route/snapshot artifacts |
-| build_pr_input_bundle | fn | packages/repo-routing/src/repo_routing/inputs/builder.py | 0 | assemble PR inputs |
-| run_streaming_eval | fn | packages/evaluation-harness/src/evaluation_harness/runner.py | 0 | streaming evaluation runner |
-
 ## CONVENTIONS
 - Use `uv` workspace; prefer `uv run --project packages/<pkg> ...` for commands.
 - Packages use `src/` layout; pytest config sets `pythonpath = ["src"]`.
-- CLIs use Typer; entry points set in each package `pyproject.toml`.
-
-## ANTI-PATTERNS (THIS PROJECT)
-- None documented at the repo level.
+- CLIs use Typer; entry points are set in each package `pyproject.toml`.
+- Keep import modules stable for now (`gh_history_ingestion`, `repo_routing`, `evaluation_harness`, `repo_cli`) while package names are the new core names.
 
 ## UNIQUE STYLES
 - `docs/attention-routing/architecture.md` is current; related task/planning docs there are historical.
@@ -58,12 +53,12 @@ Python uv-workspace monorepo for repository ingestion, routing artifacts, and ev
 ## COMMANDS
 ```bash
 uv venv
-uv pip install -e .
+uv sync
 
-uv run --project packages/repo-ingestion repo-ingestion --help
-uv run --project packages/repo-routing repo-routing --help
-uv run --project packages/evaluation-harness evaluation-harness --help
-uv run --project packages/repo-cli repo --help
+uv run --project packages/ingestion ingestion --help
+uv run --project packages/inference inference --help
+uv run --project packages/evaluation evaluation --help
+uv run --project packages/cli repo --help
 ```
 
 ## NOTES

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import marimo as mo
 
-from repo_cli.marimo_components import repo_analysis_panel
+from experimentation.marimo_components import repo_analysis_panel
 
 
 app = mo.App(width="full")

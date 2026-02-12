@@ -1,7 +1,8 @@
 [tool.uv.workspace]
 members = [
-  "packages/repo-ingestion",
-  "packages/repo-routing",
-  "packages/evaluation-harness",
-  "packages/repo-cli",
+  "packages/ingestion",
+  "packages/inference",
+  "packages/evaluation",
+  "packages/experimentation",
+  "packages/cli",
 ]

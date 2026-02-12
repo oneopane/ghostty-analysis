@@ -153,7 +153,7 @@ def _(mo, to_rfc3339_z, utc_now):
         label="Router/baseline",
     )
     stewards_config = mo.ui.text(
-        value="packages/repo-routing/experiments/configs/v0.json",
+        value="experiments/configs/v0.json",
         label="Stewards config",
     )
 
@@ -238,9 +238,9 @@ def _(base, controls, db_path, end_at_s, repo_s, start_at_s):
         "uv",
         "run",
         "--project",
-        "packages/repo-routing",
+        "packages/inference",
         "python",
-        "packages/repo-routing/experiments/extract/export_v0.py",
+        "experiments/extract/export_v0.py",
         "--repo",
         repo_s,
         "--export-run-id",
@@ -261,7 +261,7 @@ def _(base, controls, db_path, end_at_s, repo_s, start_at_s):
         "uv",
         "run",
         "repo",
-        "eval",
+        "evaluation",
         "run",
         "--repo",
         repo_s,
