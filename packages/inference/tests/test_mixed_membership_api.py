@@ -6,15 +6,15 @@ from pathlib import Path
 
 import pytest
 
-from repo_routing.mixed_membership.areas.basis import (
-    build_user_area_activity_rows,
-    rows_to_user_area_matrix,
+from repo_routing.mixed_membership.boundaries.basis import (
+    build_user_boundary_activity_rows,
+    rows_to_user_boundary_matrix,
 )
-from repo_routing.mixed_membership.config import AreaMembershipConfig
+from repo_routing.mixed_membership.config import BoundaryMembershipConfig
 from repo_routing.mixed_membership.models.nmf import (
     build_candidate_role_mix_features,
     build_pair_role_affinity_features,
-    fit_area_membership_nmf,
+    fit_boundary_membership_nmf,
 )
 
 
@@ -86,14 +86,14 @@ def _seed_db(tmp_path: Path) -> tuple[str, Path]:
     return repo, data_dir
 
 
-def test_build_user_area_activity_rows_and_matrix(tmp_path: Path) -> None:
+def test_build_user_boundary_activity_rows_and_matrix(tmp_path: Path) -> None:
     repo, data_dir = _seed_db(tmp_path)
 
-    rows = build_user_area_activity_rows(
+    rows = build_user_boundary_activity_rows(
         repo=repo,
         cutoff=datetime(2024, 1, 3, tzinfo=timezone.utc),
         data_dir=data_dir,
-        config=AreaMembershipConfig(lookback_days=30),
+        config=BoundaryMembershipConfig(lookback_days=30),
     )
 
     assert rows
@@ -101,11 +101,11 @@ def test_build_user_area_activity_rows_and_matrix(tmp_path: Path) -> None:
     assert "bob" in users
     assert "robot[bot]" not in users
 
-    matrix = rows_to_user_area_matrix(rows)
+    matrix = rows_to_user_boundary_matrix(rows)
     assert matrix.users
-    assert matrix.areas
+    assert matrix.boundaries
     assert len(matrix.values) == len(matrix.users)
-    assert len(matrix.values[0]) == len(matrix.areas)
+    assert len(matrix.values[0]) == len(matrix.boundaries)
 
 
 def test_fit_nmf_and_derive_features(tmp_path: Path) -> None:
@@ -114,18 +114,18 @@ def test_fit_nmf_and_derive_features(tmp_path: Path) -> None:
 
     repo, data_dir = _seed_db(tmp_path)
 
-    rows = build_user_area_activity_rows(
+    rows = build_user_boundary_activity_rows(
         repo=repo,
         cutoff=datetime(2024, 1, 3, tzinfo=timezone.utc),
         data_dir=data_dir,
-        config=AreaMembershipConfig(lookback_days=30, n_components=2),
+        config=BoundaryMembershipConfig(lookback_days=30, n_components=2),
     )
 
-    model = fit_area_membership_nmf(
+    model = fit_boundary_membership_nmf(
         repo=repo,
         cutoff=datetime(2024, 1, 3, tzinfo=timezone.utc),
         rows=rows,
-        config=AreaMembershipConfig(lookback_days=30, n_components=2),
+        config=BoundaryMembershipConfig(lookback_days=30, n_components=2),
     )
 
     assert model.roles
@@ -137,7 +137,7 @@ def test_fit_nmf_and_derive_features(tmp_path: Path) -> None:
 
     pair = build_pair_role_affinity_features(
         model=model,
-        pr_area_distribution={"src": 0.8, "docs": 0.2},
+        pr_boundary_distribution={"src": 0.8, "docs": 0.2},
         candidate_logins=["bob"],
     )
-    assert "pair.affinity.pr_area_dot_candidate_role_mix" in pair["bob"]
+    assert "pair.affinity.pr_boundary_dot_candidate_role_mix" in pair["bob"]

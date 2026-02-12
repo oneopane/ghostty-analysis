@@ -9,7 +9,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-class AreaMembershipModelArtifact(BaseModel):
+class BoundaryMembershipModelArtifact(BaseModel):
     kind: str = "mixed_membership_model"
     version: str = "mm.v1"
     model_type: str = "nmf"
@@ -20,11 +20,11 @@ class AreaMembershipModelArtifact(BaseModel):
     config: dict[str, Any] = Field(default_factory=dict)
 
     users: list[str] = Field(default_factory=list)
-    areas: list[str] = Field(default_factory=list)
+    boundaries: list[str] = Field(default_factory=list)
     roles: list[str] = Field(default_factory=list)
 
     user_role_mix: dict[str, list[float]] = Field(default_factory=dict)
-    role_area_mix: dict[str, dict[str, float]] = Field(default_factory=dict)
+    role_boundary_mix: dict[str, dict[str, float]] = Field(default_factory=dict)
 
     diagnostics: dict[str, Any] = Field(default_factory=dict)
     model_hash: str = ""
@@ -40,15 +40,15 @@ def compute_model_hash(payload: dict[str, Any]) -> str:
         "cutoff": payload.get("cutoff"),
         "config": payload.get("config"),
         "users": payload.get("users"),
-        "areas": payload.get("areas"),
+        "boundaries": payload.get("boundaries"),
         "roles": payload.get("roles"),
         "user_role_mix": payload.get("user_role_mix"),
-        "role_area_mix": payload.get("role_area_mix"),
+        "role_boundary_mix": payload.get("role_boundary_mix"),
     }
     return hashlib.sha256(_canonical_payload(core).encode("utf-8")).hexdigest()
 
 
-def write_model_artifact(path: str | Path, artifact: AreaMembershipModelArtifact) -> Path:
+def write_model_artifact(path: str | Path, artifact: BoundaryMembershipModelArtifact) -> Path:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
 
@@ -61,7 +61,7 @@ def write_model_artifact(path: str | Path, artifact: AreaMembershipModelArtifact
     return p
 
 
-def read_model_artifact(path: str | Path) -> AreaMembershipModelArtifact:
+def read_model_artifact(path: str | Path) -> BoundaryMembershipModelArtifact:
     p = Path(path)
     data = json.loads(p.read_text(encoding="utf-8"))
-    return AreaMembershipModelArtifact.model_validate(data)
+    return BoundaryMembershipModelArtifact.model_validate(data)

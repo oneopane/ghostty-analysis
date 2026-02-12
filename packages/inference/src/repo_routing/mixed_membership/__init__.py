@@ -1,18 +1,18 @@
 from .artifacts import (
-    AreaMembershipModelArtifact,
+    BoundaryMembershipModelArtifact,
     read_model_artifact,
     write_model_artifact,
 )
-from .config import AreaMembershipConfig
-from .dataset import build_area_membership_dataset, build_area_membership_matrix
-from .pipeline import derive_role_features_for_pr, fit_area_membership_model
+from .config import BoundaryMembershipConfig
+from .dataset import build_boundary_membership_dataset, build_boundary_membership_matrix
+from .pipeline import derive_role_features_for_pr, fit_boundary_membership_model
 
 __all__ = [
-    "AreaMembershipConfig",
-    "AreaMembershipModelArtifact",
-    "build_area_membership_dataset",
-    "build_area_membership_matrix",
-    "fit_area_membership_model",
+    "BoundaryMembershipConfig",
+    "BoundaryMembershipModelArtifact",
+    "build_boundary_membership_dataset",
+    "build_boundary_membership_matrix",
+    "fit_boundary_membership_model",
     "derive_role_features_for_pr",
     "write_model_artifact",
     "read_model_artifact",

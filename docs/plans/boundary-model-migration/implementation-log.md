@@ -8,7 +8,7 @@ This log is intended to be updated as implementation proceeds.
 - Start date: 2026-02-11
 - Owner: TBD
 - Current phase: Implementation
-- Current PR: PR-04 (In progress)
+- Current PR: PR-05 (In progress)
 
 ## PR Tracking Table
 
@@ -17,8 +17,8 @@ This log is intended to be updated as implementation proceeds.
 | PR-01 | Boundary core and artifacts | In progress | oneopane | TBD | 2026-02-11 | - | boundary package + tests scaffolded |
 | PR-02 | Hybrid inference v1 | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | strategy registry + hybrid v1 + boundary CLI build scaffolded |
 | PR-03 | Inputs/analysis/risk cutover | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | boundary projection + input/analysis/risk/labels/receipt cutover |
-| PR-04 | Predictor feature stack migration | In progress | oneopane | TBD | 2026-02-11 | - | boundary feature keys migrated across extractor/registry/policy/tests |
-| PR-05 | Mixed-membership boundary migration | Planned | TBD | TBD | - | - | |
+| PR-04 | Predictor feature stack migration | Complete | oneopane | TBD | 2026-02-11 | 2026-02-11 | boundary feature keys migrated across extractor/registry/policy/tests |
+| PR-05 | Mixed-membership boundary migration | In progress | oneopane | TBD | 2026-02-11 | - | boundary-basis mixed-membership APIs + artifacts + notebook migration |
 | PR-06 | Parser plugin framework + Python backend | Planned | TBD | TBD | - | - | |
 | PR-07 | Zig + TS/JS parser backends + cleanup | Planned | TBD | TBD | - | - | |
 
@@ -45,9 +45,9 @@ This log is intended to be updated as implementation proceeds.
 - [x] feature extraction tests green
 
 ### M5: Mixed-membership migration
-- [ ] boundary basis row builder complete
-- [ ] NMF pipeline switched to boundary basis
-- [ ] mixed-membership tests green
+- [x] boundary basis row builder complete
+- [x] NMF pipeline switched to boundary basis
+- [x] mixed-membership tests green
 
 ### M6: Parser framework + Python
 - [ ] parser registry and contract merged

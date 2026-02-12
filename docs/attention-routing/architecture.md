@@ -323,7 +323,7 @@ A function-first mixed-membership API is available for notebook-driven explorati
 
 - module: `repo_routing.mixed_membership`
 - basis v1: areas (`areas.v1`)
-- notebook starter: `experiments/marimo/mixed_membership_areas_v0.py`
+- notebook starter: `experiments/marimo/mixed_membership_boundaries_v1.py`
 
 This lane is optional and intended for offline analysis/ablation.
 

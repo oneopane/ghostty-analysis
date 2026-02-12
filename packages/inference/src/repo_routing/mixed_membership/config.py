@@ -3,11 +3,11 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
-class AreaMembershipConfig(BaseModel):
-    """Configuration for area-basis mixed-membership exploration."""
+class BoundaryMembershipConfig(BaseModel):
+    """Configuration for boundary-basis mixed-membership exploration."""
 
-    version: str = "mm.areas.nmf.v1"
-    basis_version: str = "areas.v1"
+    version: str = "mm.boundary.nmf.v1"
+    basis_version: str = "hybrid_path_cochange.v1"
 
     lookback_days: int = Field(default=180, ge=1)
 
@@ -28,4 +28,4 @@ class AreaMembershipConfig(BaseModel):
 
     min_user_total_weight: float = Field(default=0.0, ge=0.0)
 
-    top_role_areas: int = Field(default=8, ge=1)
+    top_role_boundaries: int = Field(default=8, ge=1)
