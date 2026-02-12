@@ -262,8 +262,8 @@ def run_streaming_eval(
             return None
 
     package_versions = {
-        "evaluation-harness": pkg_version("evaluation-harness"),
-        "repo-routing": pkg_version("repo-routing"),
+        "evaluation": pkg_version("evaluation"),
+        "inference": pkg_version("inference"),
     }
 
     generated_at = datetime.now(timezone.utc)

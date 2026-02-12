@@ -73,7 +73,7 @@ class ResolvedTruthPolicy:
 
 
 def builtin_truth_policy_specs() -> dict[str, TruthPolicySpec]:
-    """Narrow v1 built-ins used by evaluation-harness truth contracts."""
+    """Narrow v1 built-ins used by evaluation truth contracts."""
     specs = [
         TruthPolicySpec(
             id="first_response_v1",

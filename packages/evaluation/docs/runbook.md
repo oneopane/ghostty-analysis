@@ -1,4 +1,4 @@
-# Evaluation Harness Runbook
+# Evaluation Runbook
 
 This runbook explains how to run offline routing evaluations and inspect outputs.
 
@@ -8,19 +8,19 @@ From repo root:
 
 ```bash
 uv venv
-uv pip install -e .
+uv sync
 ```
 
 Ensure ingestion data exists:
 
 ```bash
-uv run --project packages/repo-ingestion repo-ingestion ingest --repo <owner>/<repo>
+uv run --project packages/ingestion ingestion ingest --repo <owner>/<repo>
 ```
 
 If using PR-window ingestion, include truth signals:
 
 ```bash
-uv run --project packages/repo-ingestion repo-ingestion pull-requests \
+uv run --project packages/ingestion ingestion pull-requests \
   --repo <owner>/<repo> --start-at <iso> --end-at <iso> --with-truth
 ```
 
@@ -33,7 +33,7 @@ Expected DB:
 Option A: explicit PRs
 
 ```bash
-uv run --project packages/evaluation-harness evaluation-harness run \
+uv run --project packages/evaluation evaluation run \
   --repo <owner>/<repo> \
   --pr 101 --pr 102 \
   --router mentions --router popularity
@@ -42,7 +42,7 @@ uv run --project packages/evaluation-harness evaluation-harness run \
 Option B: sample by created_at window
 
 ```bash
-uv run --project packages/evaluation-harness evaluation-harness run \
+uv run --project packages/evaluation evaluation run \
   --repo <owner>/<repo> \
   --from 2024-01-01T00:00:00Z --end-at 2024-02-01T00:00:00Z \
   --limit 50 \
@@ -52,7 +52,7 @@ uv run --project packages/evaluation-harness evaluation-harness run \
 ## 3) Run with import-path router (optional)
 
 ```bash
-uv run --project packages/evaluation-harness evaluation-harness run \
+uv run --project packages/evaluation evaluation run \
   --repo <owner>/<repo> \
   --pr 101 \
   --router-import repo_routing.examples.llm_router_example:create_router \
@@ -64,20 +64,20 @@ uv run --project packages/evaluation-harness evaluation-harness run \
 List runs:
 
 ```bash
-uv run --project packages/evaluation-harness evaluation-harness list --repo <owner>/<repo>
+uv run --project packages/evaluation evaluation list --repo <owner>/<repo>
 ```
 
 Show report:
 
 ```bash
-uv run --project packages/evaluation-harness evaluation-harness show \
+uv run --project packages/evaluation evaluation show \
   --repo <owner>/<repo> --run-id <run_id>
 ```
 
 Explain one PR/router:
 
 ```bash
-uv run --project packages/evaluation-harness evaluation-harness explain \
+uv run --project packages/evaluation evaluation explain \
   --repo <owner>/<repo> --run-id <run_id> --pr 101 --router mentions
 ```
 
