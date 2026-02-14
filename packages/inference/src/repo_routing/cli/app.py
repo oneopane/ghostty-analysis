@@ -19,6 +19,7 @@ from ..paths import repo_codeowners_dir, repo_db_path
 from ..registry import RouterSpec
 from ..runtime_defaults import DEFAULT_DATA_DIR, DEFAULT_TOP_K, parse_dt_utc
 from ..router_specs import build_router_specs
+from ..semantic.backfill import backfill_semantic_artifacts
 from ..time import cutoff_key_utc
 
 
@@ -37,9 +38,9 @@ def _parse_iso_utc(value: str, *, param: str) -> datetime:
     return dt
 
 
-def _build_specs_for_baselines(
+def _build_specs_for_routers(
     *,
-    baselines: list[str],
+    routers: list[str],
     config: str | None,
 ) -> list[RouterSpec]:
     router_configs: list[str] = []
@@ -47,11 +48,10 @@ def _build_specs_for_baselines(
         router_configs = [f"stewards={config}"]
     try:
         specs = build_router_specs(
-            routers=[],
-            baselines=baselines,
+            routers=routers,
             router_imports=[],
             router_configs=router_configs,
-            stewards_config_required_message="--config is required when baseline includes stewards",
+            stewards_config_required_message="--config is required when router includes stewards",
         )
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc
@@ -97,9 +97,9 @@ def snapshot(
 def route(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     pr_number: int = typer.Option(..., help="Pull request number"),
-    baseline: str = typer.Option(
+    router: str = typer.Option(
         ...,
-        help="Baseline: mentions | popularity | codeowners | union | hybrid_ranker | llm_rerank | stewards",
+        help="Router: mentions | popularity | codeowners | union | hybrid_ranker | llm_rerank | stewards",
     ),
     config: str | None = typer.Option(
         None, help="Scoring config path (required for stewards)"
@@ -109,14 +109,14 @@ def route(
     top_k: int = typer.Option(DEFAULT_TOP_K, help="Number of candidates to emit"),
     data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
-    """Run one baseline and emit a RouteResult artifact."""
+    """Run one router and emit a RouteResult artifact."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
-    specs = _build_specs_for_baselines(baselines=[baseline], config=config)
+    specs = _build_specs_for_routers(routers=[router], config=config)
     spec = specs[0]
     as_of_dt = _parse_iso_utc(as_of, param="--as-of")
 
     artifact = build_route_artifact(
-        baseline=spec.name,
+        router=spec.name,
         repo=cfg.repo,
         pr_number=pr_number,
         as_of=as_of_dt,
@@ -207,18 +207,18 @@ def build_artifacts(
         "--pr",
         help="Explicit PR number(s). If provided, window options are ignored.",
     ),
-    baseline: list[str] = typer.Option(
+    router: list[str] = typer.Option(
         ["mentions", "popularity", "codeowners"],
-        help="Baselines to run",
+        help="Routers to run",
     ),
     config: str | None = typer.Option(
         None, help="Scoring config path (used by stewards)"
     ),
     data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
 ):
-    """Build snapshot + baseline routing artifacts for a PR list/window."""
+    """Build snapshot + routing artifacts for a PR list/window."""
     cfg = RepoRoutingConfig(repo=repo, data_dir=data_dir)
-    specs = _build_specs_for_baselines(baselines=list(baseline), config=config)
+    specs = _build_specs_for_routers(routers=list(router), config=config)
 
     as_of_dt: datetime | None = (
         _parse_iso_utc(as_of, param="--as-of") if as_of is not None else None
@@ -267,7 +267,7 @@ def build_artifacts(
         )
         route_artifacts = [
             build_route_artifact(
-                baseline=spec.name,
+                router=spec.name,
                 repo=cfg.repo,
                 pr_number=pr_number,
                 as_of=cutoff,
@@ -283,3 +283,21 @@ def build_artifacts(
         for art in route_artifacts:
             route_path = writer.write_route_result(art)
             print(f"[bold]wrote[/bold] {route_path}")
+
+
+@app.command("backfill-semantic")
+def backfill_semantic(
+    repo: str = typer.Option(..., help="Repository in owner/name format"),
+    prompt: str = typer.Option(..., "--prompt", help="Prompt id"),
+    since: str = typer.Option(..., help="ISO timestamp lower bound"),
+    data_dir: str = typer.Option(DEFAULT_DATA_DIR, help="Base directory for per-repo data"),
+    dry_run: bool = typer.Option(False, help="Plan only; do not write outputs"),
+):
+    out = backfill_semantic_artifacts(
+        repo=repo,
+        prompt_id=prompt,
+        since=since,
+        data_dir=data_dir,
+        dry_run=dry_run,
+    )
+    print(out)
