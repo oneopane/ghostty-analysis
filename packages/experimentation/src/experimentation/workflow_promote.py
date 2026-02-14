@@ -11,6 +11,7 @@ from repo_routing.runtime_defaults import DEFAULT_DATA_DIR
 import json
 
 from .workflow_helpers import _write_json
+from .workflow_registry import CandidateRegistry
 
 
 def experiment_promote(
