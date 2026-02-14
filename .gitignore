@@ -14,5 +14,8 @@ data/
 *.sqlite-*
 *.duckdb
 
+# MkDocs output
+site/
+
 # OS
 .DS_Store

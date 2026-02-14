@@ -5,6 +5,7 @@ requires-python = ">=3.11"
 [manifest]
 members = [
     "cli",
+    "core",
     "evaluation",
     "experimentation",
     "inference",
@@ -113,10 +114,31 @@ wheels = [
 ]
 
 [[package]]
+name = "core"
+version = "0.1.0"
+source = { editable = "packages/core" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0" },
+]
+provides-extras = ["dev"]
+
+[[package]]
 name = "evaluation"
 version = "0.1.0"
 source = { editable = "packages/evaluation" }
 dependencies = [
+    { name = "core" },
     { name = "inference" },
     { name = "pydantic" },
     { name = "rich" },
@@ -130,6 +152,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "core", editable = "packages/core" },
     { name = "inference", editable = "packages/inference" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0" },
@@ -143,6 +166,7 @@ name = "experimentation"
 version = "0.1.0"
 source = { editable = "packages/experimentation" }
 dependencies = [
+    { name = "core" },
     { name = "evaluation" },
     { name = "inference" },
     { name = "ingestion" },
@@ -156,6 +180,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "core", editable = "packages/core" },
     { name = "evaluation", editable = "packages/evaluation" },
     { name = "inference", editable = "packages/inference" },
     { name = "ingestion", editable = "packages/ingestion" },
@@ -311,6 +336,7 @@ name = "inference"
 version = "0.1.0"
 source = { editable = "packages/inference" }
 dependencies = [
+    { name = "core" },
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "rich" },
@@ -329,6 +355,7 @@ mixed-membership = [
 
 [package.metadata]
 requires-dist = [
+    { name = "core", editable = "packages/core" },
     { name = "numpy", marker = "extra == 'mixed-membership'", specifier = ">=1.26.0" },
     { name = "polars", marker = "extra == 'mixed-membership'", specifier = ">=1.0.0" },
     { name = "pyarrow", specifier = ">=16.0.0" },

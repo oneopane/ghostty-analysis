@@ -300,7 +300,7 @@ def repo_analysis_panel(
     router = mo.ui.dropdown(
         options=["mentions", "popularity", "stewards"],
         value="mentions",
-        label="Router/baseline",
+        label="Router",
     )
     limit_prs = mo.ui.slider(10, 2000, value=200, step=10, label="Eval PR limit")
     config_path = mo.ui.text(
@@ -373,12 +373,12 @@ def repo_analysis_panel(
         start_at,
         "--end-at",
         end_at,
-        "--baseline",
-        str(form.value["Router/baseline"]),
+        "--router",
+        str(form.value["Router"]),
         "--limit",
         str(int(form.value["Eval PR limit"])),
     ]
-    if str(form.value["Router/baseline"]) == "stewards":
+    if str(form.value["Router"]) == "stewards":
         eval_cmd.extend(["--config", str(form.value["Router config (stewards only)"])])
 
     cmds = {"export": export_cmd, "eval": eval_cmd}

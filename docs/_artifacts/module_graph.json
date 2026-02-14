@@ -1,0 +1,186 @@
+{
+  "edges": [
+    {
+      "from": "repo_cli",
+      "to": "gh_history_ingestion",
+      "type": "imports"
+    },
+    {
+      "from": "repo_cli",
+      "to": "experimentation",
+      "type": "imports"
+    },
+    {
+      "from": "repo_cli",
+      "to": "repo_routing",
+      "type": "imports"
+    },
+    {
+      "from": "repo_cli",
+      "to": "evaluation_harness",
+      "type": "imports"
+    },
+    {
+      "from": "gh_history_ingestion",
+      "to": "gh",
+      "type": "imports"
+    },
+    {
+      "from": "gh",
+      "to": "gh_history_ingestion",
+      "type": "imports"
+    },
+    {
+      "from": "evaluation_harness",
+      "to": "repo_routing",
+      "type": "imports"
+    },
+    {
+      "from": "harness",
+      "to": "evaluation_harness",
+      "type": "imports"
+    },
+    {
+      "from": "harness",
+      "to": "repo_routing",
+      "type": "imports"
+    },
+    {
+      "from": "experimentation",
+      "to": "evaluation_harness",
+      "type": "imports"
+    },
+    {
+      "from": "experimentation",
+      "to": "repo_routing",
+      "type": "imports"
+    },
+    {
+      "from": "experimentation",
+      "to": "gh_history_ingestion",
+      "type": "imports"
+    },
+    {
+      "from": "experimentation",
+      "to": "workflow",
+      "type": "imports"
+    },
+    {
+      "from": "workflow",
+      "to": "evaluation_harness",
+      "type": "imports"
+    },
+    {
+      "from": "workflow",
+      "to": "repo_routing",
+      "type": "imports"
+    },
+    {
+      "from": "experiments.extract.export_v0",
+      "to": "repo_routing",
+      "type": "imports"
+    },
+    {
+      "from": "experimentation.workflow_run",
+      "to": "evaluation_harness",
+      "type": "calls"
+    },
+    {
+      "from": "evaluation_harness.runner_per_pr",
+      "to": "repo_routing.artifacts.writer",
+      "type": "calls"
+    },
+    {
+      "from": "repo_routing.predictor.feature_extractor_v1",
+      "to": "repo_routing",
+      "type": "imports"
+    }
+  ],
+  "nodes": [
+    {
+      "name": "gh_history_ingestion",
+      "ref": "codebase_map_pack/architecture/#ingestion-gh_history_ingestion",
+      "type": "package"
+    },
+    {
+      "name": "gh",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "package"
+    },
+    {
+      "name": "repo_routing",
+      "ref": "codebase_map_pack/architecture/#inference-repo_routing",
+      "type": "package"
+    },
+    {
+      "name": "evaluation_harness",
+      "ref": "codebase_map_pack/architecture/#evaluation-evaluation_harness",
+      "type": "package"
+    },
+    {
+      "name": "harness",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "package"
+    },
+    {
+      "name": "experimentation",
+      "ref": "codebase_map_pack/architecture/#experimentation-experimentation",
+      "type": "package"
+    },
+    {
+      "name": "workflow",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "package"
+    },
+    {
+      "name": "repo_cli",
+      "ref": "codebase_map_pack/architecture/#unified-cli-repo_cli",
+      "type": "package"
+    },
+    {
+      "name": "experiments.extract.export_v0",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "module"
+    },
+    {
+      "name": "gh_history_ingestion.cli.app",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "module"
+    },
+    {
+      "name": "repo_routing.cli.app",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "module"
+    },
+    {
+      "name": "evaluation_harness.cli.app",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "module"
+    },
+    {
+      "name": "experimentation.unified_experiment",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "module"
+    },
+    {
+      "name": "experimentation.workflow_run",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "module"
+    },
+    {
+      "name": "evaluation_harness.runner_per_pr",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "module"
+    },
+    {
+      "name": "repo_routing.artifacts.writer",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "module"
+    },
+    {
+      "name": "repo_routing.predictor.feature_extractor_v1",
+      "ref": "codebase_map_pack/architecture/",
+      "type": "module"
+    }
+  ]
+}

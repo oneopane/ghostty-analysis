@@ -183,15 +183,13 @@ Per run:
 - gate and queue summaries:
   - `metrics/gates.py`, `metrics/queue.py`
 
-## Routers vs baselines compatibility
+## Router-only reporting contract
 
-Current compatibility behavior:
+Current behavior:
 
-- `per_pr.jsonl` writes both:
-  - `routers` (preferred)
-  - `baselines` (alias for backward compatibility)
-- `report.json` and `manifest.json` include both `routers` and `baselines`
-- `evaluation explain` reads `routers` first, then falls back to `baselines`
+- `per_pr.jsonl` writes `routers` only.
+- `report.json` and `manifest.json` include router metadata only.
+- `evaluation explain` reads `routers` only.
 
 ---
 
@@ -404,16 +402,7 @@ evaluation run \
   --router-config config.json
 ```
 
-## 8.3 Backward-compatible alias flags
-
-```bash
-evaluation run \
-  --repo acme/widgets \
-  --pr 101 \
-  --baseline mentions
-```
-
-## 8.4 Explain run output for one PR
+## 8.3 Explain run output for one PR
 
 ```bash
 evaluation explain \
@@ -423,13 +412,13 @@ evaluation explain \
   --router mentions
 ```
 
-## 8.5 inference single-router artifact build (legacy baseline flow)
+## 8.4 inference single-router artifact build
 
 ```bash
 inference route \
   --repo acme/widgets \
   --pr-number 101 \
-  --baseline mentions \
+  --router mentions \
   --run-id debug-run \
   --as-of 2024-01-10T00:00:00Z
 ```
@@ -440,9 +429,9 @@ inference route \
 
 Common errors:
 
-- `unknown router(s)` / `unknown baseline(s)`:
+- `unknown router(s)`:
   - check CLI names and spelling
-- `--config is required when baseline includes stewards`:
+- `--config is required when router includes stewards`:
   - provide `--router-config`/`--config` for stewards
 - `invalid import_path (expected module:attr)`:
   - use `pkg.module:ClassOrFactory` format
@@ -482,7 +471,6 @@ Quick run sanity checks:
 - **Ranker**: stage converting `(input, features)` into ranked candidates
 - **RouterSpec**: declarative router descriptor (`builtin` or `import_path`)
 - **Router ID**: stable run key for router outputs and metrics
-- **Baseline**: legacy name for builtin routers; now an alias to `routers`
 - **Cutoff**: as-of timestamp defining what data is visible
 - **Truth label**: observed target used for scoring (currently first eligible reviewer)
 - **Deterministic artifact**: stable JSON output independent of execution order/environment

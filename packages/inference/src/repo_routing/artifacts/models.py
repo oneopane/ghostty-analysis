@@ -28,8 +28,8 @@ class PRSnapshotArtifact(BaseModel):
 
 class RouteArtifact(BaseModel):
     kind: str = "route_result"
-    version: str = "v0"
+    version: str = "v1"
 
-    baseline: str
+    router_id: str
     result: RouteResult
     meta: dict[str, object] = Field(default_factory=dict)

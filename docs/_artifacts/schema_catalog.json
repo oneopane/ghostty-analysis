@@ -1,0 +1,1571 @@
+{
+  "tables": [
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "owner_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "owner_login",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "full_name",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "is_private",
+          "type": "Boolean"
+        },
+        {
+          "description": "",
+          "name": "description",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "default_branch",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "created_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "updated_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "pushed_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "archived",
+          "type": "Boolean"
+        },
+        {
+          "description": "",
+          "name": "disabled",
+          "type": "Boolean"
+        }
+      ],
+      "grain": "1 row per repo",
+      "name": "repos",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-repos"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "login",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "type",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "site_admin",
+          "type": "Boolean"
+        },
+        {
+          "description": "",
+          "name": "avatar_url",
+          "type": "String"
+        }
+      ],
+      "grain": "1 row per user",
+      "name": "users",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-users"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "slug",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "name",
+          "type": "String"
+        }
+      ],
+      "grain": "1 row per team",
+      "name": "teams",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-teams"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "color",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "description",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "is_default",
+          "type": "Boolean"
+        }
+      ],
+      "grain": "1 row per label id",
+      "name": "labels",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-labels"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "number",
+          "type": "Integer"
+        },
+        {
+          "description": "",
+          "name": "title",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "state",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "description",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "due_on",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "closed_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "created_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "updated_at",
+          "type": "DateTime(timezone=True)"
+        }
+      ],
+      "grain": "1 row per milestone id",
+      "name": "milestones",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-milestones"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "unique per repo",
+          "name": "number",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> users.id",
+          "name": "user_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "title",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "body",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "state",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "created_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "updated_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "closed_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "is_pull_request",
+          "type": "Boolean"
+        },
+        {
+          "description": "",
+          "name": "locked",
+          "type": "Boolean"
+        }
+      ],
+      "grain": "1 row per issue id",
+      "name": "issues",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-issues"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "unique per repo",
+          "name": "number",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> issues.id",
+          "name": "issue_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> users.id",
+          "name": "user_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "title",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "body",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "state",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "draft",
+          "type": "Boolean"
+        },
+        {
+          "description": "",
+          "name": "merged",
+          "type": "Boolean"
+        },
+        {
+          "description": "",
+          "name": "merge_commit_sha",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "head_sha",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "head_ref",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "base_sha",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "base_ref",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "created_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "updated_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "closed_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "merged_at",
+          "type": "DateTime(timezone=True)"
+        }
+      ],
+      "grain": "1 row per pull request id",
+      "name": "pull_requests",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-pull_requests"
+    },
+    {
+      "columns": [
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> pull_requests.id",
+          "name": "pull_request_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "head_sha",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "path",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "status",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "additions",
+          "type": "Integer"
+        },
+        {
+          "description": "",
+          "name": "deletions",
+          "type": "Integer"
+        },
+        {
+          "description": "",
+          "name": "changes",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per (pr, head_sha, path)",
+      "name": "pull_request_files",
+      "primary_key": [
+        "repo_id",
+        "pull_request_id",
+        "head_sha",
+        "path"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-pull_request_files"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> pull_requests.id",
+          "name": "pull_request_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> users.id",
+          "name": "user_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "state",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "body",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "submitted_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "commit_id",
+          "type": "String"
+        }
+      ],
+      "grain": "1 row per review id",
+      "name": "reviews",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-reviews"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> issues.id",
+          "name": "issue_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> pull_requests.id",
+          "name": "pull_request_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> reviews.id",
+          "name": "review_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> users.id",
+          "name": "user_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "body",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "created_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "updated_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "path",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "position",
+          "type": "Integer"
+        },
+        {
+          "description": "",
+          "name": "commit_id",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "in_reply_to_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "comment_type",
+          "type": "String"
+        }
+      ],
+      "grain": "1 row per comment id",
+      "name": "comments",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-comments"
+    },
+    {
+      "columns": [
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "sha",
+          "type": "String"
+        },
+        {
+          "description": "FK -> users.id",
+          "name": "author_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> users.id",
+          "name": "committer_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "author_name",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "author_email",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "committer_name",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "committer_email",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "message",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "authored_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "committed_at",
+          "type": "DateTime(timezone=True)"
+        }
+      ],
+      "grain": "1 row per (repo_id, sha)",
+      "name": "commits",
+      "primary_key": [
+        "repo_id",
+        "sha"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-commits"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "ref_type",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "sha",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "is_protected",
+          "type": "Boolean"
+        }
+      ],
+      "grain": "1 row per ref",
+      "name": "refs",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-refs"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "tag_name",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "draft",
+          "type": "Boolean"
+        },
+        {
+          "description": "",
+          "name": "prerelease",
+          "type": "Boolean"
+        },
+        {
+          "description": "",
+          "name": "created_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "published_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "FK -> users.id",
+          "name": "author_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "body",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "target_commitish",
+          "type": "String"
+        }
+      ],
+      "grain": "1 row per release id",
+      "name": "releases",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-releases"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "occurred_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "FK -> users.id",
+          "name": "actor_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "subject_type",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "subject_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "event_type",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "object_type",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "object_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "commit_sha",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "payload_json",
+          "type": "Text"
+        },
+        {
+          "description": "unique",
+          "name": "event_key",
+          "type": "String"
+        }
+      ],
+      "grain": "1 row per normalized event",
+      "name": "events",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-events"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "resource",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "updated_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "etag",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "last_modified",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "cursor",
+          "type": "String"
+        }
+      ],
+      "grain": "1 row per (repo_id, resource)",
+      "name": "watermarks",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-watermarks"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "resource",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "url",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "page",
+          "type": "Integer"
+        },
+        {
+          "description": "",
+          "name": "expected_page",
+          "type": "Integer"
+        },
+        {
+          "description": "",
+          "name": "detail",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "detected_at",
+          "type": "DateTime(timezone=True)"
+        }
+      ],
+      "grain": "1 row per gap",
+      "name": "ingestion_gaps",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-ingestion_gaps"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "flow",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "stage",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "completed_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "details_json",
+          "type": "Text"
+        }
+      ],
+      "grain": "1 row per (repo_id, flow, stage)",
+      "name": "ingestion_checkpoints",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-ingestion_checkpoints"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> repos.id",
+          "name": "repo_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "created_at",
+          "type": "DateTime(timezone=True)"
+        },
+        {
+          "description": "",
+          "name": "summary_json",
+          "type": "Text"
+        }
+      ],
+      "grain": "1 row per report",
+      "name": "qa_reports",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-qa_reports"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> issues.id",
+          "name": "issue_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "state",
+          "type": "String"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per (issue_id, state) interval",
+      "name": "issue_state_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-issue_state_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> issues.id",
+          "name": "issue_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "title",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "body",
+          "type": "Text"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per issue content interval",
+      "name": "issue_content_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-issue_content_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> issues.id",
+          "name": "issue_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> labels.id",
+          "name": "label_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per (issue_id, label_id) interval",
+      "name": "issue_label_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-issue_label_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> issues.id",
+          "name": "issue_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> users.id",
+          "name": "user_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per (issue_id, user_id) interval",
+      "name": "issue_assignee_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-issue_assignee_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> issues.id",
+          "name": "issue_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> milestones.id",
+          "name": "milestone_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per (issue_id, milestone_id) interval",
+      "name": "issue_milestone_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-issue_milestone_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> pull_requests.id",
+          "name": "pull_request_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "is_draft",
+          "type": "Boolean"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per PR draft interval",
+      "name": "pull_request_draft_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-pull_request_draft_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> pull_requests.id",
+          "name": "pull_request_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "head_sha",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "head_ref",
+          "type": "String"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per PR head interval",
+      "name": "pull_request_head_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-pull_request_head_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> pull_requests.id",
+          "name": "pull_request_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "reviewer_type",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "reviewer_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per PR review-request interval",
+      "name": "pull_request_review_request_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-pull_request_review_request_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> comments.id",
+          "name": "comment_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "body",
+          "type": "Text"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per comment content interval",
+      "name": "comment_content_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-comment_content_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> reviews.id",
+          "name": "review_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "body",
+          "type": "Text"
+        },
+        {
+          "description": "",
+          "name": "state",
+          "type": "String"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "start_event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "end_event_id",
+          "type": "Integer"
+        }
+      ],
+      "grain": "1 row per review content interval",
+      "name": "review_content_intervals",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-review_content_intervals"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "id",
+          "type": "Integer"
+        },
+        {
+          "description": "FK -> events.id",
+          "name": "event_id",
+          "type": "Integer"
+        },
+        {
+          "description": "",
+          "name": "object_type",
+          "type": "String"
+        },
+        {
+          "description": "",
+          "name": "object_id",
+          "type": "BigInteger"
+        },
+        {
+          "description": "",
+          "name": "payload_json",
+          "type": "Text"
+        }
+      ],
+      "grain": "1 row per object snapshot",
+      "name": "object_snapshots",
+      "primary_key": [
+        "id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-object_snapshots"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "key",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "value",
+          "type": "text"
+        }
+      ],
+      "grain": "1 row per key",
+      "name": "examples_index.meta",
+      "primary_key": [
+        "key"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-examples_index-meta"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "repo",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "run_id",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "run_dir_rel",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "generated_at",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "cohort_hash",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "experiment_spec_hash",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "db_max_event_occurred_at",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "db_max_watermark_updated_at",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "manifest_json_sha256",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "report_json_sha256",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "per_pr_jsonl_sha256",
+          "type": "text"
+        }
+      ],
+      "grain": "1 row per (repo, run_id)",
+      "name": "examples_index.runs",
+      "primary_key": [
+        "repo",
+        "run_id"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-examples_index-runs"
+    },
+    {
+      "columns": [
+        {
+          "description": "",
+          "name": "repo",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "run_id",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "pr_number",
+          "type": "integer"
+        },
+        {
+          "description": "",
+          "name": "cutoff",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "truth_status",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "missing_issue",
+          "type": "integer"
+        },
+        {
+          "description": "",
+          "name": "missing_ai_disclosure",
+          "type": "integer"
+        },
+        {
+          "description": "",
+          "name": "missing_provenance",
+          "type": "integer"
+        },
+        {
+          "description": "",
+          "name": "merged",
+          "type": "integer"
+        },
+        {
+          "description": "",
+          "name": "primary_policy",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "routers_json",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "artifact_paths_json",
+          "type": "text"
+        },
+        {
+          "description": "",
+          "name": "indexed_at",
+          "type": "text"
+        }
+      ],
+      "grain": "1 row per (repo, run_id, pr_number)",
+      "name": "examples_index.examples",
+      "primary_key": [
+        "repo",
+        "run_id",
+        "pr_number"
+      ],
+      "ref": "codebase_map_pack/schemas/#table-examples_index-examples"
+    }
+  ]
+}

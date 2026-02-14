@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import random
 from datetime import datetime
@@ -8,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import typer
+from sdlc_core.hashing import stable_hash_json
 from evaluation_harness.cutoff import cutoff_for_pr
 from evaluation_harness.sampling import sample_pr_numbers_created_in_window
 from repo_routing.api import (
@@ -43,8 +43,7 @@ def _stable_json(obj: object) -> str:
 def _stable_hash_payload(payload: dict[str, Any]) -> str:
     clean = dict(payload)
     clean.pop("hash", None)
-    data = json.dumps(clean, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+    return stable_hash_json(clean)
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -90,7 +89,6 @@ def _build_router_specs(
     try:
         return shared_build_router_specs(
             routers=routers,
-            baselines=[],
             router_imports=router_imports,
             router_configs=router_configs,
             stewards_config_required_message="--router-config is required when router includes stewards",

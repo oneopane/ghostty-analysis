@@ -1,0 +1,199 @@
+{
+  "pipelines": [
+    {
+      "edges": [
+        {
+          "from": "ingest_full_backfill",
+          "to": "rebuild_intervals"
+        },
+        {
+          "from": "ingest_incremental",
+          "to": "rebuild_intervals"
+        }
+      ],
+      "name": "ingestion",
+      "nodes": [
+        {
+          "entrypoint": "packages/ingestion/src/gh_history_ingestion/cli/app.py:ingest",
+          "inputs": [
+            "github_rest_api"
+          ],
+          "name": "ingest_full_backfill",
+          "outputs": [
+            "history.sqlite"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-ingestion",
+          "schedule": "manual"
+        },
+        {
+          "entrypoint": "packages/ingestion/src/gh_history_ingestion/cli/app.py:incremental",
+          "inputs": [
+            "github_rest_api",
+            "history.sqlite"
+          ],
+          "name": "ingest_incremental",
+          "outputs": [
+            "history.sqlite"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-ingestion",
+          "schedule": "manual"
+        },
+        {
+          "entrypoint": "packages/ingestion/src/gh_history_ingestion/intervals/rebuild.py:rebuild_intervals",
+          "inputs": [
+            "history.sqlite:events"
+          ],
+          "name": "rebuild_intervals",
+          "outputs": [
+            "history.sqlite:interval_tables"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-ingestion",
+          "schedule": "inline with ingestion"
+        }
+      ],
+      "ref": "codebase_map_pack/pipelines/#pipeline-ingestion"
+    },
+    {
+      "edges": [],
+      "name": "inference_artifacts",
+      "nodes": [
+        {
+          "entrypoint": "packages/inference/src/repo_routing/cli/app.py:boundary_build",
+          "inputs": [
+            "history.sqlite"
+          ],
+          "name": "build_boundary_model",
+          "outputs": [
+            "boundary_model_artifacts"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-inference",
+          "schedule": "manual"
+        },
+        {
+          "entrypoint": "packages/inference/src/repo_routing/cli/app.py:build_artifacts",
+          "inputs": [
+            "history.sqlite"
+          ],
+          "name": "build_pr_snapshots_and_routes",
+          "outputs": [
+            "route_result_artifacts"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-inference",
+          "schedule": "manual"
+        }
+      ],
+      "ref": "codebase_map_pack/pipelines/#pipeline-inference"
+    },
+    {
+      "edges": [
+        {
+          "from": "eval_run",
+          "to": "eval_compare"
+        }
+      ],
+      "name": "evaluation",
+      "nodes": [
+        {
+          "entrypoint": "packages/evaluation/src/evaluation_harness/cli/app.py:run",
+          "inputs": [
+            "history.sqlite",
+            "route_result_artifacts"
+          ],
+          "name": "eval_run",
+          "outputs": [
+            "eval_run_dir",
+            "eval_per_pr_jsonl"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-evaluation",
+          "schedule": "manual"
+        },
+        {
+          "entrypoint": "packages/evaluation/src/evaluation_harness/cli/app.py:compare",
+          "inputs": [
+            "eval_run_dir"
+          ],
+          "name": "eval_compare",
+          "outputs": [
+            "compare_summary.json"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-evaluation",
+          "schedule": "manual"
+        }
+      ],
+      "ref": "codebase_map_pack/pipelines/#pipeline-evaluation"
+    },
+    {
+      "edges": [
+        {
+          "from": "cohort_create",
+          "to": "experiment_run"
+        },
+        {
+          "from": "experiment_run",
+          "to": "index_examples"
+        }
+      ],
+      "name": "experimentation_unified",
+      "nodes": [
+        {
+          "entrypoint": "packages/experimentation/src/experimentation/unified_experiment.py (cohort create)",
+          "inputs": [
+            "history.sqlite"
+          ],
+          "name": "cohort_create",
+          "outputs": [
+            "cohort.json"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-experimentation",
+          "schedule": "manual"
+        },
+        {
+          "entrypoint": "packages/experimentation/src/experimentation/workflow_run.py:experiment_run",
+          "inputs": [
+            "cohort.json",
+            "experiment_spec.json",
+            "history.sqlite"
+          ],
+          "name": "experiment_run",
+          "outputs": [
+            "eval_run_dir"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-experimentation",
+          "schedule": "manual"
+        },
+        {
+          "entrypoint": "packages/experimentation/src/experimentation/examples_index.py:index_run",
+          "inputs": [
+            "eval_run_dir"
+          ],
+          "name": "index_examples",
+          "outputs": [
+            "examples_index.sqlite"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-experimentation",
+          "schedule": "manual"
+        }
+      ],
+      "ref": "codebase_map_pack/pipelines/#pipeline-experimentation"
+    },
+    {
+      "edges": [],
+      "name": "export_parquet",
+      "nodes": [
+        {
+          "entrypoint": "experiments/extract/export_v0.py:main",
+          "inputs": [
+            "history.sqlite"
+          ],
+          "name": "export_v0",
+          "outputs": [
+            "exports_parquet_v0"
+          ],
+          "ref": "codebase_map_pack/pipelines/#pipeline-export",
+          "schedule": "manual"
+        }
+      ],
+      "ref": "codebase_map_pack/pipelines/#pipeline-export"
+    }
+  ]
+}

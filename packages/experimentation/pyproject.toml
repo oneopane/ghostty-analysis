@@ -9,6 +9,7 @@ dependencies = [
   "ingestion>=0.1.0",
   "inference>=0.1.0",
   "evaluation>=0.1.0",
+  "core>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -21,3 +22,4 @@ pythonpath = ["src"]
 ingestion = { workspace = true }
 inference = { workspace = true }
 evaluation = { workspace = true }
+core = { workspace = true }

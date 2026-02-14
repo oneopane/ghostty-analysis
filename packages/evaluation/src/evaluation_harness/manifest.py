@@ -20,7 +20,6 @@ class EvalManifest(BaseModel):
     db_max_watermark_updated_at: datetime | None = None
     package_versions: dict[str, str | None] = Field(default_factory=dict)
     routers: list[dict[str, Any]] = Field(default_factory=list)
-    baselines: list[str] = Field(default_factory=list)
     router_feature_meta: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
     cutoff_source: str = "policy"
@@ -39,7 +38,6 @@ def build_manifest(
     db_max_event_occurred_at: datetime | None = None,
     db_max_watermark_updated_at: datetime | None = None,
     package_versions: dict[str, str | None] | None = None,
-    baselines: list[str] | None = None,
     routers: list[dict[str, Any]] | None = None,
     router_feature_meta: dict[str, dict[str, Any]] | None = None,
     cutoff_source: str = "policy",
@@ -54,7 +52,6 @@ def build_manifest(
         db_max_watermark_updated_at=db_max_watermark_updated_at,
         package_versions=package_versions or {},
         routers=list(routers or []),
-        baselines=list(baselines or []),
         router_feature_meta=dict(router_feature_meta or {}),
         cutoff_source=cutoff_source,
         pr_cutoffs=dict(pr_cutoffs or {}),

@@ -14,7 +14,7 @@ from ..models import QueueMetrics, QueueRiskBucketSummary, QueueSummary
 def per_pr_queue_metrics(
     *,
     result: RouteResult,
-    baseline: str,
+    router_id: str,
     cutoff: datetime,
     data_dir: str | Path = "data",
     include_ttfc: bool = False,
@@ -89,7 +89,7 @@ def per_pr_queue_metrics(
         ttfr_seconds=ttfr_seconds,
         ttfc_seconds=ttfc_seconds,
         risk=result.risk,
-        baseline=baseline,
+        router_id=router_id,
     )
 
 
@@ -101,7 +101,7 @@ def _mean(vals: list[float]) -> float | None:
 class QueueMetricsAggregator:
     repo: str
     run_id: str
-    baseline: str
+    router_id: str
 
     def aggregate(self, per_pr: Iterable[QueueMetrics]) -> QueueSummary:
         rows = list(per_pr)
@@ -110,7 +110,7 @@ class QueueMetricsAggregator:
             return QueueSummary(
                 repo=self.repo,
                 run_id=self.run_id,
-                baseline=self.baseline,
+                router_id=self.router_id,
                 n=0,
             )
 
@@ -132,7 +132,7 @@ class QueueMetricsAggregator:
         return QueueSummary(
             repo=self.repo,
             run_id=self.run_id,
-            baseline=self.baseline,
+            router_id=self.router_id,
             n=n,
             by_risk=buckets,
         )

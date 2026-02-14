@@ -28,9 +28,9 @@ def test_end_to_end_eval_run(tmp_path) -> None:  # type: ignore[no-untyped-def]
             str(db.data_dir),
             "--pr",
             str(db.pr_number),
-            "--baseline",
+            "--router",
             "mentions",
-            "--baseline",
+            "--router",
             "popularity",
         ],
     )

@@ -1,0 +1,19 @@
+{
+  "title": "Follow-up: Evaluation data contract choice",
+  "questions": [
+    {
+      "id": "eval_contract_choice",
+      "type": "single",
+      "question": "Choose how evaluation should consume data in v2:",
+      "codeBlock": {
+        "lang": "text",
+        "code": "Artifact-native:\n  Evaluation reads/writes ArtifactRefs only.\n  Truth/metrics/report are derived artifacts.\n  Biggest cleanup, clearest architecture.\n\nMixed:\n  Evaluation can use ArtifactRefs but still keeps some direct legacy builders.\n  Lower migration risk, more complexity.\n\nLegacy-first:\n  Keep current eval internals and only add ArtifactStore later.\n  Fastest short-term, weakest long-term architecture."
+      },
+      "options": [
+        "Artifact-native (full cutover now)",
+        "Mixed (dual path)",
+        "Legacy-first (defer eval rewrite)"
+      ]
+    }
+  ]
+}

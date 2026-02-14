@@ -1,0 +1,130 @@
+{
+  "title": "LLM-Powered SDLC Rewrite Planning",
+  "questions": [
+    {
+      "id": "goal",
+      "type": "single",
+      "question": "What should this planning session optimize for first?",
+      "options": [
+        "Ship a minimal v2 architecture quickly",
+        "Preserve compatibility and reduce migration risk",
+        "Maximize long-term cleanliness, even if slower",
+        "Prototype aggressively, harden later"
+      ]
+    },
+    {
+      "id": "delivery_strategy",
+      "type": "single",
+      "question": "Preferred delivery strategy for the rewrite?",
+      "options": [
+        "Incremental strangler: introduce v2 contracts, keep old views during transition",
+        "Big-bang cutover: replace internals and switch all readers/writers at once",
+        "Hybrid: incremental core + one decisive cutover milestone"
+      ]
+    },
+    {
+      "id": "compatibility",
+      "type": "single",
+      "question": "How much backward compatibility do you want for existing eval runs?",
+      "options": [
+        "Full: old runs must remain explorable via show/explain/diff without migration",
+        "Partial: compatibility for one schema generation, then remove",
+        "Migration-first: provide migration tool; no runtime compatibility required",
+        "None: break old runs and move fast"
+      ]
+    },
+    {
+      "id": "must_keep",
+      "type": "multi",
+      "question": "Which external contracts are non-negotiable to keep stable during rewrite?",
+      "options": [
+        "Unified CLI command surface (`repo ...`)",
+        "Run directory root (`data/github/<owner>/<repo>/eval/<run_id>/`)",
+        "Current human-readable outputs (`manifest.json`, `per_pr.jsonl`, `report.json/md`)",
+        "Router contract shape (`RouteResult` + `router_id` semantics)",
+        "Current cohort/spec hashing semantics"
+      ]
+    },
+    {
+      "id": "v2_store",
+      "type": "single",
+      "question": "What should be the first ArtifactStore/index backend?",
+      "options": [
+        "Filesystem + append-only JSONL index (simple first)",
+        "SQLite-backed index from day one",
+        "Dual: JSONL writer with optional SQLite materialization"
+      ]
+    },
+    {
+      "id": "llm_scope",
+      "type": "multi",
+      "question": "Which LLM operator roles should be first-class in v2 phase 1?",
+      "options": [
+        "Extractor",
+        "Summarizer/Compressor",
+        "Router",
+        "Ontology/Taxonomy builder",
+        "Aligner/Normalizer",
+        "Policy/Rule elicitor",
+        "Program synthesizer",
+        "End-to-end predictor"
+      ]
+    },
+    {
+      "id": "semantic_artifacts_phase1",
+      "type": "multi",
+      "question": "Which semantic artifact families should we implement in phase 1?",
+      "options": [
+        "LLM step artifacts (`llm/*`) with standardized header + provenance",
+        "Prompt artifacts/registry (prompt refs, hashes, templates)",
+        "Truth policy artifacts with explicit version + source refs",
+        "Areas taxonomy + membership artifacts",
+        "Entity normalization artifacts (aliases/team mappings)",
+        "Promotion artifacts (candidate/champion state)"
+      ]
+    },
+    {
+      "id": "eval_contract",
+      "type": "single",
+      "question": "How should evaluation consume data in v2?",
+      "options": [
+        "Artifact-native: evaluation reads ArtifactRefs and emits derived report views",
+        "Mixed: evaluation keeps direct builders but also records ArtifactRefs",
+        "Legacy-first: keep current eval internals, add ArtifactStore later"
+      ]
+    },
+    {
+      "id": "risk_controls",
+      "type": "multi",
+      "question": "Which rollout controls do you want mandatory before cutover?",
+      "options": [
+        "Golden-run parity tests (old vs new outputs on fixed fixtures)",
+        "Schema/version lints and contract tests",
+        "Performance/cost budgets (runtime + LLM token/cost tracking)",
+        "Feature flags for v1/v2 writers/readers",
+        "Automatic migration smoke tests on historical runs"
+      ]
+    },
+    {
+      "id": "timeline",
+      "type": "single",
+      "question": "What timeline should planning target?",
+      "options": [
+        "1-2 weeks (focused, minimal scope)",
+        "3-6 weeks (balanced rewrite)",
+        "7-12 weeks (deep architecture refactor)",
+        "No fixed timeline; optimize quality"
+      ]
+    },
+    {
+      "id": "definition_of_done",
+      "type": "text",
+      "question": "What is your definition of done for this rewrite (concrete acceptance criteria)?"
+    },
+    {
+      "id": "constraints",
+      "type": "text",
+      "question": "Any hard constraints or preferences (team bandwidth, risk tolerance, must-have features, things to avoid)?"
+    }
+  ]
+}

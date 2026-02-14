@@ -1,0 +1,16 @@
+{
+  "refs": {
+    "gh_history_ingestion": "codebase_map_pack/architecture/#ingestion-gh_history_ingestion",
+    "repo_routing": "codebase_map_pack/architecture/#inference-repo_routing",
+    "evaluation_harness": "codebase_map_pack/architecture/#evaluation-evaluation_harness",
+    "experimentation": "codebase_map_pack/architecture/#experimentation-experimentation",
+    "repo_cli": "codebase_map_pack/architecture/#unified-cli-repo_cli",
+
+    "history.sqlite": "codebase_map_pack/schemas/#primary-db-history-sqlite",
+    "examples_index.sqlite": "codebase_map_pack/schemas/#secondary-db-examples_index-sqlite",
+
+    "module_graph": "codebase_map_pack/architecture/#workspace-packages-containers",
+    "data_lineage": "codebase_map_pack/data_lineage/#lineage-diagram-mermaid",
+    "pipelines": "codebase_map_pack/pipelines/#pipelines"
+  }
+}

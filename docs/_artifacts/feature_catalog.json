@@ -1,0 +1,634 @@
+{
+  "features": [
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "automation.bot_authors.distinct_count",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "automation.bot_categories.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "automation.bot_comment_count",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "automation.has_*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "user",
+      "known_by_time": "<= cutoff",
+      "name": "cand.activity.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_window"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "user",
+      "known_by_time": "<= cutoff",
+      "name": "candidate.activity.*_180d",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "user",
+      "known_by_time": "<= cutoff",
+      "name": "candidate.activity.event_counts_*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_window"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "user",
+      "known_by_time": "<= cutoff",
+      "name": "candidate.activity.last_seen_seconds",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_window"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "user",
+      "known_by_time": "<= cutoff",
+      "name": "candidate.activity.load_proxy.open_reviews_est",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "user",
+      "known_by_time": "<= cutoff",
+      "name": "candidate.footprint.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "user",
+      "known_by_time": "<= cutoff",
+      "name": "candidate.profile.account_age_days",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_window"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "user",
+      "known_by_time": "<= cutoff",
+      "name": "candidate.profile.is_bot",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "user",
+      "known_by_time": "<= cutoff",
+      "name": "candidate.profile.type",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "debug.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "labels.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "review",
+      "known_by_time": "<= cutoff",
+      "name": "pair.affinity.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "review",
+      "known_by_time": "<= cutoff",
+      "name": "pair.availability.historical_response_rate_bucket",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "review",
+      "known_by_time": "<= cutoff",
+      "name": "pair.availability.is_already_participating",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "review",
+      "known_by_time": "<= cutoff",
+      "name": "pair.availability.recency_seconds",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_window"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "review",
+      "known_by_time": "<= cutoff",
+      "name": "pair.social.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.attention.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.boundary.boundary_entropy",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.boundary.count",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.boundary.set",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.churn.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.files.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.gates.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.gates.completeness_score",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.geometry.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.meta.author_type",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.meta.created_at_ts",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.meta.is_draft",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.meta.mentions.count",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.meta.title_has_hotfix_signal",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.meta.title_has_wip_signal",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.owners.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.ownership.owner_coverage_ratio",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.ownership.owner_set",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.ownership.owner_set_size",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.paths.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.request_overlap.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.silence.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.surface.changed_file_count",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.surface.directory_entropy.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.surface.distinct_directories_count.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.surface.extension_entropy",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.surface.max_file_churn",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.surface.median_file_churn",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.surface.status_ratio.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.surface.total_churn",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.surface.touches_*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.text.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "at_cutoff"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.timeline.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.trajectory.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_cumulative"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.trajectory.head_update_burstiness",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_window"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "pr.trajectory.time_since_last_head_update_seconds",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "pre_cutoff_window"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "repo",
+      "known_by_time": "<= cutoff",
+      "name": "repo.priors.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "sim.nearest_prs.common_boundaries_topk",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "sim.nearest_prs.common_reviewers_topk",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "sim.nearest_prs.mean_ttfr_topk",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "sim.nearest_prs.owner_overlap_rate_topk",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "PR",
+      "known_by_time": "<= cutoff",
+      "name": "sim.nearest_prs.topk_ids",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "entity": "review",
+      "known_by_time": "<= cutoff",
+      "name": "x.*",
+      "ref": "codebase_map_pack/features/#feature-families",
+      "source_table": "",
+      "used_by_models": [],
+      "window": "derived_from_cutoff_safe_inputs"
+    }
+  ]
+}

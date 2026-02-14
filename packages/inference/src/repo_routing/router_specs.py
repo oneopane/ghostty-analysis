@@ -65,16 +65,11 @@ def apply_router_configs(
 def build_router_specs(
     *,
     routers: list[str],
-    baselines: list[str] | None = None,
     router_imports: list[str] | None = None,
     router_configs: list[str] | None = None,
     default_builtin: str = "mentions",
     stewards_config_required_message: str = "--router-config is required when router includes stewards",
 ) -> list[RouterSpec]:
-    baseline_values = normalize_builtin_router_names(
-        baselines or [],
-        option_name="baseline",
-    )
     router_values = normalize_builtin_router_names(
         routers,
         option_name="router",
@@ -82,7 +77,7 @@ def build_router_specs(
 
     specs: list[RouterSpec] = [
         RouterSpec(type="builtin", name=name)
-        for name in [*baseline_values, *router_values]
+        for name in router_values
     ]
     specs.extend(
         [

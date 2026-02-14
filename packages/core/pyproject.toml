@@ -1,0 +1,15 @@
+[project]
+name = "core"
+version = "0.1.0"
+description = "Shared SDLC core types, hashing, and stores"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.12.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

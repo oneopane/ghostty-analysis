@@ -1,0 +1,139 @@
+{
+  "datasets": [
+    {
+      "grain": "varies by endpoint",
+      "known_by_time": "live",
+      "name": "github_rest_api",
+      "ref": "codebase_map_pack/data_lineage/#dataset-catalog",
+      "source": "packages/ingestion/src/gh_history_ingestion/providers/github",
+      "type": "raw"
+    },
+    {
+      "grain": "multi-table (repo/user/pr/event/...)",
+      "known_by_time": "up to ingestion horizon",
+      "name": "history.sqlite",
+      "ref": "codebase_map_pack/schemas/#primary-db-history-sqlite",
+      "source": "packages/ingestion/src/gh_history_ingestion/ingest/*",
+      "type": "normalized"
+    },
+    {
+      "grain": "1 row per (entity, interval)",
+      "known_by_time": "as-of via start/end events",
+      "name": "history.sqlite:interval_tables",
+      "ref": "codebase_map_pack/data_lineage/#dataset-catalog",
+      "source": "packages/ingestion/src/gh_history_ingestion/intervals/rebuild.py",
+      "type": "normalized"
+    },
+    {
+      "grain": "1 row per (base_sha, path)",
+      "known_by_time": "immutable once fetched (anchored to base_sha)",
+      "name": "repo_artifacts_pinned",
+      "ref": "codebase_map_pack/data_lineage/#dataset-catalog",
+      "source": "packages/ingestion/src/gh_history_ingestion/repo_artifacts/fetcher.py",
+      "type": "raw"
+    },
+    {
+      "grain": "1 per (repo, strategy_id, cutoff_key)",
+      "known_by_time": "anchored to cutoff_key",
+      "name": "boundary_model_artifacts",
+      "ref": "codebase_map_pack/data_lineage/#dataset-catalog",
+      "source": "packages/inference/src/repo_routing/boundary/pipeline.py",
+      "type": "model_input"
+    },
+    {
+      "grain": "1 per (repo, run_id)",
+      "known_by_time": "generated_at",
+      "name": "eval_run_dir",
+      "ref": "codebase_map_pack/data_lineage/#dataset-catalog",
+      "source": "packages/evaluation/src/evaluation_harness/service.py + runner_*",
+      "type": "normalized"
+    },
+    {
+      "grain": "1 row per PR per run",
+      "known_by_time": "generated_at",
+      "name": "eval_per_pr_jsonl",
+      "ref": "codebase_map_pack/data_lineage/#dataset-catalog",
+      "source": "packages/evaluation/src/evaluation_harness/runner_per_pr.py",
+      "type": "normalized"
+    },
+    {
+      "grain": "1 artifact per (run, pr, router)",
+      "known_by_time": "as-of cutoff",
+      "name": "route_result_artifacts",
+      "ref": "codebase_map_pack/data_lineage/#dataset-catalog",
+      "source": "packages/inference/src/repo_routing/artifacts/writer.py",
+      "type": "prediction"
+    },
+    {
+      "grain": "1 artifact per (run, pr, router)",
+      "known_by_time": "as-of cutoff",
+      "name": "feature_artifacts_optional",
+      "ref": "codebase_map_pack/data_lineage/#dataset-catalog",
+      "source": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py (via PipelinePredictor)",
+      "type": "feature"
+    },
+    {
+      "grain": "per PR / per file / per activity event",
+      "known_by_time": "cutoff-safe snapshots; activity window explicit",
+      "name": "exports_parquet_v0",
+      "ref": "codebase_map_pack/data_lineage/#dataset-catalog",
+      "source": "experiments/extract/export_v0.py",
+      "type": "model_input"
+    },
+    {
+      "grain": "1 row per (repo, run_id, pr_number)",
+      "known_by_time": "after eval run exists",
+      "name": "examples_index.sqlite",
+      "ref": "codebase_map_pack/schemas/#secondary-db-examples_index-sqlite",
+      "source": "packages/experimentation/src/experimentation/examples_index.py",
+      "type": "normalized"
+    }
+  ],
+  "edges": [
+    {
+      "from": "history.sqlite",
+      "to": "history.sqlite:interval_tables",
+      "type": "derived_from"
+    },
+    {
+      "from": "github_rest_api",
+      "to": "history.sqlite",
+      "type": "derived_from"
+    },
+    {
+      "from": "history.sqlite",
+      "to": "exports_parquet_v0",
+      "type": "derived_from"
+    },
+    {
+      "from": "history.sqlite",
+      "to": "route_result_artifacts",
+      "type": "derived_from"
+    },
+    {
+      "from": "history.sqlite",
+      "to": "eval_run_dir",
+      "type": "derived_from"
+    },
+    {
+      "from": "route_result_artifacts",
+      "to": "eval_per_pr_jsonl",
+      "type": "derived_from"
+    },
+    {
+      "from": "eval_run_dir",
+      "to": "examples_index.sqlite",
+      "type": "derived_from"
+    },
+    {
+      "from": "repo_artifacts_pinned",
+      "to": "feature_artifacts_optional",
+      "type": "derived_from"
+    },
+    {
+      "from": "boundary_model_artifacts",
+      "to": "feature_artifacts_optional",
+      "type": "derived_from"
+    }
+  ]
+}

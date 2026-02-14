@@ -107,7 +107,7 @@ class QueueMetrics(BaseModel):
     ttfc_seconds: float | None = None
 
     risk: str | None = None
-    baseline: str | None = None
+    router_id: str | None = None
 
 
 class QueueRiskBucketSummary(BaseModel):
@@ -120,7 +120,7 @@ class QueueSummary(BaseModel):
     repo: str
     run_id: str
 
-    baseline: str
+    router_id: str
 
     n: int
 

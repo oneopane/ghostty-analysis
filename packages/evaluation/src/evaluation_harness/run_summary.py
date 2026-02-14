@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sdlc_core.hashing import stable_file_sha256
+
 from .reporting.formatters import json_dumps
 
 
 def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return stable_file_sha256(path)
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:

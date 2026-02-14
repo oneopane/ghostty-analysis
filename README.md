@@ -13,6 +13,7 @@ If you want to complete an end-to-end run **without reading source code**:
 
 ## Workspace packages
 
+- `packages/core`
 - `packages/ingestion`
 - `packages/inference`
 - `packages/experimentation`

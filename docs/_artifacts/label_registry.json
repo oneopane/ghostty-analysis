@@ -1,0 +1,46 @@
+{
+  "labels": [
+    {
+      "computed_in": "packages/evaluation/src/evaluation_harness/truth.py:truth_with_policy",
+      "definition": "First eligible non-author, non-bot review/review-comment in (cutoff, cutoff+window_seconds]",
+      "grain": "PR",
+      "name": "truth:first_response_v1",
+      "ref": "codebase_map_pack/labels_metrics/#labels"
+    },
+    {
+      "computed_in": "packages/evaluation/src/evaluation_harness/truth.py:truth_with_policy",
+      "definition": "First eligible non-author, non-bot APPROVED review in (cutoff, cutoff+window_seconds]",
+      "grain": "PR",
+      "name": "truth:first_approval_v1",
+      "ref": "codebase_map_pack/labels_metrics/#labels"
+    },
+    {
+      "computed_in": "packages/evaluation/src/evaluation_harness/truth.py:intent_truth_from_review_requests",
+      "definition": "Review requests active at cutoff with interval start in [cutoff-window, cutoff]",
+      "grain": "PR",
+      "name": "truth:intent_review_requests_v0",
+      "ref": "codebase_map_pack/labels_metrics/#labels"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "definition": "Placeholder key emitted by AttentionRoutingFeatureExtractorV1; value is not computed by extractor",
+      "grain": "PR",
+      "name": "labels.truth_first_responder",
+      "ref": "codebase_map_pack/labels_metrics/#labels"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "definition": "Placeholder key emitted by AttentionRoutingFeatureExtractorV1; value is not computed by extractor",
+      "grain": "PR",
+      "name": "labels.truth_in_candidate_pool",
+      "ref": "codebase_map_pack/labels_metrics/#labels"
+    },
+    {
+      "computed_in": "packages/inference/src/repo_routing/predictor/feature_extractor_v1.py",
+      "definition": "Placeholder key emitted by AttentionRoutingFeatureExtractorV1; value is not computed by extractor",
+      "grain": "PR",
+      "name": "labels.missed_by_candidate_gen",
+      "ref": "codebase_map_pack/labels_metrics/#labels"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "entities": [
+    {
+      "available_at": "computed as-of cutoff via HistoryReader(strict_as_of=True)",
+      "name": "PRInputBundle",
+      "ref": "codebase_map_pack/temporal_validity/",
+      "risk_of_leakage": "low if all downstream queries honor <= cutoff"
+    },
+    {
+      "available_at": "as-of cutoff",
+      "name": "PR snapshot artifact",
+      "ref": "codebase_map_pack/temporal_validity/",
+      "risk_of_leakage": "low (artifact built from as-of snapshot)"
+    },
+    {
+      "available_at": "as-of cutoff",
+      "name": "RouteResult artifact",
+      "ref": "codebase_map_pack/temporal_validity/",
+      "risk_of_leakage": "depends on router implementation (should not read post-cutoff)"
+    },
+    {
+      "available_at": "as-of cutoff_key",
+      "name": "Boundary model artifact",
+      "ref": "codebase_map_pack/temporal_validity/",
+      "risk_of_leakage": "low if cutoff_key is used consistently"
+    },
+    {
+      "available_at": "anchored to PR base_sha",
+      "name": "Pinned repo artifacts (CODEOWNERS/OWNERS/etc)",
+      "ref": "codebase_map_pack/temporal_validity/",
+      "risk_of_leakage": "low (prevents reading repo HEAD), but risk if base_sha is wrong or missing"
+    },
+    {
+      "available_at": "post-cutoff window (cutoff, cutoff+truth_window]",
+      "name": "Behavior truth (first_response_v1 / first_approval_v1)",
+      "ref": "codebase_map_pack/temporal_validity/",
+      "risk_of_leakage": "high if accidentally used as a feature; intended only for labels"
+    },
+    {
+      "available_at": "at evaluation time",
+      "name": "TruthStatus.unknown_due_to_ingestion_gap",
+      "ref": "codebase_map_pack/temporal_validity/",
+      "risk_of_leakage": "medium if treated as negative label instead of unknown"
+    }
+  ]
+}

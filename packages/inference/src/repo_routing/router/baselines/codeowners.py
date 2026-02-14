@@ -188,7 +188,7 @@ class CodeownersRouter:
                 top_k=top_k,
                 candidates=[],
                 risk="unknown",
-                notes=["codeowners baseline disabled"],
+                notes=["codeowners router disabled"],
             )
 
         if input_bundle is not None:

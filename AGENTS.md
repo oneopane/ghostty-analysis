@@ -20,6 +20,7 @@ Python uv-workspace monorepo for repository ingestion, inference/routing artifac
 ```
 
 ## WORKSPACE PACKAGES
+- `packages/core`             # shared SDLC ids/hashing/types/stores
 - `packages/ingestion`        # GitHub -> history.sqlite
 - `packages/inference`        # cutoff-safe snapshots, routers, artifact writing
 - `packages/experimentation`  # cohort/spec flow, quality gates, marimo helpers

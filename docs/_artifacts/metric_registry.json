@@ -1,0 +1,40 @@
+{
+  "metrics": [
+    {
+      "implemented_in": "packages/evaluation/src/evaluation_harness/metrics/routing_agreement.py",
+      "name": "routing.hit_at_1",
+      "ref": "codebase_map_pack/labels_metrics/#metrics",
+      "type": "ranking"
+    },
+    {
+      "implemented_in": "packages/evaluation/src/evaluation_harness/metrics/routing_agreement.py",
+      "name": "routing.hit_at_3",
+      "ref": "codebase_map_pack/labels_metrics/#metrics",
+      "type": "ranking"
+    },
+    {
+      "implemented_in": "packages/evaluation/src/evaluation_harness/metrics/routing_agreement.py",
+      "name": "routing.hit_at_5",
+      "ref": "codebase_map_pack/labels_metrics/#metrics",
+      "type": "ranking"
+    },
+    {
+      "implemented_in": "packages/evaluation/src/evaluation_harness/metrics/routing_agreement.py",
+      "name": "routing.mrr",
+      "ref": "codebase_map_pack/labels_metrics/#metrics",
+      "type": "ranking"
+    },
+    {
+      "implemented_in": "packages/evaluation/src/evaluation_harness/metrics/gates.py",
+      "name": "gates.merged_rate_missing_vs_present",
+      "ref": "codebase_map_pack/labels_metrics/#metrics",
+      "type": "classification"
+    },
+    {
+      "implemented_in": "packages/evaluation/src/evaluation_harness/metrics/queue.py",
+      "name": "queue.ttfr_seconds",
+      "ref": "codebase_map_pack/labels_metrics/#metrics",
+      "type": "time-to-event"
+    }
+  ]
+}

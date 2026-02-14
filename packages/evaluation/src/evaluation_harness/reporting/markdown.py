@@ -51,17 +51,17 @@ def render_report_md(
         out.append("## Routing Agreement")
         out.append("")
         if isinstance(routing, dict):
-            for baseline in sorted(routing.keys(), key=lambda s: s.lower()):
-                r = routing[baseline]
-                out.append(f"- {baseline}.n: {r.n}")
+            for router_id in sorted(routing.keys(), key=lambda s: s.lower()):
+                r = routing[router_id]
+                out.append(f"- {router_id}.n: {r.n}")
                 if r.hit_at_1 is not None:
-                    out.append(f"- {baseline}.hit@1: {r.hit_at_1:.4f}")
+                    out.append(f"- {router_id}.hit@1: {r.hit_at_1:.4f}")
                 if r.hit_at_3 is not None:
-                    out.append(f"- {baseline}.hit@3: {r.hit_at_3:.4f}")
+                    out.append(f"- {router_id}.hit@3: {r.hit_at_3:.4f}")
                 if r.hit_at_5 is not None:
-                    out.append(f"- {baseline}.hit@5: {r.hit_at_5:.4f}")
+                    out.append(f"- {router_id}.hit@5: {r.hit_at_5:.4f}")
                 if r.mrr is not None:
-                    out.append(f"- {baseline}.mrr: {r.mrr:.4f}")
+                    out.append(f"- {router_id}.mrr: {r.mrr:.4f}")
         else:
             out.append(f"- n: {routing.n}")
             if routing.hit_at_1 is not None:
@@ -102,19 +102,19 @@ def render_report_md(
         out.append("## Queue Metrics")
         out.append("")
         if isinstance(queue, dict):
-            for baseline in sorted(queue.keys(), key=lambda s: s.lower()):
-                q = queue[baseline]
-                out.append(f"- {baseline}.n: {q.n}")
+            for router_id in sorted(queue.keys(), key=lambda s: s.lower()):
+                q = queue[router_id]
+                out.append(f"- {router_id}.n: {q.n}")
                 for risk in sorted(q.by_risk.keys(), key=lambda s: s.lower()):
                     b = q.by_risk[risk]
-                    out.append(f"- {baseline}.{risk}.n: {b.n}")
+                    out.append(f"- {router_id}.{risk}.n: {b.n}")
                     if b.ttfr_seconds_mean is not None:
                         out.append(
-                            f"- {baseline}.{risk}.ttfr_seconds_mean: {b.ttfr_seconds_mean:.2f}"
+                            f"- {router_id}.{risk}.ttfr_seconds_mean: {b.ttfr_seconds_mean:.2f}"
                         )
                     if b.ttfc_seconds_mean is not None:
                         out.append(
-                            f"- {baseline}.{risk}.ttfc_seconds_mean: {b.ttfc_seconds_mean:.2f}"
+                            f"- {router_id}.{risk}.ttfc_seconds_mean: {b.ttfc_seconds_mean:.2f}"
                         )
         else:
             out.append(f"- n: {queue.n}")

@@ -126,10 +126,9 @@ def pr_route_result_path(
     data_dir: str | Path,
     run_id: str,
     pr_number: int,
-    baseline: str | None = None,
-    router_id: str | None = None,
+    router_id: str,
 ) -> Path:
-    rid = (router_id or baseline or "router").strip()
+    rid = router_id.strip()
     return (
         pr_routes_dir(
             repo_full_name=repo_full_name,

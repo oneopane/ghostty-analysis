@@ -1,0 +1,43 @@
+site_name: Codebase Map Explorer
+site_description: Local docs + map explorer for PR/SDLC analytics
+repo_url: null
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  font: false
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+  icon:
+    repo: material/file-document
+
+plugins:
+  - search
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - attr_list
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      use_pygments: false
+  - pymdownx.superfences
+
+extra_css:
+  - assets/explorer.css
+
+extra_javascript:
+  - assets/vendor/mermaid.min.js
+  - assets/mermaid-init.js
+  - assets/vendor/cytoscape.min.js
+  - assets/explorer.js

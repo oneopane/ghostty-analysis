@@ -276,7 +276,7 @@ evaluation runner
 
 ## Compatibility behavior
 
-Per-PR output currently writes both `routers` and `baselines` aliases for backward compatibility (`.../runner.py`, `docs/attention-routing/architecture.md`).
+Per-PR output writes `routers` only (`.../runner_per_pr.py`).
 
 ---
 
@@ -422,7 +422,7 @@ Below is a practical, rigorous loop using current tooling.
 ## Trade-offs
 - SQLite + deterministic offline design optimizes reproducibility and velocity, but limits scale/parallelism.
 - Strict leakage controls reduce accidental optimism, but can block exploratory workflows unless toggles are exposed.
-- Dual terminology (`routers` + `baselines`) aids compatibility but increases conceptual overhead.
+- Router-only terminology simplifies contracts but requires one-time migration for old consumers.
 
 ---
 

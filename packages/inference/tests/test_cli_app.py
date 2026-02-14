@@ -236,7 +236,7 @@ def test_build_artifacts_stewards_implicit_cutoff_uses_utc(tmp_path: Path) -> No
             run_id,
             "--pr",
             "1",
-            "--baseline",
+            "--router",
             "stewards",
             "--config",
             str(config_path),
@@ -271,7 +271,7 @@ def test_route_accepts_naive_as_of_and_treats_it_as_utc(tmp_path: Path) -> None:
             repo,
             "--pr-number",
             "1",
-            "--baseline",
+            "--router",
             "stewards",
             "--config",
             str(config_path),
@@ -311,7 +311,7 @@ def test_route_missing_stewards_config_returns_clean_error() -> None:
             "acme/widgets",
             "--pr-number",
             "1",
-            "--baseline",
+            "--router",
             "stewards",
             "--run-id",
             "x",
@@ -321,7 +321,7 @@ def test_route_missing_stewards_config_returns_clean_error() -> None:
     )
 
     assert result.exit_code != 0
-    assert "--config is required when baseline includes stewards" in result.output
+    assert "--config is required when router includes stewards" in result.output
     assert "Traceback" not in result.output
 
 
@@ -334,7 +334,7 @@ def test_build_artifacts_does_not_write_partial_files_on_route_failure(
     original = cli_app_module.build_route_artifact
 
     def _boom_on_popularity(**kwargs):  # type: ignore[no-untyped-def]
-        if kwargs.get("baseline") == "popularity":
+        if kwargs.get("router") == "popularity":
             raise RuntimeError("forced route failure")
         return original(**kwargs)
 
@@ -351,9 +351,9 @@ def test_build_artifacts_does_not_write_partial_files_on_route_failure(
             run_id,
             "--pr",
             "1",
-            "--baseline",
+            "--router",
             "mentions",
-            "--baseline",
+            "--router",
             "popularity",
             "--as-of",
             "2024-01-10T00:00:00Z",

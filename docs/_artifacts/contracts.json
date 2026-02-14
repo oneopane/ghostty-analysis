@@ -1,0 +1,57 @@
+{
+  "boundaries": [
+    {
+      "api_surface": "SQLite schema + HistoryReader conventions",
+      "artifacts_exchanged": [
+        "data/github/<owner>/<repo>/history.sqlite"
+      ],
+      "from_package": "gh_history_ingestion",
+      "ref": "codebase_map_pack/contracts/",
+      "stability_notes": "Schema is defined by SQLAlchemy models; no migrations detected. Consumers should tolerate optional tables in fixtures.",
+      "to_package": "repo_routing"
+    },
+    {
+      "api_surface": "SQLite schema + ingestion gap tables",
+      "artifacts_exchanged": [
+        "data/github/<owner>/<repo>/history.sqlite"
+      ],
+      "from_package": "gh_history_ingestion",
+      "ref": "codebase_map_pack/contracts/",
+      "stability_notes": "Truth coverage depends on events/reviews/comments horizon and ingestion_gaps presence.",
+      "to_package": "evaluation_harness"
+    },
+    {
+      "api_surface": "Router.route contract + RouterSpec loading",
+      "artifacts_exchanged": [
+        "router implementations",
+        "ArtifactWriter output under eval/<run_id>/prs/*"
+      ],
+      "from_package": "repo_routing",
+      "ref": "codebase_map_pack/contracts/",
+      "stability_notes": "Evaluation writes router artifacts through repo_routing.artifacts.writer; routers may optionally expose PipelinePredictor features and LLM telemetry.",
+      "to_package": "evaluation_harness"
+    },
+    {
+      "api_surface": "evaluation_harness.api.* and run directory layout",
+      "artifacts_exchanged": [
+        "eval/<run_id>/manifest.json",
+        "eval/<run_id>/report.json",
+        "eval/<run_id>/per_pr.jsonl"
+      ],
+      "from_package": "evaluation_harness",
+      "ref": "codebase_map_pack/contracts/",
+      "stability_notes": "Experimentation loads eval artifacts from disk; format changes should be versioned.",
+      "to_package": "experimentation"
+    },
+    {
+      "api_surface": "experimentation.unified_experiment Typer apps",
+      "artifacts_exchanged": [
+        "Typer command groups mounted under repo"
+      ],
+      "from_package": "experimentation",
+      "ref": "codebase_map_pack/contracts/",
+      "stability_notes": "repo_cli mounts experimentation directly; inference/evaluation mounts are optional and degrade on import failure.",
+      "to_package": "repo_cli"
+    }
+  ]
+}

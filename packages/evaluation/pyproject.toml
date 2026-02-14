@@ -9,6 +9,7 @@ dependencies = [
   "rich>=14.2.0",
   "typer>=0.21.1",
   "inference>=0.1.0",
+  "core>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -22,3 +23,4 @@ pythonpath = ["src"]
 
 [tool.uv.sources]
 inference = { workspace = true }
+core = { workspace = true }

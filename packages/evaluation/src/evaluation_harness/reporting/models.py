@@ -21,7 +21,6 @@ class EvalReport(BaseModel):
     package_versions: dict[str, str | None] = Field(default_factory=dict)
 
     routers: list[str] = Field(default_factory=list)
-    baselines: list[str] = Field(default_factory=list)
 
     routing_agreement: dict[str, RoutingAgreementSummary] = Field(default_factory=dict)
     gates: GateCorrelationSummary | None = None

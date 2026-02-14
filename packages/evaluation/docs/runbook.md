@@ -103,8 +103,9 @@ Key files:
 - `strict_streaming_eval=true` (default) aborts if any PR cutoff is after
   `db_max_event_occurred_at`.
 - Truth excludes bots and PR author by default.
-- Default truth policy is `first_response_v1`, using configured `truth_window`
-  (default 60 minutes) and scanning `review_submitted` + `review_comment`.
+- Active truth policies default to `first_response_v1` and `first_approval_v1`.
+- Primary truth policy defaults to `first_approval_v1`.
+- Configured `truth_window` defaults to 60 minutes.
 - Missing router configs (for `stewards`) fail fast.
 
 ## 7) Recommended experiment loop

@@ -1,5 +1,6 @@
 [tool.uv.workspace]
 members = [
+  "packages/core",
   "packages/ingestion",
   "packages/inference",
   "packages/evaluation",
