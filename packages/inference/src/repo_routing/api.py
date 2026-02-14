@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from .history.reader import HistoryReader
 from .registry import RouterSpec, load_router, router_id_for_spec
+from .operators.registry import list_operator_ids
 from .repo_profile.builder import build_repo_profile
 from .repo_profile.storage import (
     CODEOWNERS_PATH_CANDIDATES,
@@ -22,6 +23,7 @@ __all__ = [
     "DEFAULT_PINNED_ARTIFACT_PATHS",
     "HistoryReader",
     "RouterSpec",
+    "list_operator_ids",
     "build_repo_profile",
     "build_router_specs",
     "cutoff_key_utc",

@@ -16,6 +16,13 @@ from ..paths import repo_db_path
 from ..registry import RouterSpec, load_router
 from ..router.base import RouteResult
 from ..time import cutoff_key_utc, dt_sql_utc, parse_dt_utc, require_dt_utc
+from sdlc_core.store import FileArtifactStore
+from sdlc_core.types.artifact import (
+    ArtifactEntityRef,
+    ArtifactHeader,
+    ArtifactRecord,
+    VersionKey,
+)
 from .models import PRSnapshotArtifact, RouteArtifact
 from .paths import (
     pr_features_path,
@@ -25,6 +32,7 @@ from .paths import (
     pr_repo_profile_qa_path,
     pr_route_result_path,
     pr_snapshot_path,
+    repo_eval_run_dir,
 )
 
 
@@ -61,13 +69,13 @@ class ArtifactWriter:
             pr_number=pr_number,
         )
 
-    def route_result_path(self, *, pr_number: int, baseline: str) -> Path:
+    def route_result_path(self, *, pr_number: int, router_id: str) -> Path:
         return pr_route_result_path(
             repo_full_name=self.repo,
             data_dir=self.data_dir,
             run_id=self.run_id,
             pr_number=pr_number,
-            baseline=baseline,
+            router_id=router_id,
         )
 
     def features_path(self, *, pr_number: int, router_id: str) -> Path:
@@ -136,10 +144,52 @@ class ArtifactWriter:
 
     def write_route_result(self, artifact: RouteArtifact) -> Path:
         p = self.route_result_path(
-            pr_number=artifact.result.pr_number, baseline=artifact.baseline
+            pr_number=artifact.result.pr_number, router_id=artifact.router_id
         )
         _write_json_deterministic(p, artifact.model_dump(mode="json"))
         return p
+
+    def write_route_result_v2(
+        self,
+        *,
+        router_id: str,
+        result: RouteResult,
+        meta: dict[str, object],
+    ):
+        run_dir = repo_eval_run_dir(
+            repo_full_name=self.repo,
+            data_dir=self.data_dir,
+            run_id=self.run_id,
+        )
+        store = FileArtifactStore(root=run_dir)
+        record = ArtifactRecord(
+            header=ArtifactHeader(
+                artifact_type="route_result",
+                artifact_version="v2",
+                entity=ArtifactEntityRef(
+                    repo=result.repo,
+                    entity_type="pull_request",
+                    entity_id=str(result.pr_number),
+                    entity_version=result.as_of.isoformat(),
+                ),
+                cutoff=result.as_of,
+                created_at=result.as_of,
+                code_version="unknown",
+                config_hash="unknown",
+                version_key=VersionKey(
+                    operator_id=f"router.{router_id}",
+                    operator_version="v2",
+                    schema_version="v2",
+                ),
+                input_artifact_refs=[],
+            ),
+            payload={
+                "router_id": router_id,
+                "result": result.model_dump(mode="json"),
+                "meta": meta,
+            },
+        )
+        return store.write_artifact(record=record)
 
     def write_repo_profile(self, *, pr_number: int, profile: RepoProfile) -> Path:
         p = self.repo_profile_path(pr_number=pr_number)
@@ -199,7 +249,7 @@ def build_pr_inputs_artifact(
 
 def build_route_result(
     *,
-    baseline: str | None = None,
+    router: str | None = None,
     router_spec: RouterSpec | None = None,
     repo: str,
     pr_number: int,
@@ -210,16 +260,16 @@ def build_route_result(
 ) -> RouteResult:
     spec = router_spec
     if spec is None:
-        if baseline is None:
-            raise ValueError("baseline or router_spec is required")
+        if router is None:
+            raise ValueError("router or router_spec is required")
         spec = RouterSpec(
             type="builtin",
-            name=baseline,
+            name=router,
             config_path=None if config_path is None else str(config_path),
         )
 
-    router = load_router(spec)
-    return router.route(
+    loaded_router = load_router(spec)
+    return loaded_router.route(
         repo=repo,
         pr_number=pr_number,
         as_of=require_dt_utc(as_of, name="as_of"),
@@ -230,7 +280,7 @@ def build_route_result(
 
 def build_route_artifact(
     *,
-    baseline: str,
+    router: str,
     repo: str,
     pr_number: int,
     as_of: datetime,
@@ -239,7 +289,7 @@ def build_route_artifact(
     config_path: str | Path | None = None,
 ) -> RouteArtifact:
     result = build_route_result(
-        baseline=baseline,
+        router=router,
         repo=repo,
         pr_number=pr_number,
         as_of=as_of,
@@ -247,7 +297,7 @@ def build_route_artifact(
         top_k=top_k,
         config_path=config_path,
     )
-    return RouteArtifact(baseline=baseline, result=result)
+    return RouteArtifact(router_id=router, result=result)
 
 
 def iter_pr_numbers_created_in_window(
