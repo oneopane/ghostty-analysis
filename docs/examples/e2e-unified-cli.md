@@ -13,6 +13,13 @@ Use case: run the complete lifecycle for `ghostty-org/ghostty`:
 7. compare runs,
 8. run evaluation/quality checks.
 
+This guide assumes artifacts are the primary API; each run emits:
+
+- `run_summary.json` (single JSON entrypoint for automation)
+- optional `promotion_summary.json` (promotion decision + reasons)
+- `examples_index.sqlite` (cross-run PR index)
+- `compare_summary.json` (single JSON entrypoint for run-to-run changes)
+
 ---
 
 ## Assumptions
@@ -98,6 +105,23 @@ uv run --project packages/cli repo experiment run \
   --spec "$OUT_DIR/experiment.hybrid.json" \
   --data-dir "$DATA_DIR" \
   --run-id "$RUN_B"
+
+# 4.1) summarize + compare + promotion decision (artifact-first)
+uv run --project packages/cli repo experiment summarize \
+  --repo "$REPO" \
+  --run-id "$RUN_B" \
+  --data-dir "$DATA_DIR"
+
+uv run --project packages/cli repo experiment compare \
+  --repo "$REPO" \
+  --run-a "$RUN_A" \
+  --run-b "$RUN_B" \
+  --data-dir "$DATA_DIR"
+
+uv run --project packages/cli repo experiment promote \
+  --repo "$REPO" \
+  --run-id "$RUN_B" \
+  --data-dir "$DATA_DIR"
 
 # 5) inspect + diff
 uv run --project packages/cli repo experiment show --repo "$REPO" --run-id "$RUN_A" --data-dir "$DATA_DIR"
@@ -196,6 +220,11 @@ Success signals:
 
 - no stale-cutoff blocking diagnostics,
 - acceptable profile/artifact coverage for your experiment mode.
+
+Expected artifacts (printed by the command):
+
+- `data/github/<owner>/<repo>/doctor/<doctor_id>/doctor_summary.json`
+- `data/github/<owner>/<repo>/doctor/<doctor_id>/pinned_artifacts_plan.json`
 
 ---
 
@@ -302,6 +331,7 @@ Expected files in each run dir:
 - `report.json`
 - `report.md`
 - `per_pr.jsonl`
+- `run_summary.json`
 - `prs/<pr_number>/...` (per-PR artifacts)
 
 ---
@@ -387,6 +417,22 @@ uv run --project packages/cli repo profile build \
   --strict
 ```
 
+Optional cohort-wide profile build (can also fetch missing pinned artifacts):
+
+```bash
+uv run --project packages/cli repo profile build \
+  --repo "$REPO" \
+  --cohort "$OUT_DIR/cohort.v1.json" \
+  --data-dir "$DATA_DIR" \
+  --run-id "profile-prefetch-$(date -u +%Y%m%dT%H%M%SZ)" \
+  --allow-fetch-missing-artifacts \
+  --no-strict
+```
+
+Expected artifact:
+
+- `data/github/<owner>/<repo>/eval/<run_id>/profile_build_summary.json`
+
 Optional full validation script:
 
 ```bash
@@ -405,6 +451,7 @@ artifacts/examples/ghostty-e2e/
 
 data/github/ghostty-org/ghostty/
   history.sqlite
+  examples_index.sqlite
   eval/
     <run_id>/
       cohort.json
@@ -414,11 +461,15 @@ data/github/ghostty-org/ghostty/
       report.json
       report.md
       per_pr.jsonl
+      run_summary.json
       prs/
         <pr_number>/
           repo_profile/
             profile.json
             qa.json
+    _compare/
+      <run_a>__vs__<run_b>/
+        compare_summary.json
 ```
 
 ---

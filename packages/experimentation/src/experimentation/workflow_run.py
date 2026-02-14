@@ -4,7 +4,13 @@ from pathlib import Path
 from typing import Any
 
 import typer
-from evaluation_harness.api import EvalDefaults, EvalRunConfig, compute_run_id, run as run_eval
+from evaluation_harness.api import (
+    EvalDefaults,
+    EvalRunConfig,
+    compute_run_id,
+    run as run_eval,
+    write_run_summary,
+)
 from repo_routing.api import RouterSpec, router_id_for_spec
 from repo_routing.runtime_defaults import DEFAULT_DATA_DIR
 
@@ -38,6 +44,7 @@ from .workflow_quality import (
     evaluate_quality_gates,
     persist_report_post_processing,
 )
+from .examples_index import index_run as index_examples_run
 
 
 def experiment_run(
@@ -53,7 +60,9 @@ def experiment_run(
     end_at: str | None = typer.Option(None, help="ISO created_at window end"),
     limit: int | None = typer.Option(None, help="Maximum PR count"),
     seed: int | None = typer.Option(None, help="Seed used when sampling with --limit"),
-    cutoff_policy: str = typer.Option("created_at", help="Cutoff policy for inline mode"),
+    cutoff_policy: str = typer.Option(
+        "created_at", help="Cutoff policy for inline mode"
+    ),
     router: list[str] = typer.Option([], "--router", help="Builtin router id(s)"),
     router_import: list[str] = typer.Option(
         [],
@@ -223,7 +232,9 @@ def experiment_run(
         raise typer.BadParameter("cohort payload missing hash")
     spec_cohort_hash = None
     spec_cohort_raw = spec_payload.get("cohort")
-    if isinstance(spec_cohort_raw, dict) and isinstance(spec_cohort_raw.get("hash"), str):
+    if isinstance(spec_cohort_raw, dict) and isinstance(
+        spec_cohort_raw.get("hash"), str
+    ):
         spec_cohort_hash = str(spec_cohort_raw.get("hash") or "") or None
     if spec_cohort_hash is not None and spec_cohort_hash != cohort_hash:
         raise typer.BadParameter(
@@ -283,7 +294,11 @@ def experiment_run(
             else None
         ),
         llm_mode=str(
-            ((spec_payload.get("llm") or {}) if isinstance(spec_payload.get("llm"), dict) else {}).get("mode")
+            (
+                (spec_payload.get("llm") or {})
+                if isinstance(spec_payload.get("llm"), dict)
+                else {}
+            ).get("mode")
             or "replay"
         ),
     )
@@ -308,10 +323,14 @@ def experiment_run(
 
     routers_for_run = [router_id_for_spec(s) for s in router_specs]
     try:
-        report_payload = _load_report(repo=repo_name, run_id=cfg.run_id, data_dir=data_dir)
+        report_payload = _load_report(
+            repo=repo_name, run_id=cfg.run_id, data_dir=data_dir
+        )
     except Exception:
         report_payload = {"kind": "eval_report", "version": "v0", "extra": {}}
-    per_pr_rows = _load_per_pr_rows(repo=repo_name, run_id=cfg.run_id, data_dir=data_dir)
+    per_pr_rows = _load_per_pr_rows(
+        repo=repo_name, run_id=cfg.run_id, data_dir=data_dir
+    )
     if per_pr_rows and isinstance(report_payload, dict):
         quality_gates = evaluate_quality_gates(
             rows=per_pr_rows,
@@ -323,7 +342,9 @@ def experiment_run(
     report_extra = report_payload.get("extra")
     if not isinstance(report_extra, dict):
         report_extra = {}
-    primary_policy = str(report_extra.get("truth_primary_policy") or "first_approval_v1")
+    primary_policy = str(
+        report_extra.get("truth_primary_policy") or "first_approval_v1"
+    )
     promotion_eval = evaluate_promotion(
         rows=per_pr_rows,
         routers=routers_for_run,
@@ -359,6 +380,20 @@ def experiment_run(
     context["quality_gates"] = quality_gates
     context["promotion_evaluation"] = promotion_eval
     _write_json(result.run_dir / EXPERIMENT_MANIFEST_FILENAME, context)
+
+    # Refresh run_summary.json after post-processing so it reflects quality gates.
+    write_run_summary(repo=repo_name, run_id=cfg.run_id, run_dir=result.run_dir)
+
+    # Best-effort cross-run index update (offline, derived from per_pr.jsonl).
+    try:
+        index_examples_run(
+            repo=repo_name,
+            run_id=cfg.run_id,
+            data_dir=data_dir,
+            run_dir=result.run_dir,
+        )
+    except Exception:
+        pass
 
     typer.echo(f"run_dir {result.run_dir}")
     typer.echo(f"cohort_hash {cohort_payload['hash']}")

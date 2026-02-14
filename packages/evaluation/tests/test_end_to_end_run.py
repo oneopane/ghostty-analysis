@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
+from pathlib import Path
 
 from evaluation_harness.cli.app import app
 from evaluation_harness.config import EvalDefaults, EvalRunConfig
@@ -51,6 +52,25 @@ def test_end_to_end_eval_run(tmp_path) -> None:  # type: ignore[no-untyped-def]
         repo_full_name=db.repo, data_dir=db.data_dir, run_id=run_id
     ).exists()
 
+    summary_path = Path(run_dir) / "run_summary.json"
+    assert summary_path.exists()
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["schema_version"] == 1
+    assert summary["kind"] == "run_summary"
+    assert summary["repo"] == db.repo
+    assert summary["run_id"] == run_id
+    for k in (
+        "watermark",
+        "inputs",
+        "counts",
+        "artifacts",
+        "hashes",
+        "headline_metrics",
+        "gates",
+        "drill",
+    ):
+        assert k in summary
+
 
 def test_truth_window_in_manifest_matches_effective_diagnostics(tmp_path) -> None:  # type: ignore[no-untyped-def]
     db = build_min_db(tmp_path=tmp_path)
@@ -69,7 +89,9 @@ def test_truth_window_in_manifest_matches_effective_diagnostics(tmp_path) -> Non
         router_specs=[RouterSpec(type="builtin", name="mentions")],
     )
 
-    row = json.loads((res.run_dir / "per_pr.jsonl").read_text(encoding="utf-8").splitlines()[0])
+    row = json.loads(
+        (res.run_dir / "per_pr.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    )
     manifest = json.loads((res.run_dir / "manifest.json").read_text(encoding="utf-8"))
     report = json.loads((res.run_dir / "report.json").read_text(encoding="utf-8"))
 

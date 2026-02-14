@@ -1,0 +1,59 @@
+{
+  "artifact_kind": "profile_build_summary",
+  "artifact_schema_version": 1,
+  "compatibility": {
+    "additive_fields": "non-breaking",
+    "breaking_change_requires_version_bump": true,
+    "unknown_fields": "consumers_must_ignore"
+  },
+  "required_fields": [
+    "schema_version",
+    "kind",
+    "generated_at",
+    "repo",
+    "run_id",
+    "run_dir",
+    "data_dir",
+    "inputs",
+    "counts",
+    "failures",
+    "per_pr"
+  ],
+  "field_types": {
+    "schema_version": "integer=1",
+    "kind": "string=profile_build_summary",
+    "generated_at": "string(iso8601)",
+    "repo": "string(owner/name)",
+    "run_id": "string",
+    "run_dir": "string(path)",
+    "data_dir": "string(path)",
+    "cohort": "{path:null|string(path),hash:null|string(sha256)}",
+    "inputs": {
+      "cutoff_policy": "string",
+      "strict": "boolean",
+      "allow_fetch_missing_artifacts": "boolean",
+      "artifact_paths": "array[string]",
+      "critical_artifact_paths": "array[string]"
+    },
+    "counts": {
+      "selected_prs": "integer>=0",
+      "built_profiles": "integer>=0",
+      "skipped_missing_base_sha": "integer>=0",
+      "failure_count": "integer>=0",
+      "fetched_base_sha_count": "integer>=0",
+      "fetched_path_count": "integer>=0"
+    },
+    "failures": "array[string]",
+    "per_pr": "array[object]"
+  },
+  "derivation": {
+    "run_dir": ["data/github/<owner>/<repo>/eval/<run_id>/"],
+    "per_pr": ["one row per PR attempted"],
+    "counts.*": ["derived during build"],
+    "failures": ["collected errors and strict coverage failures"],
+    "exit_codes": {
+      "0": "strict=false OR failure_count=0",
+      "1": "strict=true AND failure_count>0"
+    }
+  }
+}

@@ -4,6 +4,7 @@ from repo_routing.registry import router_manifest_entry
 
 from .manifest import build_manifest
 from .reporting import render_report_md
+from .run_summary import write_run_summary
 from .runner_models import (
     AggregatedEvalStage,
     PerPrEvalStage,
@@ -60,4 +61,10 @@ def emit_eval_stage(
         truth=aggregated.truth_manifest,
     )
     prepared.store.write_json("manifest.json", manifest.model_dump(mode="json"))
+
+    # run_summary.json is the primary automation entrypoint; derive it from the
+    # on-disk artifacts to keep it replayable and stable.
+    write_run_summary(
+        repo=prepared.cfg.repo, run_id=prepared.cfg.run_id, run_dir=prepared.run_dir
+    )
     return RunResult(run_dir=prepared.run_dir)

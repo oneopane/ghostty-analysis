@@ -1,0 +1,95 @@
+{
+  "artifact_kind": "compare_summary",
+  "artifact_schema_version": 1,
+  "compatibility": {
+    "additive_fields": "non-breaking",
+    "breaking_change_requires_version_bump": true,
+    "unknown_fields": "consumers_must_ignore"
+  },
+  "required_fields": [
+    "schema_version",
+    "kind",
+    "generated_at",
+    "compare_id",
+    "repo",
+    "baseline",
+    "candidate",
+    "compatibility",
+    "ranked_deltas",
+    "top_regressed_slices",
+    "top_regressed_examples",
+    "gate_deltas",
+    "drill"
+  ],
+  "field_types": {
+    "schema_version": "integer=1",
+    "kind": "string=compare_summary",
+    "generated_at": "string(iso8601)",
+    "compare_id": "string(sha256)",
+    "repo": "string",
+    "baseline": {
+      "run_id": "string",
+      "run_dir": "string(path)",
+      "cohort_hash": "null|string(sha256)",
+      "pr_cutoffs_hash": "null|string(sha256)",
+      "watermark": "object",
+      "artifacts": "object[path pointers]"
+    },
+    "candidate": {
+      "run_id": "string",
+      "run_dir": "string(path)",
+      "cohort_hash": "null|string(sha256)",
+      "pr_cutoffs_hash": "null|string(sha256)",
+      "watermark": "object",
+      "artifacts": "object[path pointers]"
+    },
+    "compatibility": {
+      "warnings": "array[string]",
+      "cohort_hash_match": "null|boolean",
+      "pr_cutoffs_match": "null|boolean"
+    },
+    "ranked_deltas": "array[delta_row]",
+    "top_regressed_slices": "array[slice_regression_row]",
+    "top_regressed_examples": "array[example_regression_row]",
+    "gate_deltas": "object",
+    "drill": "object[path pointers]"
+  },
+  "derivation": {
+    "baseline.*": [
+      "baseline_run_dir/manifest.json",
+      "baseline_run_dir/report.json",
+      "baseline_run_dir/per_pr.jsonl",
+      "baseline_run_dir/experiment_manifest.json (optional)"
+    ],
+    "candidate.*": [
+      "candidate_run_dir/manifest.json",
+      "candidate_run_dir/report.json",
+      "candidate_run_dir/per_pr.jsonl",
+      "candidate_run_dir/experiment_manifest.json (optional)"
+    ],
+    "ranked_deltas": [
+      "report.json.routing_agreement",
+      "report.json.extra.routing_agreement_by_policy",
+      "report.json.extra.routing_agreement_slices_by_policy"
+    ],
+    "gate_deltas": [
+      "report.json.gates",
+      "report.json.extra.quality_gates",
+      "report.json.extra.promotion_evaluation"
+    ],
+    "top_regressed_examples": [
+      "per_pr.jsonl[pr].routers[router_id].routing_agreement_by_policy[policy_id]"
+    ]
+  },
+  "compatibility_policy": {
+    "default_behavior": "warn_and_compare",
+    "expected_mismatches": [
+      "db_max_event_occurred_at can change across runs as ingestion advances",
+      "db_max_watermark_updated_at can change across runs as ingestion advances"
+    ],
+    "hard_errors": [
+      "missing baseline/candidate report.json",
+      "invalid JSON in required artifacts"
+    ]
+  }
+}

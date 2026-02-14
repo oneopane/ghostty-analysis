@@ -11,6 +11,9 @@ from .workflow_cohort import cohort_create
 from .workflow_diff import experiment_diff
 from .workflow_doctor import doctor
 from .workflow_eval import experiment_explain, experiment_list, experiment_show
+from .workflow_summaries import experiment_compare, experiment_summarize
+from .workflow_promote import experiment_promote
+from .workflow_index_all import experiment_index_all
 from .workflow_artifacts import (
     _build_repo_profile_settings,
     _missing_artifact_paths,
@@ -66,4 +69,8 @@ experiment_app.command("show")(experiment_show)
 experiment_app.command("list")(experiment_list)
 experiment_app.command("explain")(experiment_explain)
 experiment_app.command("diff")(experiment_diff)
+experiment_app.command("summarize")(experiment_summarize)
+experiment_app.command("compare")(experiment_compare)
+experiment_app.command("promote")(experiment_promote)
+experiment_app.command("index-all")(experiment_index_all)
 profile_app.command("build")(profile_build)

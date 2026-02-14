@@ -1,0 +1,45 @@
+{
+  "artifact_kind": "promotion_summary",
+  "artifact_schema_version": 1,
+  "compatibility": {
+    "additive_fields": "non-breaking",
+    "breaking_change_requires_version_bump": true,
+    "unknown_fields": "consumers_must_ignore"
+  },
+  "required_fields": [
+    "schema_version",
+    "kind",
+    "repo",
+    "run_id",
+    "decision",
+    "reasons",
+    "promotion_evaluation",
+    "quality_gates",
+    "artifacts"
+  ],
+  "field_types": {
+    "schema_version": "integer=1",
+    "kind": "string=promotion_summary",
+    "repo": "string(owner/name)",
+    "run_id": "string",
+    "decision": "string(promote|do_not_promote|ineligible|unknown)",
+    "reasons": "array[string]",
+    "promotion_evaluation": "null|object",
+    "quality_gates": "null|object",
+    "artifacts": {
+      "run_summary_json": "string(path)",
+      "report_json": "string(path)",
+      "per_pr_jsonl": "string(path)"
+    }
+  },
+  "derivation": {
+    "promotion_evaluation": ["run_summary.json.gates.promotion_evaluation"],
+    "quality_gates": ["run_summary.json.gates.quality_gates"],
+    "decision": ["deterministic logic over promotion_evaluation + quality_gates"],
+    "reasons": ["explanations for decision; may include gate failures"],
+    "exit_codes": {
+      "0": "decision=promote",
+      "2": "decision!=promote or missing required evaluation fields"
+    }
+  }
+}

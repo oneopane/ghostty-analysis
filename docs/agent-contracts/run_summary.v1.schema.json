@@ -1,0 +1,134 @@
+{
+  "artifact_kind": "run_summary",
+  "artifact_schema_version": 1,
+  "compatibility": {
+    "additive_fields": "non-breaking",
+    "breaking_change_requires_version_bump": true,
+    "unknown_fields": "consumers_must_ignore"
+  },
+  "required_fields": [
+    "schema_version",
+    "kind",
+    "repo",
+    "run_id",
+    "watermark",
+    "inputs",
+    "counts",
+    "artifacts",
+    "hashes",
+    "headline_metrics",
+    "gates",
+    "drill"
+  ],
+  "field_types": {
+    "schema_version": "integer=1",
+    "kind": "string=run_summary",
+    "repo": "string",
+    "run_id": "string",
+    "watermark": {
+      "db_max_event_occurred_at": "null|string(iso8601)",
+      "db_max_watermark_updated_at": "null|string(iso8601)",
+      "cutoff_source": "null|string",
+      "cutoff_policy": "null|string",
+      "min_pr_cutoff": "null|string(iso8601)",
+      "max_pr_cutoff": "null|string(iso8601)"
+    },
+    "inputs": {
+      "cohort_hash": "null|string(sha256)",
+      "experiment_spec_hash": "null|string(sha256)",
+      "llm_mode": "null|string",
+      "artifact_prefetch": "null|{enabled:null|boolean,network_used:null|boolean,requested_artifact_paths:array[string],event_count:int}",
+      "routers": "array[string]",
+      "truth_primary_policy": "null|string"
+    },
+    "counts": {
+      "pr_count": "integer>=0",
+      "per_pr_row_count": "integer>=0"
+    },
+    "artifacts": {
+      "manifest_json": "null|string(path)",
+      "report_json": "null|string(path)",
+      "report_md": "null|string(path)",
+      "per_pr_jsonl": "null|string(path)",
+      "experiment_manifest_json": "null|string(path)",
+      "cohort_json": "null|string(path)",
+      "experiment_json": "null|string(path)"
+    },
+    "hashes": {
+      "manifest_json_sha256": "null|string(sha256)",
+      "report_json_sha256": "null|string(sha256)",
+      "per_pr_jsonl_sha256": "null|string(sha256)",
+      "experiment_manifest_json_sha256": "null|string(sha256)",
+      "cohort_json_sha256": "null|string(sha256)",
+      "experiment_json_sha256": "null|string(sha256)"
+    },
+    "headline_metrics": {
+      "routing_agreement": "object[router_id -> {n:int,mrr:float|null,hit_at_1:float|null,hit_at_3:float|null,hit_at_5:float|null}]",
+      "llm_total_cost_usd": "null|number",
+      "worst_slices": "array[{policy_id:string,router_id:string,slice:string,n:int,mrr:float,hit_at_1:float|null}]"
+    },
+    "gates": {
+      "truth_coverage_counts": "object[string -> int]",
+      "gate_correlation": "null|object",
+      "quality_gates": "null|object",
+      "promotion_evaluation": "null|object",
+      "warnings": "array[string]"
+      ,
+      "taxonomy": "{version:string,categories:array[string]}",
+      "failures": "array[{gate_id:string,category:string,pass:boolean,reason:string,inspect:object}]"
+    },
+    "drill": {
+      "prs_dir": "string=prs",
+      "pr_dir_template": "string",
+      "snapshot_template": "string",
+      "inputs_template": "string",
+      "route_template": "string",
+      "per_pr_jsonl": "string",
+      "report_json": "string"
+    }
+  },
+  "derivation": {
+    "repo": [
+      "manifest.json.repo",
+      "report.json.repo",
+      "experiment_manifest.json.repo"
+    ],
+    "run_id": [
+      "manifest.json.run_id",
+      "report.json.run_id",
+      "experiment_manifest.json.run_id"
+    ],
+    "watermark.db_max_event_occurred_at": [
+      "manifest.json.db_max_event_occurred_at",
+      "report.json.db_max_event_occurred_at"
+    ],
+    "watermark.db_max_watermark_updated_at": [
+      "manifest.json.db_max_watermark_updated_at",
+      "report.json.db_max_watermark_updated_at"
+    ],
+    "inputs.cohort_hash": [
+      "experiment_manifest.json.cohort_hash",
+      "cohort.json.hash"
+    ],
+    "inputs.experiment_spec_hash": [
+      "experiment_manifest.json.experiment_spec_hash",
+      "experiment.json.hash"
+    ],
+    "headline_metrics.routing_agreement": ["report.json.routing_agreement"],
+    "headline_metrics.worst_slices": ["report.json.extra.routing_agreement_slices_by_policy"],
+    "gates.truth_coverage_counts": ["report.json.extra.truth_coverage_counts"],
+    "gates.gate_correlation": ["report.json.gates"],
+    "gates.quality_gates": ["report.json.extra.quality_gates"],
+    "gates.promotion_evaluation": ["report.json.extra.promotion_evaluation"],
+    "inputs.llm_mode": ["manifest.json.config.defaults.llm_mode"],
+    "inputs.artifact_prefetch": ["experiment_manifest.json.artifact_prefetch"],
+    "gates.taxonomy": ["derived"],
+    "gates.failures": ["report.json.extra.quality_gates + report.json.notes"],
+    "hashes.*": ["sha256(file_bytes)"],
+    "drill.*": ["conventions: run_dir/<relative paths>"],
+    "counts.pr_count": [
+      "manifest.json.pr_numbers.length",
+      "per_pr.jsonl line_count"
+    ]
+  }
+}

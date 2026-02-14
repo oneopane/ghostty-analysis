@@ -62,7 +62,10 @@ def evaluate_quality_gates(
             codeowners_present += 1
     availability = _safe_ratio(codeowners_present, len(profile_rows))
 
-    unavailable_slots = 0
+    # Router availability should measure pipeline output completeness.
+    # Empty candidate lists are often expected (e.g. mentions); track separately.
+    missing_output_slots = 0
+    empty_candidate_slots = 0
     total_slots = 0
     for row in rows:
         by_router = row.get("routers")
@@ -75,12 +78,17 @@ def evaluate_quality_gates(
             total_slots += 1
             route_result = payload.get("route_result")
             if not isinstance(route_result, dict):
-                unavailable_slots += 1
+                missing_output_slots += 1
                 continue
             candidates = route_result.get("candidates")
-            if not isinstance(candidates, list) or not candidates:
-                unavailable_slots += 1
-    unavailable_rate = _safe_ratio(unavailable_slots, total_slots)
+            if not isinstance(candidates, list):
+                missing_output_slots += 1
+                continue
+            if not candidates:
+                empty_candidate_slots += 1
+
+    missing_output_rate = _safe_ratio(missing_output_slots, total_slots)
+    empty_candidates_rate = _safe_ratio(empty_candidate_slots, total_slots)
 
     window_consistent_n = 0
     window_total_n = 0
@@ -141,7 +149,7 @@ def evaluate_quality_gates(
         for note in notes:
             s = str(note)
             if s.startswith("weights_hash="):
-                hybrid_hashes.add(s[len("weights_hash="):])
+                hybrid_hashes.add(s[len("weights_hash=") :])
     if len(hybrid_hashes) > 1:
         deterministic_ok = False
 
@@ -163,9 +171,10 @@ def evaluate_quality_gates(
             "pass": availability >= thresholds["availability_min"],
         },
         "G5_router_unavailable_rate": {
-            "value": unavailable_rate,
+            "value": missing_output_rate,
             "max": thresholds["unavailable_max"],
-            "pass": unavailable_rate <= thresholds["unavailable_max"],
+            "pass": missing_output_rate <= thresholds["unavailable_max"],
+            "empty_candidates_rate": empty_candidates_rate,
         },
         "G6_deterministic_reproducibility": {
             "pass": deterministic_ok,
@@ -249,22 +258,34 @@ def evaluate_promotion(
         cand_route = cand_row.get("route_result")
         if not isinstance(base_route, dict) or not isinstance(cand_route, dict):
             continue
-        if not isinstance(base_route.get("candidates"), list) or not base_route.get("candidates"):
+        if not isinstance(base_route.get("candidates"), list) or not base_route.get(
+            "candidates"
+        ):
             continue
-        if not isinstance(cand_route.get("candidates"), list) or not cand_route.get("candidates"):
+        if not isinstance(cand_route.get("candidates"), list) or not cand_route.get(
+            "candidates"
+        ):
             continue
 
-        base_metrics = (base_row.get("routing_agreement_by_policy") or {}).get(primary_policy)
-        cand_metrics = (cand_row.get("routing_agreement_by_policy") or {}).get(primary_policy)
+        base_metrics = (base_row.get("routing_agreement_by_policy") or {}).get(
+            primary_policy
+        )
+        cand_metrics = (cand_row.get("routing_agreement_by_policy") or {}).get(
+            primary_policy
+        )
         if not isinstance(base_metrics, dict) or not isinstance(cand_metrics, dict):
             continue
         base_mrr = base_metrics.get("mrr")
         cand_mrr = cand_metrics.get("mrr")
         base_hit1 = base_metrics.get("hit_at_1")
         cand_hit1 = cand_metrics.get("hit_at_1")
-        if not isinstance(base_mrr, (int, float)) or not isinstance(cand_mrr, (int, float)):
+        if not isinstance(base_mrr, (int, float)) or not isinstance(
+            cand_mrr, (int, float)
+        ):
             continue
-        if not isinstance(base_hit1, (int, float)) or not isinstance(cand_hit1, (int, float)):
+        if not isinstance(base_hit1, (int, float)) or not isinstance(
+            cand_hit1, (int, float)
+        ):
             continue
         deltas_mrr.append(float(cand_mrr) - float(base_mrr))
         deltas_hit1.append(float(cand_hit1) - float(base_hit1))

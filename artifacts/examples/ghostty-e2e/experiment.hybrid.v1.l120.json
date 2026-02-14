@@ -1,0 +1,69 @@
+{
+  "cohort": {
+    "hash": "b6541aca2f5295268bb7d5287fc5fb7b0f6212cacb82b55b69960e7a0da38c4f",
+    "path": "/Users/oneopane/Documents/code/data-analysis/ghostty-analysis/artifacts/cohorts/ghostty-org_ghostty_20250810_20260210_l120_s4242_validated.json"
+  },
+  "cutoff_policy": "created_at",
+  "feature_policy_mode": "v0",
+  "hash": "485c8c4b336c53b926fab2600d80bd0e8ad8ec8b1d1aadb877b832439dc24010",
+  "kind": "experiment_spec",
+  "llm": {
+    "mode": "replay"
+  },
+  "notes": "",
+  "profile": "standard",
+  "repo": "ghostty-org/ghostty",
+  "repo_profile": {
+    "allow_fetch_missing_artifacts": false,
+    "artifact_paths": [
+      ".github/CODEOWNERS",
+      ".github/CONTRIBUTING.md",
+      ".github/OWNERS",
+      ".github/teams.yml",
+      "CODEOWNERS",
+      "CONTRIBUTING.md",
+      "docs/CODEOWNERS",
+      "OWNERS",
+      "teams.yml"
+    ],
+    "critical_artifact_paths": [],
+    "enabled": true,
+    "strict": false
+  },
+  "routers": [
+    {
+      "config_path": null,
+      "import_path": null,
+      "name": "mentions",
+      "type": "builtin"
+    },
+    {
+      "config_path": null,
+      "import_path": null,
+      "name": "popularity",
+      "type": "builtin"
+    },
+    {
+      "config_path": null,
+      "import_path": null,
+      "name": "codeowners",
+      "type": "builtin"
+    },
+    {
+      "config_path": null,
+      "import_path": null,
+      "name": "union",
+      "type": "builtin"
+    },
+    {
+      "config_path": null,
+      "import_path": null,
+      "name": "hybrid_ranker",
+      "type": "builtin"
+    }
+  ],
+  "strict_streaming_eval": true,
+  "tags": [],
+  "top_k": 5,
+  "version": "v1"
+}

@@ -1,0 +1,51 @@
+{
+  "artifact_kind": "pinned_artifacts_plan",
+  "artifact_schema_version": 1,
+  "compatibility": {
+    "additive_fields": "non-breaking",
+    "breaking_change_requires_version_bump": true,
+    "unknown_fields": "consumers_must_ignore"
+  },
+  "required_fields": [
+    "schema_version",
+    "kind",
+    "plan_id",
+    "generated_at",
+    "repo",
+    "data_dir",
+    "requested",
+    "counts",
+    "coverage_by_path",
+    "by_base_sha"
+  ],
+  "field_types": {
+    "schema_version": "integer=1",
+    "kind": "string=pinned_artifacts_plan",
+    "plan_id": "string(sha256)",
+    "generated_at": "string(iso8601)",
+    "repo": "string(owner/name)",
+    "data_dir": "string(path)",
+    "doctor_id": "null|string(sha256)",
+    "cohort": "{hash:null|string(sha256),path:null|string(path)}",
+    "requested": {
+      "artifact_paths": "array[string]",
+      "codeowners_candidates": "array[string]"
+    },
+    "counts": {
+      "pr_count": "integer>=0",
+      "unique_base_sha_count": "integer>=0",
+      "missing_base_sha_pr_count": "integer>=0",
+      "codeowners_present_pr_count": "integer>=0",
+      "codeowners_missing_pr_count": "integer>=0"
+    },
+    "coverage_by_path": "array[{path:string,present_pr_count:int,missing_pr_count:int,present_rate:float}]",
+    "by_base_sha": "array[{base_sha:string,pr_numbers:array[int],present_paths:array[string],missing_paths:array[string],present_by_path:object,counts:object,codeowners:object}]"
+  },
+  "derivation": {
+    "selection.pr_base_shas": ["HistoryReader.pull_request_snapshot(...).base_sha"],
+    "requested.artifact_paths": ["DEFAULT_PINNED_ARTIFACT_PATHS or spec.repo_profile.artifact_paths"],
+    "by_base_sha.*.present_by_path": ["pinned_artifact_path(...).exists()"],
+    "by_base_sha.*.codeowners": ["any(CODEOWNERS_PATH_CANDIDATES exists)"],
+    "plan_id": ["sha256(canonical_json({repo,cohort_hash,artifact_paths,pr_base_shas,doctor_id}))"]
+  }
+}

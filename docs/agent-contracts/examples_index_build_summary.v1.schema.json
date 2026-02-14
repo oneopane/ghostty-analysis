@@ -1,0 +1,53 @@
+{
+  "artifact_kind": "examples_index_build_summary",
+  "artifact_schema_version": 1,
+  "compatibility": {
+    "additive_fields": "non-breaking",
+    "breaking_change_requires_version_bump": true,
+    "unknown_fields": "consumers_must_ignore"
+  },
+  "required_fields": [
+    "schema_version",
+    "kind",
+    "build_id",
+    "generated_at",
+    "repo",
+    "data_dir",
+    "eval_dir",
+    "include_incomplete",
+    "counts",
+    "artifacts",
+    "errors"
+  ],
+  "field_types": {
+    "schema_version": "integer=1",
+    "kind": "string=examples_index_build_summary",
+    "build_id": "string(sha256)",
+    "generated_at": "string(iso8601)",
+    "repo": "string(owner/name)",
+    "data_dir": "string(path)",
+    "eval_dir": "string(path)",
+    "include_incomplete": "boolean",
+    "counts": {
+      "discovered_runs": "integer>=0",
+      "selected_runs": "integer>=0",
+      "skipped_runs": "integer>=0",
+      "indexed_runs": "integer>=0",
+      "run_summaries_written": "integer>=0",
+      "indexed_examples_total": "integer>=0",
+      "error_runs": "integer>=0"
+    },
+    "artifacts": {
+      "examples_index_sqlite": "string(path)",
+      "runs_index_results_jsonl": "string(path)",
+      "examples_index_build_summary_json": "string(path)"
+    },
+    "errors": "array[string]"
+  },
+  "derivation": {
+    "eval_dir": ["data/github/<owner>/<repo>/eval"],
+    "counts.*": ["derived from scanning eval_dir and indexing outcomes"],
+    "artifacts.runs_index_results_jsonl": ["per-run status rows"],
+    "build_id": ["sha256(canonical_json({repo,data_dir,include_incomplete,selected_run_ids}))"]
+  }
+}

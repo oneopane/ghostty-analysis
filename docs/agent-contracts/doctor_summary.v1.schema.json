@@ -1,0 +1,68 @@
+{
+  "artifact_kind": "doctor_summary",
+  "artifact_schema_version": 1,
+  "compatibility": {
+    "additive_fields": "non-breaking",
+    "breaking_change_requires_version_bump": true,
+    "unknown_fields": "consumers_must_ignore"
+  },
+  "required_fields": [
+    "schema_version",
+    "kind",
+    "doctor_id",
+    "generated_at",
+    "repo",
+    "data_dir",
+    "db_path",
+    "db_max_event_occurred_at",
+    "db_max_watermark_updated_at",
+    "selection",
+    "checks",
+    "artifacts"
+  ],
+  "field_types": {
+    "schema_version": "integer=1",
+    "kind": "string=doctor_summary",
+    "doctor_id": "string(sha256)",
+    "generated_at": "string(iso8601)",
+    "repo": "string(owner/name)",
+    "data_dir": "string(path)",
+    "db_path": "string(path)",
+    "db_max_event_occurred_at": "null|string(iso8601)",
+    "db_max_watermark_updated_at": "null|string(iso8601)",
+    "selection": {
+      "cohort_path": "null|string(path)",
+      "cohort_hash": "null|string(sha256)",
+      "filters": "object",
+      "pr_numbers": "array[int]",
+      "pr_cutoffs": "object[pr_number -> iso8601]",
+      "pr_base_shas": "object[pr_number -> null|string]"
+    },
+    "checks": {
+      "issues": "integer>=0",
+      "strict": "boolean",
+      "stale_cutoff": "{pass:boolean,stale_prs:array[int]}",
+      "codeowners": "{pass:boolean,present:int,missing:int,missing_prs:array[int]}",
+      "profile": "{missing_base_sha:int,missing_base_sha_prs:array[int]}",
+      "truth": "{approval_ready:boolean,approval_review_count:int}",
+      "merge": "{merger_ready:boolean,merger_actor_count:int}",
+      "ingestion_gaps": "array[{resource:string,n:int}]",
+      "qa_summary": "null|object"
+    },
+    "artifacts": {
+      "doctor_summary_json": "string(path)",
+      "pinned_artifacts_plan_json": "null|string(path)"
+    }
+  },
+  "derivation": {
+    "db_max_event_occurred_at": ["history.sqlite.events.occurred_at max"],
+    "db_max_watermark_updated_at": ["history.sqlite.watermarks.updated_at max (optional)"],
+    "selection.pr_numbers": ["cohort.json.pr_numbers OR sampling"],
+    "selection.pr_cutoffs": ["evaluation_harness.cutoff.cutoff_for_pr(...)"],
+    "selection.pr_base_shas": ["HistoryReader.pull_request_snapshot(...).base_sha"],
+    "checks.codeowners": ["pinned artifacts presence under data/github/<repo>/repo_artifacts/<base_sha>/..."],
+    "checks.truth.approval_ready": ["history.sqlite.reviews APPROVED count"],
+    "checks.merge.merger_ready": ["history.sqlite.events pull_request.merged actor_id count"],
+    "doctor_id": ["sha256(canonical_json({repo,filters,pr_numbers,pr_cutoffs,db_horizon,cohort_hash}))"]
+  }
+}
