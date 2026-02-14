@@ -11,6 +11,7 @@ from .config import EvalRunConfig
 from .reporting.models import EvalReport
 from .store.filesystem import FilesystemStore
 from .truth_policy import ResolvedTruthPolicy
+from sdlc_core.store import FileArtifactStore, FileRunStore
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,8 @@ class PreparedEvalStage:
     generated_at: datetime
     run_dir: Path
     store: FilesystemStore
+    artifact_store: FileArtifactStore
+    run_store: FileRunStore
     db_max_event_occurred_at: datetime | None
     db_max_watermark_updated_at: datetime | None
     cutoffs: dict[int, datetime]

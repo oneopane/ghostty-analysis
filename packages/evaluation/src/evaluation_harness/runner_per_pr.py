@@ -13,6 +13,12 @@ from repo_routing.artifacts.writer import (
 from repo_routing.inputs.models import PRInputBundle
 from repo_routing.predictor.pipeline import PipelinePredictor
 from repo_routing.repo_profile.builder import build_repo_profile
+from sdlc_core.types.artifact import (
+    ArtifactEntityRef,
+    ArtifactHeader,
+    ArtifactRecord,
+    VersionKey,
+)
 
 from .metrics.gates import per_pr_gate_metrics
 from .metrics.queue import per_pr_queue_metrics
@@ -263,6 +269,39 @@ def per_pr_evaluate_stage(
             truth_status_counts.get(truth_diag.status.value, 0) + 1
         )
 
+        prepared.artifact_store.write_artifact(
+            record=ArtifactRecord(
+                header=ArtifactHeader(
+                    artifact_type="truth_label",
+                    artifact_version="v2",
+                    entity=ArtifactEntityRef(
+                        repo=prepared.cfg.repo,
+                        entity_type="pull_request",
+                        entity_id=str(pr_number),
+                        entity_version=cutoff.isoformat(),
+                    ),
+                    cutoff=cutoff,
+                    created_at=cutoff,
+                    code_version="unknown",
+                    config_hash="unknown",
+                    version_key=VersionKey(
+                        operator_id="evaluation.truth_policy",
+                        operator_version="v1",
+                        schema_version="v2",
+                    ),
+                    input_artifact_refs=[],
+                ),
+                payload={
+                    "primary_policy": prepared.truth_primary_policy,
+                    "policies": {
+                        pid: truth_diags[pid].model_dump(mode="json")
+                        for pid in prepared.truth_policies
+                    },
+                },
+            ),
+            cache_key=f"truth:{prepared.cfg.repo}:{pr_number}:{cutoff.isoformat()}:{prepared.truth_primary_policy}",
+        )
+
         gate_metrics = per_pr_gate_metrics(
             repo=prepared.cfg.repo,
             pr_number=pr_number,
@@ -345,7 +384,37 @@ def per_pr_evaluate_stage(
                 router_feature_meta[router_id] = dict(feature_meta)
 
             routing_writer.write_route_result(
-                RouteArtifact(baseline=router_id, result=result, meta=feature_meta)
+                RouteArtifact(router_id=router_id, result=result, meta=feature_meta)
+            )
+            prepared.artifact_store.write_artifact(
+                record=ArtifactRecord(
+                    header=ArtifactHeader(
+                        artifact_type="route_result",
+                        artifact_version="v2",
+                        entity=ArtifactEntityRef(
+                            repo=prepared.cfg.repo,
+                            entity_type="pull_request",
+                            entity_id=str(pr_number),
+                            entity_version=cutoff.isoformat(),
+                        ),
+                        cutoff=cutoff,
+                        created_at=cutoff,
+                        code_version="unknown",
+                        config_hash="unknown",
+                        version_key=VersionKey(
+                            operator_id=f"router.{router_id}",
+                            operator_version="v2",
+                            schema_version="v2",
+                        ),
+                        input_artifact_refs=[],
+                    ),
+                    payload={
+                        "router_id": router_id,
+                        "result": result.model_dump(mode="json"),
+                        "meta": feature_meta,
+                    },
+                ),
+                cache_key=f"route:{router_id}:{prepared.cfg.repo}:{pr_number}:{cutoff.isoformat()}",
             )
 
             pr_metrics_primary = per_pr_metrics(
@@ -371,7 +440,7 @@ def per_pr_evaluate_stage(
                 )
             queue_metrics = per_pr_queue_metrics(
                 result=result,
-                baseline=router_id,
+                router_id=router_id,
                 cutoff=cutoff,
                 data_dir=prepared.cfg.data_dir,
                 include_ttfc=False,
@@ -429,7 +498,6 @@ def per_pr_evaluate_stage(
             },
             "gates": gate_metrics.model_dump(mode="json"),
             "routers": per_router,
-            "baselines": per_router,
         }
         if repo_profile_row is not None:
             row["repo_profile"] = repo_profile_row

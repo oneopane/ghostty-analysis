@@ -15,6 +15,7 @@ from ..paths import repo_db_path, repo_eval_run_dir
 from ..run_id import compute_run_id
 from ..compare_summary import write_compare_summary
 from ..sampling import sample_pr_numbers_created_in_window
+from ..service import cutoff_horizon_check
 from ..service import explain as explain_eval
 from ..service import list_runs as list_eval_runs
 from ..service import run as run_eval
@@ -73,11 +74,23 @@ def sample(
 @app.command("cutoff")
 def cutoff(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
-    pr_number: int = typer.Option(..., help="Pull request number"),
+    pr_number: int | None = typer.Option(None, help="Pull request number"),
+    cutoff: str | None = typer.Option(None, help="ISO cutoff timestamp for horizon check"),
     data_dir: str = typer.Option(
         DEFAULT_DATA_DIR, help="Base directory for per-repo data"
     ),
 ):
+    if cutoff is not None:
+        out = cutoff_horizon_check(repo=repo, cutoff=cutoff, data_dir=data_dir)
+        typer.echo("pass" if out["ok"] else "fail")
+        typer.echo(out)
+        if not out["ok"]:
+            raise typer.Exit(code=1)
+        return
+
+    if pr_number is None:
+        raise typer.BadParameter("either --pr-number or --cutoff is required")
+
     c = cutoff_for_pr(repo=repo, pr_number=pr_number, data_dir=data_dir)
     print(c.isoformat())
 
@@ -134,7 +147,6 @@ def explain(
     repo: str = typer.Option(..., help="Repository in owner/name format"),
     run_id: str = typer.Option(..., help="Evaluation run id"),
     pr_number: int = typer.Option(..., "--pr", help="Pull request number"),
-    baseline: str | None = typer.Option(None, help="Router id (deprecated name)"),
     router: str | None = typer.Option(None, help="Router id (default: first present)"),
     policy: str | None = typer.Option(None, "--policy", help="Truth policy id"),
     data_dir: str = typer.Option(
@@ -146,7 +158,6 @@ def explain(
             repo=repo,
             run_id=run_id,
             pr_number=pr_number,
-            baseline=baseline,
             router=router,
             policy=policy,
             data_dir=data_dir,
@@ -169,9 +180,6 @@ def run(
     ),
     end_at: str | None = typer.Option(None, help="ISO created_at window end"),
     limit: int | None = typer.Option(None, help="Max PRs"),
-    baseline: list[str] = typer.Option(
-        [], "--baseline", help="Deprecated alias for --router"
-    ),
     router: list[str] = typer.Option(
         [], "--router", help="Builtin router name(s) (repeatable)"
     ),
@@ -204,10 +212,9 @@ def run(
     try:
         specs = build_router_specs(
             routers=list(router),
-            baselines=list(baseline),
             router_imports=list(router_import),
             router_configs=configs,
-            stewards_config_required_message="--config is required when baseline includes stewards",
+            stewards_config_required_message="--config is required when router includes stewards",
         )
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc

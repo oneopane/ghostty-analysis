@@ -90,7 +90,7 @@ def aggregate_eval_stage(
     )
     queue_summaries = {
         rid: QueueMetricsAggregator(
-            repo=prepared.cfg.repo, run_id=prepared.cfg.run_id, baseline=rid
+            repo=prepared.cfg.repo, run_id=prepared.cfg.run_id, router_id=rid
         ).aggregate(
             rows  # type: ignore[arg-type]
         )
@@ -118,6 +118,8 @@ def aggregate_eval_stage(
     notes: list[str] = []
     if prepared.stale_cutoff_note is not None:
         notes.append(prepared.stale_cutoff_note)
+    if (prepared.run_dir / "artifact_index.jsonl").exists():
+        notes.append("artifact_native_index_present")
 
     report = EvalReport(
         repo=prepared.cfg.repo,
@@ -127,7 +129,6 @@ def aggregate_eval_stage(
         db_max_watermark_updated_at=prepared.db_max_watermark_updated_at,
         package_versions=prepared.package_versions,
         routers=list(per_pr.routing_rows_by_router),
-        baselines=list(per_pr.routing_rows_by_router),
         routing_agreement=routing_summaries,  # type: ignore[arg-type]
         gates=gates_summary,
         queue=queue_summaries,  # type: ignore[arg-type]

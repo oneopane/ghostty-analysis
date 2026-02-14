@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from repo_routing.registry import router_manifest_entry
 
+from .derived_views import materialize_per_pr_jsonl, materialize_report_json
 from .manifest import build_manifest
 from .reporting import render_report_md
 from .run_summary import write_run_summary
@@ -20,6 +21,10 @@ def emit_eval_stage(
     aggregated: AggregatedEvalStage,
 ) -> RunResult:
     prepared.store.write_json("report.json", aggregated.report.model_dump(mode="json"))
+    materialize_per_pr_jsonl(run_dir=prepared.run_dir)
+    report_payload = materialize_report_json(run_dir=prepared.run_dir)
+    prepared.store.write_json("report.json", report_payload)
+
     prepared.store.write_text(
         "report.md",
         render_report_md(
@@ -49,7 +54,6 @@ def emit_eval_stage(
         db_max_event_occurred_at=prepared.db_max_event_occurred_at,
         db_max_watermark_updated_at=prepared.db_max_watermark_updated_at,
         package_versions=prepared.package_versions,
-        baselines=sorted(per_pr.routing_rows_by_router, key=str.lower),
         routers=[router_manifest_entry(s) for s in prepared.specs],
         router_feature_meta={
             k: per_pr.router_feature_meta[k] for k in sorted(per_pr.router_feature_meta)

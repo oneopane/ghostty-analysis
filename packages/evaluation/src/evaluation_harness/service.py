@@ -7,6 +7,7 @@ from pathlib import Path
 from repo_routing.registry import RouterSpec
 
 from .config import EvalRunConfig
+from .db import RepoDb
 from .paths import (
     eval_per_pr_jsonl_path,
     eval_report_json_path,
@@ -14,13 +15,13 @@ from .paths import (
     repo_eval_dir,
 )
 from .runner import RepoProfileRunSettings, RunResult, run_streaming_eval
+from repo_routing.time import parse_dt_utc
 
 
 def run(
     *,
     cfg: EvalRunConfig,
     pr_numbers: list[int],
-    baselines: list[str] | None = None,
     router_specs: list[RouterSpec] | None = None,
     router_config_path: str | Path | None = None,
     repo_profile_settings: RepoProfileRunSettings | None = None,
@@ -29,7 +30,6 @@ def run(
     return run_streaming_eval(
         cfg=cfg,
         pr_numbers=pr_numbers,
-        baselines=baselines,
         router_specs=router_specs,
         router_config_path=router_config_path,
         repo_profile_settings=repo_profile_settings,
@@ -68,12 +68,31 @@ def show(
     raise FileNotFoundError(f"{p} / {pj}")
 
 
+def cutoff_horizon_check(*, repo: str, cutoff: str, data_dir: str = "data") -> dict[str, object]:
+    dt = parse_dt_utc(cutoff)
+    if dt is None:
+        raise ValueError("invalid cutoff")
+
+    db = RepoDb(repo=repo, data_dir=data_dir)
+    conn = db.connect()
+    try:
+        horizon = db.max_event_occurred_at(conn)
+    finally:
+        conn.close()
+
+    ok = horizon is not None and dt <= horizon
+    return {
+        "ok": ok,
+        "cutoff": cutoff,
+        "db_max_event_occurred_at": None if horizon is None else horizon.isoformat(),
+    }
+
+
 def explain(
     *,
     repo: str,
     run_id: str,
     pr_number: int,
-    baseline: str | None = None,
     router: str | None = None,
     policy: str | None = None,
     data_dir: str = "data",
@@ -93,11 +112,11 @@ def explain(
     if row is None:
         raise ValueError(f"pr not found in per_pr.jsonl: {pr_number}")
 
-    routers = row.get("routers") or row.get("baselines") or {}
+    routers = row.get("routers") or {}
     if not isinstance(routers, dict) or not routers:
         raise ValueError("missing routers for pr")
 
-    chosen = router or baseline
+    chosen = router
     if chosen is None:
         chosen = sorted(routers.keys(), key=lambda s: str(s).lower())[0]
     if chosen not in routers:

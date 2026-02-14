@@ -8,6 +8,7 @@ the public cross-package contract.
 from __future__ import annotations
 
 from .config import EvalDefaults, EvalRunConfig
+from .artifact_service import list_artifacts, show_artifact
 from .compare_summary import build_compare_summary, write_compare_summary
 from .run_id import compute_run_id
 from .run_summary import build_run_summary, write_run_summary
@@ -24,6 +25,8 @@ __all__ = [
     "compute_run_id",
     "build_run_summary",
     "write_run_summary",
+    "list_artifacts",
+    "show_artifact",
     "explain",
     "list_runs",
     "run",
